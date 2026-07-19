@@ -1,0 +1,292 @@
+import ModelPlayer from "../../model/model/ModelPlayer.js";
+import EntityRenderer from "../EntityRenderer.js";
+import Block from "../../../world/block/Block.js";
+import * as AuthLib from "../../../network/AuthLib.js";
+import * as THREE from "../../../../../../../../libraries/three.module.js";
+
+const skinLoadVersions = new Map();
+
+export default class PlayerRenderer extends EntityRenderer {
+
+    static instances = new Set();
+
+    constructor(worldRenderer) {
+        super(new ModelPlayer());
+
+        PlayerRenderer.instances.add(this);
+        this.worldRenderer = worldRenderer;
+
+        // Load default character texture
+        this.defaultTexture = worldRenderer.minecraft.getThreeTexture('char.png');
+        this.defaultTexture.magFilter = THREE.NearestFilter;
+        this.defaultTexture.minFilter = THREE.NearestFilter;
+        this.textureCharacter = this.defaultTexture;
+
+        this.skinTextures = new Map();
+        this.pendingSkinLoads = new Map();
+        this.lastEntity = null;
+
+        // First person right-hand holder
+        this.handModel = null;
+        this.firstPersonGroup = new THREE.Object3D();
+        this.worldRenderer.overlay.add(this.firstPersonGroup);
+
+        // Nametag group
+        this.nametagGroup = new THREE.Object3D();
+        this.nametagSprite = null;
+        this.nametagTexture = null;
+        this.group.add(this.nametagGroup);
+    }
+
+    static invalidateSkinCache(username) {
+        const nextVersion = (skinLoadVersions.get(username) || 0) + 1;
+        skinLoadVersions.set(username, nextVersion);
+
+        for (const renderer of PlayerRenderer.instances) {
+            if (renderer.skinTextures) {
+                renderer.skinTextures.delete(username);
+            }
+            if (renderer.pendingSkinLoads) {
+                renderer.pendingSkinLoads.delete(username);
+            }
+            if (renderer.lastEntity) {
+                renderer.rebuild(renderer.lastEntity);
+            }
+        }
+    }
+
+    getTextureForEntity(entity) {
+        const username = entity && entity.username ? entity.username : null;
+        const sessionUsername = this.worldRenderer?.minecraft?.getSession?.()?.getProfile?.()?.getUsername?.();
+        const effectiveUsername = username || sessionUsername || null;
+
+        if (!effectiveUsername) {
+            return this.defaultTexture;
+        }
+
+        if (this.skinTextures.has(effectiveUsername)) {
+            return this.skinTextures.get(effectiveUsername);
+        }
+
+        if (!this.pendingSkinLoads.has(effectiveUsername)) {
+            this.pendingSkinLoads.set(effectiveUsername, this.loadSkinTexture(effectiveUsername, entity));
+        }
+
+        return this.defaultTexture;
+    }
+
+    async loadSkinTexture(username, entity) {
+        const skinVersion = skinLoadVersions.get(username) || 0;
+        const skinUrl = `${AuthLib.getSkinUrl(username)}?t=${Date.now()}`;
+
+        try {
+            const image = new Image();
+            image.crossOrigin = "anonymous";
+            image.onload = () => {
+                if ((skinLoadVersions.get(username) || 0) !== skinVersion) {
+                    return;
+                }
+
+                const texture = new THREE.CanvasTexture(image);
+                texture.magFilter = THREE.NearestFilter;
+                texture.minFilter = THREE.NearestFilter;
+                texture.generateMipmaps = false;
+
+                this.skinTextures.set(username, texture);
+                this.pendingSkinLoads.delete(username);
+
+                if (this.lastEntity) {
+                    this.rebuild(this.lastEntity);
+                }
+            };
+            image.onerror = () => {
+                if ((skinLoadVersions.get(username) || 0) !== skinVersion) {
+                    return;
+                }
+
+                this.pendingSkinLoads.delete(username);
+                this.skinTextures.set(username, this.defaultTexture);
+            };
+            image.src = skinUrl;
+        } catch (error) {
+            this.pendingSkinLoads.delete(username);
+            this.skinTextures.set(username, this.defaultTexture);
+            console.warn(`Failed to load skin for ${username}:`, error);
+        }
+
+        return null;
+    }
+
+    rebuild(entity) {
+        let isSelf = entity === this.worldRenderer.minecraft.player;
+        let firstPerson = this.worldRenderer.minecraft.settings.thirdPersonView === 0;
+        let itemStack = firstPerson && isSelf ? this.worldRenderer.itemToRender : entity.inventory.getItemInSelectedSlot();
+        let itemId = itemStack.getType();
+        let hasItem = !itemStack.isEmpty();
+
+        if (firstPerson && hasItem && isSelf) {
+            super.rebuild(entity);
+
+            // Create new item group and add it to the hand
+            this.firstPersonGroup.clear();
+            let itemGroup = new THREE.Object3D();
+            this.firstPersonGroup.add(itemGroup);
+
+            // Render item in hand in first person
+            let block = Block.getById(itemId);
+            if (block !== null) {
+                this.worldRenderer.blockRenderer.renderBlockInFirstPerson(itemGroup, block, entity.getEntityBrightness());
+
+                // Copy material and update depth test of the item to render it always in front
+                if (itemGroup.children.length > 0) {
+                    let mesh = itemGroup.children[0];
+                    mesh.material = mesh.material.clone();
+                    mesh.material.depthTest = false;
+                }
+            }
+        } else {
+            this.tessellator.bindTexture(this.getTextureForEntity(entity));
+            super.rebuild(entity);
+
+            // Render item in hand in third person
+            if (hasItem) {
+                let block = Block.getById(itemId);
+                if (block !== null) {
+                    let group = this.model.rightArm.bone;
+                    this.worldRenderer.blockRenderer.renderBlockInHandThirdPerson(group, block, entity.getEntityBrightness());
+                }
+            }
+
+            // Create first person right hand and attach it to the holder
+            this.firstPersonGroup.clear();
+            this.handModel = this.model.rightArm.clone();
+            this.firstPersonGroup.add(this.handModel.bone);
+
+            // Copy material and update depth test of the hand to render it always in front
+            let mesh = this.handModel.bone.children[0];
+            mesh.material = mesh.material.clone();
+            mesh.material.depthTest = false;
+        }
+    }
+
+    render(entity, partialTicks) {
+        this.lastEntity = entity;
+
+        let swingProgress = entity.swingProgress - entity.prevSwingProgress;
+        if (swingProgress < 0.0) {
+            swingProgress++;
+        }
+        this.model.swingProgress = entity.prevSwingProgress + swingProgress * partialTicks;
+        this.model.hasItemInHand = !entity.inventory.getItemInSelectedSlot().isEmpty();
+        this.model.isSneaking = entity.isSneaking();
+
+        // TODO find a better way
+        if (entity !== this.worldRenderer.minecraft.player) {
+            this.firstPersonGroup.visible = false;
+        }
+
+        super.render(entity, partialTicks);
+
+        // Render nametag for other players, or for local player in third person
+        let isThirdPerson = this.worldRenderer.minecraft.settings.thirdPersonView !== 0;
+        if ((entity !== this.worldRenderer.minecraft.player || isThirdPerson) && entity.username) {
+            this.renderNametag(entity);
+        }
+    }
+
+    updateFirstPerson(player) {
+        // Make sure the model is created
+        this.prepareModel(player);
+
+        // Make the group visible
+        this.firstPersonGroup.visible = true;
+    }
+
+    renderRightHand(player, partialTicks) {
+        this.updateFirstPerson(player);
+
+        // Set transform of renderer
+        this.model.swingProgress = 0;
+        this.model.hasItemInHand = false;
+        this.model.isSneaking = false;
+        this.model.setRotationAngles(player, 0, 0, 0, 0, 0, 0);
+        this.handModel.copyTransformOf(this.model.rightArm);
+
+        // Render hand model
+        this.handModel.render();
+    }
+
+    fillMeta(entity, meta) {
+        super.fillMeta(entity, meta);
+
+        let firstPerson = this.worldRenderer.minecraft.settings.thirdPersonView === 0;
+
+        meta.firstPerson = firstPerson;
+        meta.itemInHand = firstPerson ? this.worldRenderer.itemToRender : entity.inventory.getItemInSelectedSlot();
+    }
+
+    renderNametag(entity) {
+        // Create or update nametag texture
+        if (!this.nametagTexture || this.nametagUsername !== entity.username) {
+            this.nametagUsername = entity.username;
+
+            // Create canvas for nametag
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const fontRenderer = this.worldRenderer.minecraft.fontRenderer;
+
+            // Measure text - calculate width manually
+            let textWidth = 0;
+            for (let i = 0; i < entity.username.length; i++) {
+                textWidth += fontRenderer.charWidths[entity.username.charCodeAt(i)] || 6;
+            }
+            canvas.width = textWidth + 4;
+            canvas.height = 12;
+
+            // Disable smoothing for pixel-perfect text
+            ctx.imageSmoothingEnabled = false;
+
+            // Render text using font renderer's internal method
+            fontRenderer.drawStringRaw(ctx, entity.username, 2, 2, 0xFFFFFF, false, "8", false);
+
+            // Create texture from canvas
+            if (this.nametagTexture) {
+                this.nametagTexture.dispose();
+            }
+            this.nametagTexture = new THREE.CanvasTexture(canvas);
+            this.nametagTexture.magFilter = THREE.NearestFilter;
+            this.nametagTexture.minFilter = THREE.NearestFilter;
+        }
+
+        // Create or update sprite
+        if (!this.nametagSprite) {
+            const material = new THREE.SpriteMaterial({
+                map: this.nametagTexture,
+                transparent: true,
+                depthTest: false
+            });
+            this.nametagSprite = new THREE.Sprite(material);
+            this.nametagGroup.add(this.nametagSprite);
+        }
+
+        // Update sprite texture
+        this.nametagSprite.material.map = this.nametagTexture;
+
+        // Position nametag above player
+        this.nametagGroup.position.set(0, 2.5, 0);
+
+        // Scale sprite based on canvas size
+        const scale = 0.01;
+        this.nametagSprite.scale.set(
+            this.nametagTexture.image.width * scale,
+            this.nametagTexture.image.height * scale,
+            1
+        );
+
+        // Make nametag visible and face camera
+        this.nametagGroup.visible = true;
+        this.nametagSprite.visible = true;
+        this.nametagGroup.lookAt(this.worldRenderer.camera.position);
+    }
+
+}

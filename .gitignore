@@ -1,0 +1,12 @@
+*.iml
+.idea
+world.bin
+worlds/*
+minecraft/*
+jars/*
+players/*
+data/*
+vcs.py
+vcs2.py
+node_modules/*
+package-lock.json

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Vector Layout Workspace</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: #ffffff;
+            user-select: none;
+        }
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255,255,255,0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            cursor: pointer;
+        }
+        #instructions {
+            text-align: center;
+            color: #000;
+        }
+        #instructions h1 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            letter-spacing: -1px;
+        }
+        #reticle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            border: 2px solid #000000;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 5;
+        }
+        #ui-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #000;
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border: 2px solid #000;
+            pointer-events: none;
+            z-index: 5;
+            font-size: 12px;
+            line-height: 1.6;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .active-item {
+            background: #000;
+            color: #fff;
+            padding: 0 4px;
+        }
+        #hud-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+            background: rgba(255,255,255,0.9);
+            padding: 8px;
+            border: 2px solid #000;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="blocker">
+        <div id="instructions">
+            <h1>STENCIL WORKSPACE v2</h1>
+            <p>Click to Lock Mouse & Begin</p>
+            <p style="font-size: 12px; margin-top: 20px; color: #666;">Move: WASD | Jump: SPACE | Look: MOUSE</p>
+        </div>
+    </div>
+
+    <div id="reticle"></div>
+    <div id="hud-status">MODE: BUILD (CUBE)</div>
+
+    <div id="ui-panel">
+        <strong>SHAPE TYPES (Press [G] to Cycle):</strong><br>
+        <span id="shape-cube" class="active-item">Cube</span> | 
+        <span id="shape-sphere">Sphere</span> | 
+        <span id="shape-semisphere">Semi-Sphere</span> | 
+        <span id="shape-cylinder">Cylinder</span> | 
+        <span id="shape-donut">Donut</span> | 
+        <span id="shape-circle">2D Circle</span> | 
+        <span id="shape-semicircle">2D Semi-Circle</span> | 
+        <span id="shape-text">3D Text Frame</span>
+        <br><br>
+        <strong>EDITOR MODES:</strong><br>
+        [1] Build Asset Target<br>
+        [2] Select / Transform Asset<br>
+        [3] Delete Target Asset<br><br>
+        <strong>TRANSFORM ACTIONS (In Mode 2):</strong><br>
+        Move Object: [Arrow Keys] / [PageUp / PageDown]<br>
+        Scale Width (X): [I] / [K]<br>
+        Scale Height (Y): [O] / [L]<br>
+        Scale Depth (Z): [P] / [Semi-Colon]
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+
+        let scene, camera, renderer, controls;
+        const transformableObjects = []; 
+        const raycastTargets = []; 
+        
+        // Editor State variables
+        let editMode = 'build'; 
+        let selectedPrimitive = 'cube';
+        let selectedGroup = null; 
+        const gridUnit = 1;
+
+        // Geometries Map
+        const primitives = ['cube', 'sphere', 'semisphere', 'cylinder', 'donut', 'circle', 'semicircle', 'text'];
+        let loadedFont = null;
+
+        // Player Rig Physics Variables
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let canJump = false;
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        const playerRadius = 0.8;
+
+        const OutlineShader = {
+            vertexShader: `
+                uniform float thickness;
+                void main() {
+                    vec3 transformed = position + normal * thickness;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+                }
+            `,
+            fragmentShader: `
+                void main() {
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                }
+            `
+        };
+
+        // Initialize Font Loader Early
+        const fontLoader = new FontLoader();
+        fontLoader.load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+            loadedFont = font;
+        });
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 10);
+
+            // Lighting (High intensity to create pure flat white faces)
+            const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+            scene.add(ambient);
+
+            controls = new PointerLockControls(camera, document.body);
+            const blocker = document.getElementById('blocker');
+            blocker.addEventListener('click', () => controls.lock());
+            controls.addEventListener('lock', () => blocker.style.display = 'none');
+            controls.addEventListener('unlock', () => blocker.style.display = 'flex');
+            scene.add(controls.getObject());
+
+            setupInput();
+
+            // Ground Setup
+            const floorGeo = new THREE.PlaneGeometry(1000, 1000);
+            floorGeo.rotateX(-Math.PI / 2);
+            const floorMesh = createOutlinedMesh(floorGeo, 0.005);
+            scene.add(floorMesh);
+            raycastTargets.push(floorMesh.children[0]); // Push the core hit bounds mesh
+
+            // Axis reference lines
+            const grid = new THREE.GridHelper(100, 100, 0x000000, 0xdddddd);
+            grid.position.y = 0.001; 
+            scene.add(grid);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createOutlinedMesh(geometry, thickness = 0.03) {
+            const baseMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const baseMesh = new THREE.Mesh(geometry, baseMat);
+
+            const outlineMat = new THREE.ShaderMaterial({
+                vertexShader: OutlineShader.vertexShader,
+                fragmentShader: OutlineShader.fragmentShader,
+                uniforms: { thickness: { value: thickness } },
+                side: THREE.BackSide
+            });
+            const outlineMesh = new THREE.Mesh(geometry, outlineMat);
+
+            const container = new THREE.Group();
+            container.add(baseMesh);
+            container.add(outlineMesh);
+
+            baseMesh.userData.parentGroup = container;
+            return container;
+        }
+
+        function getGeometry(type) {
+            switch(type) {
+                case 'cube': return new THREE.BoxGeometry(2, 2, 2);
+                case 'sphere': return new THREE.SphereGeometry(1.2, 24, 24);
+                case 'semisphere': return new THREE.SphereGeometry(1.2, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+                case 'cylinder': return new THREE.CylinderGeometry(1, 1, 2.5, 24);
+                case 'donut': return new THREE.TorusGeometry(1, 0.3, 12, 24);
+                case 'circle': return new THREE.CircleGeometry(1.5, 32);
+                case 'semicircle': return new THREE.CircleGeometry(1.5, 32, 0, Math.PI);
+                case 'text':
+                    if (loadedFont) {
+                        return new TextGeometry('TXT', { font: loadedFont, size: 1, height: 0.3 });
+                    }
+                    return new THREE.BoxGeometry(1.5, 1, 0.3);
+            }
+        }
+
+        function executeAction() {
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+            const intersects = raycaster.intersectObjects(raycastTargets);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+
+                if (editMode === 'build') {
+                    const geo = getGeometry(selectedPrimitive);
+                    const group = createOutlinedMesh(geo);
+
+                    // Compute clean surface alignments based on normal hits
+                    const spawnPos = hit.point.clone().add(hit.face.normal.clone().multiplyScalar(1));
+                    group.position.set(
+                        Math.round(spawnPos.x / gridUnit) * gridUnit,
+                        Math.max(Math.round(spawnPos.y / gridUnit) * gridUnit, 0.5),
+                        Math.round(spawnPos.z / gridUnit) * gridUnit
+                    );
+
+                    scene.add(group);
+                    transformableObjects.push(group);
+                    raycastTargets.push(group.children[0]);
+
+                } else if (editMode === 'select') {
+                    if (hit.object !== raycastTargets[0]) { // Don't select the ground floor
+                        if (selectedGroup) {
+                            selectedGroup.children[0].material.color.setHex(0xffffff); // Clear past selections
+                        }
+                        selectedGroup = hit.object.userData.parentGroup;
+                        selectedGroup.children[0].material.color.setHex(0xddffff); // Light highlight tint inside lines
+                        updateStatus(`SELECTED: ${selectedGroup.children[0].geometry.type}`);
+                    }
+                } else if (editMode === 'delete') {
+                    if (hit.object !== raycastTargets[0]) {
+                        const tgtGroup = hit.object.userData.parentGroup;
+                        scene.remove(tgtGroup);
+                        
+                        if (selectedGroup === tgtGroup) selectedGroup = null;
+
+                        const idx1 = transformableObjects.indexOf(tgtGroup);
+                        if (idx1 > -1) transformableObjects.splice(idx1, 1);
+
+                        const idx2 = raycastTargets.indexOf(hit.object);
+                        if (idx2 > -1) raycastTargets.splice(idx2, 1);
+                        
+                        updateStatus("MODE: DELETE (ASSET REMOVED)");
+                    }
+                }
+            }
+        }
+
+        function handleTransform(key) {
+            if (!selectedGroup) return;
+
+            const moveStep = 0.5;
+            const scaleStep = 0.1;
+
+            switch(key) {
+                // Translation
+                case 'ArrowUp': selectedGroup.position.z -= moveStep; break;
+                case 'ArrowDown': selectedGroup.position.z += moveStep; break;
+                case 'ArrowLeft': selectedGroup.position.x -= moveStep; break;
+                case 'ArrowRight': selectedGroup.position.x += moveStep; break;
+                case 'PageUp': selectedGroup.position.y += moveStep; break;
+                case 'PageDown': selectedGroup.position.y = Math.max(0, selectedGroup.position.y - moveStep); break;
+
+                // Scale Adjustments
+                case 'KeyI': selectedGroup.scale.x += scaleStep; break;
+                case 'KeyK': selectedGroup.scale.x = Math.max(0.1, selectedGroup.scale.x - scaleStep); break;
+                case 'KeyO': selectedGroup.scale.y += scaleStep; break;
+                case 'KeyL': selectedGroup.scale.y = Math.max(0.1, selectedGroup.scale.y - scaleStep); break;
+                case 'KeyP': selectedGroup.scale.z += scaleStep; break;
+                case 'Semicolon': selectedGroup.scale.z = Math.max(0.1, selectedGroup.scale.z - scaleStep); break;
+            }
+        }
+
+        function setupInput() {
+            window.addEventListener('keydown', (e) => {
+                if (!controls.isLocked) return;
+
+                switch(e.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space': 
+                        if (canJump) {
+                            velocity.y += 12; // Initial hop velocity metrics
+                            canJump = false;
+                        }
+                        break;
+                    case 'Digit1': 
+                        editMode = 'build'; 
+                        if (selectedGroup) selectedGroup.children[0].material.color.setHex(0xffffff);
+                        updateStatus(`MODE: BUILD (${selectedPrimitive.toUpperCase()})`); 
+                        break;
+                    case 'Digit2': 
+                        editMode = 'select'; 
+                        updateStatus("MODE: SELECT / TRANSFORM"); 
+                        break;
+                    case 'Digit3': 
+                        editMode = 'delete'; 
+                        if (selectedGroup) selectedGroup.children[0].material.color.setHex(0xffffff);
+                        updateStatus("MODE: DELETE"); 
+                        break;
+                    case 'KeyG':
+                        if (editMode === 'build') {
+                            const curIdx = primitives.indexOf(selectedPrimitive);
+                            selectedPrimitive = primitives[(curIdx + 1) % primitives.length];
+                            
+                            primitives.forEach(p => document.getElementById(`shape-${p}`).className = '');
+                            document.getElementById(`shape-${selectedPrimitive}`).className = 'active-item';
+                            updateStatus(`MODE: BUILD (${selectedPrimitive.toUpperCase()})`);
+                        }
+                        break;
+                    default:
+                        handleTransform(e.code);
+                        break;
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                }
+            });
+
+            document.addEventListener('pointerdown', () => {
+                if (controls.isLocked) executeAction();
+            });
+        }
+
+        function updateStatus(msg) {
+            document.getElementById('hud-status').textContent = msg;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (controls.isLocked) {
+                const time = performance.now();
+                const delta = Math.min((time - prevTime) / 1000, 0.1); // Clamp step delta tracking lag spikes
+
+                // Decay X/Z component tracks
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                
+                // Acceleration constant gravity pull down lines
+                velocity.y -= 32.0 * delta; 
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * 180.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 180.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+
+                // Simple collision floor calculations
+                const controlObj = controls.getObject();
+                controlObj.position.y += velocity.y * delta;
+
+                // Basic ground level limit checking
+                if (controlObj.position.y < 2) {
+                    velocity.y = 0;
+                    controlObj.position.y = 2;
+                    canJump = true;
+                }
+
+                prevTime = time;
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

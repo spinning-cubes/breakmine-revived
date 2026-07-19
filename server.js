@@ -1,0 +1,98 @@
+const WebSocket = require('ws');
+const { initWorld, saveWorld, getWorldChanges, generateFlatChunkColumn, loadCurrentWorld, getWorldTime, tickWorldTime, setBlockInventory, getAllBlockInventoriesState } = require('./world');
+const { sendLoginSuccess, sendJoinGame, sendSpawnPosition, sendChunks, sendTimeUpdate } = require('./packets');
+const { handlePacket, cleanupPlayerChunks } = require('./handlers');
+const { addPlayer, removePlayer, getPlayerCount, getPlayers, savePlayerData, normalizeInventoryState } = require('./players');
+const Logger = require('./logger');
+const { BlockRegistry } = require('./src/js/net/minecraft/client/world/block/BlockRegistry.js');
+const ServerWorld = require('./server/World.js');
+
+let log = Logger;
+const PORT = 6008;
+
+// Load the last used world, or default to 'main'
+const currentWorld = loadCurrentWorld();
+initWorld(currentWorld);
+BlockRegistry.create(); // Initialize block registry from game code
+const serverWorld = new ServerWorld(); // Initialize server world for block ticking
+
+// Start server tick loop for block ticking and world time synchronization
+setInterval(() => {
+    serverWorld.onTick();
+    tickWorldTime();
+
+    const worldTime = getWorldTime();
+    const players = getPlayers();
+    for (const player of players.values()) {
+        if (player.ws.readyState === 1) {
+            sendTimeUpdate(player, worldTime);
+        }
+    }
+}, 1000 / 20); // Tick every 1/20th second
+
+// Save world time and world state every 60 seconds.
+setInterval(() => {
+    saveWorld();
+    //log.debug('World', 'Autosaved world time and state');
+}, 60 * 1000);
+
+const wss = new WebSocket.Server({ port: PORT, host: '0.0.0.0' });
+log.info('Server', `Minecraft server running!!! (v47)`);
+log.info('Server', `Listening on ws://0.0.0.0:${PORT}`);
+
+wss.on('connection', (ws) => {
+    const player = {
+        ws,
+        eid: null,
+        username: null,
+        protocolState: 'handshake', // Start in handshake state
+        x: 0.0,
+        y: 64.0,
+        z: 0.0,
+        yaw: 0.0,
+        pitch: 0.0,
+        onGround: true,
+        isSneaking: false
+    };
+
+    ws.on('message', (message, isBinary) => {
+        if (isBinary) {
+            handlePacket(player, message);
+            return;
+        }
+
+        const text = message.toString('utf8');
+        if (text === 'ping' || text === 'status') {
+            const payload = {
+                type: 'status',
+                players: getPlayerCount(),
+                maxPlayers: 20
+            };
+            ws.send(JSON.stringify(payload));
+            return;
+        }
+
+        try {
+            const payload = JSON.parse(text);
+            if (payload && payload.type === 'inventory') {
+                player.inventory = normalizeInventoryState(payload.inventory);
+                savePlayerData(player);
+            } else if (payload && payload.type === 'blockInventory') {
+                const blockKey = payload.key || `chest:${payload.position?.x}:${payload.position?.y}:${payload.position?.z}`;
+                if (blockKey && payload.inventory) {
+                    setBlockInventory(blockKey, payload.inventory);
+                    saveWorld();
+                }
+            }
+        } catch (err) {
+            // Ignore non-JSON text messages.
+        }
+    });
+
+    ws.on('close', () => {
+        if (player.eid !== null) {
+            removePlayer(player);
+            cleanupPlayerChunks(player.eid);
+        }
+    });
+});

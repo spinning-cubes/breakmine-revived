@@ -1,0 +1,168 @@
+export default class MusicManager {
+
+    constructor() {
+        this.tracks = [];
+        this.currentTrack = null;
+        this.currentCategory = null;
+        this.nextTrack = null;
+        this.fadeInterval = null;
+        this.scheduledNext = null;
+
+        this.menuTracks = [];
+        this.gameTracks = [];
+        this.creativeTracks = [];
+        this.netherTracks = [];
+        this.endTracks = [];
+
+        this.volume = 1;
+        this.fadeTime = 2000;
+        this.gapTime = 5000;
+
+        this.loadTracks();
+    }
+
+    loadTracks() {
+        const load = (path) => {
+            const audio = new Audio(path);
+            audio.volume = 0;
+            audio.preload = 'auto';
+            return audio;
+        };
+
+        // Menu tracks
+        for (let i = 1; i <= 4; i++) {
+            this.menuTracks.push(load('src/resources/sound/music/menu/menu' + i + '.ogg'));
+        }
+
+        // Overworld game tracks
+        const gameNames = ['calm1', 'calm2', 'calm3', 'hal1', 'hal2', 'hal3', 'hal4', 'nuance1', 'nuance2', 'piano1', 'piano2', 'piano3'];
+        for (const name of gameNames) {
+            this.gameTracks.push(load('src/resources/sound/music/game/' + name + '.ogg'));
+        }
+
+        // Creative tracks
+        for (let i = 1; i <= 6; i++) {
+            this.creativeTracks.push(load('src/resources/sound/music/game/creative/creative' + i + '.ogg'));
+        }
+
+        // Nether tracks
+        for (let i = 1; i <= 4; i++) {
+            this.netherTracks.push(load('src/resources/sound/music/game/nether/nether' + i + '.ogg'));
+        }
+
+        // End tracks
+        this.endTracks.push(load('src/resources/sound/music/game/end/boss.ogg'));
+        this.endTracks.push(load('src/resources/sound/music/game/end/credits.ogg'));
+        this.endTracks.push(load('src/resources/sound/music/game/end/end.ogg'));
+    }
+
+    getTrackList(category) {
+        switch (category) {
+            case 'menu': return this.menuTracks;
+            case 'creative': return this.creativeTracks;
+            case 'nether': return this.netherTracks;
+            case 'end': return this.endTracks;
+            default: return this.gameTracks;
+        }
+    }
+
+    pickRandom(list) {
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
+    playMusic(category) {
+        if (this.currentCategory === category && this.currentTrack) {
+            return;
+        }
+
+        this.stopMusic();
+
+        const list = this.getTrackList(category);
+        if (list.length === 0) return;
+
+        this.tracks = list;
+        this.currentCategory = category;
+        this.playNext();
+    }
+
+    playNext() {
+        if (this.tracks.length === 0) return;
+
+        const track = this.pickRandom(this.tracks);
+        if (track === this.currentTrack && this.tracks.length > 1) {
+            return this.playNext();
+        }
+
+        this.currentTrack = track;
+        this.currentTrack.currentTime = 0;
+        this.currentTrack.volume = 0;
+        this.fadeIn(this.currentTrack);
+
+        // Schedule next track after this one ends + gap
+        this.currentTrack.onended = () => {
+            this.currentTrack = null;
+            this.scheduledNext = setTimeout(() => this.playNext(), this.gapTime);
+        };
+    }
+
+    fadeIn(audio) {
+        const step = 50;
+        const increment = this.volume / (this.fadeTime / step);
+        let current = 0;
+
+        audio.play();
+
+        this.fadeInterval = setInterval(() => {
+            current += increment;
+            if (current >= this.volume) {
+                audio.volume = this.volume;
+                clearInterval(this.fadeInterval);
+                this.fadeInterval = null;
+            } else {
+                audio.volume = current;
+            }
+        }, step);
+    }
+
+    fadeOut(audio, callback) {
+        const step = 50;
+        const decrement = audio.volume / (this.fadeTime / step);
+
+        this.fadeInterval = setInterval(() => {
+            audio.volume -= decrement;
+            if (audio.volume <= 0) {
+                audio.volume = 0;
+                audio.pause();
+                audio.currentTime = 0;
+                clearInterval(this.fadeInterval);
+                this.fadeInterval = null;
+                if (callback) callback();
+            }
+        }, step);
+    }
+
+    stopMusic() {
+        this.currentCategory = null;
+        if (this.scheduledNext) {
+            clearTimeout(this.scheduledNext);
+            this.scheduledNext = null;
+        }
+        if (this.fadeInterval) {
+            clearInterval(this.fadeInterval);
+            this.fadeInterval = null;
+        }
+        if (this.currentTrack) {
+            this.currentTrack.pause();
+            this.currentTrack.currentTime = 0;
+            this.currentTrack.volume = 0;
+            this.currentTrack.onended = null;
+            this.currentTrack = null;
+        }
+        if (this.nextTrack) {
+            this.nextTrack.pause();
+            this.nextTrack.currentTime = 0;
+            this.nextTrack.volume = 0;
+            this.nextTrack = null;
+        }
+    }
+}

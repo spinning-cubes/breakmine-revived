@@ -1,0 +1,83 @@
+import BlockLog from "./type/BlockLog.js";
+import BlockStone from "./type/BlockStone.js";
+import BlockGrass from "./type/BlockGrass.js";
+import BlockDirt from "./type/BlockDirt.js";
+import BlockLeave from "./type/BlockLeave.js";
+import BlockWater from "./type/BlockWater.js";
+import BlockSand from "./type/BlockSand.js";
+import BlockTorch from "./type/BlockTorch.js";
+import Sound from "./sound/Sound.js";
+import Block from "./Block.js";
+import BlockWood from "./type/BlockWood.js";
+import BlockBedrock from "./type/BlockBedrock.js";
+import BlockGlass from "./type/BlockGlass.js";
+import SoundGlass from "./sound/SoundGlass.js";
+import BlockGravel from "./type/BlockGravel.js";
+import BlockCobblestone from "./type/BlockCobblestone.js";
+import BlockGrassPath from "./type/BlockGrassPath.js";
+import BlockStoneLike from "./type/BlockStoneLike.js";
+import BlockCraftingTable from "./type/BlockCraftingTable.js";
+import BlockChest from "./type/BlockChest.js";
+import BlockMissing from "./type/BlockMissing.js";
+import BlockBrick from "./type/BlockBrick.js";
+import BlockFurnace from "./type/BlockFurnace.js";
+import BlockBush from "./type/BlockBush.js";
+import BlockFence from "./type/BlockFence.js";
+import BlockWoodPanel from "./type/BlockWoodPanel.js";
+import SoundGrass from "./sound/SoundGrass.js";
+
+export class BlockRegistry {
+
+    static init = false;
+
+    static create() {
+        // Sounds
+        Block.sounds.stone = new Sound("stone", 1.0);
+        Block.sounds.wood = new Sound("wood", 1.0);
+        Block.sounds.gravel = new Sound("gravel", 1.0);
+        Block.sounds.grass = new SoundGrass("grass", 1.0);
+        Block.sounds.cloth = new Sound("cloth", 1.0);
+        Block.sounds.sand = new Sound("sand", 1.0);
+        Block.sounds.glass = new SoundGlass("stone", 1.0);
+        Block.sounds.leaves = new Sound("leaves", 1.0);
+
+        // Blocks
+        BlockRegistry.STONE = new BlockStone(1, 0);
+        BlockRegistry.GRASS = new BlockGrass(2, 1);
+        BlockRegistry.DIRT = new BlockDirt(3, 2);
+        BlockRegistry.COBBLE_STONE = new BlockCobblestone(4, 14);
+        BlockRegistry.WOOD = new BlockWood(5, 10);
+        BlockRegistry.BEDROCK = new BlockBedrock(7, 11);
+        BlockRegistry.GRAVEL = new BlockGravel(13, 13);
+        BlockRegistry.LOG = new BlockLog(17, 4);
+        BlockRegistry.LEAVE = new BlockLeave(18, 6);
+        BlockRegistry.GLASS = new BlockGlass(20, 12);
+        BlockRegistry.WATER = new BlockWater(9, 7);
+        BlockRegistry.SAND = new BlockSand(12, 8);
+        BlockRegistry.TORCH = new BlockTorch(50, 9);
+        BlockRegistry.GRASS_PATH = new BlockGrassPath(19, 15);
+        BlockRegistry.GOLD_ORE = new BlockStoneLike(21, 0, "gold_ore", "Gold Ore");
+        BlockRegistry.DIAMOND_ORE = new BlockStoneLike(22, 0, "diamond_ore", "Diamond Ore");
+        BlockRegistry.COAL_ORE = new BlockStoneLike(23, 0, "coal_ore", "Coal Ore");
+        BlockRegistry.IRON_ORE = new BlockStoneLike(24, 0, "iron_ore", "Iron Ore");
+        BlockRegistry.IRON_BLOCK = new BlockStoneLike(25, 0, "iron_block", "Iron Block");
+        BlockRegistry.GOLD_BLOCK = new BlockStoneLike(26, 0, "gold_block", "Gold Block");
+        BlockRegistry.DIAMOND_BLOCK = new BlockStoneLike(27, 0, "diamond_block", "Diamond Block");
+        BlockRegistry.EMERALD_BLOCK = new BlockStoneLike(28, 0, "emerald_block", "Emerald Block");
+        BlockRegistry.COAL_BLOCK = new BlockStoneLike(29, 0, "coal_block", "Coal Block");
+        BlockRegistry.EMERALD_ORE = new BlockStoneLike(30, 0, "emerald_ore", "Emerald Ore");
+        BlockRegistry.CRAFTING_TABLE = new BlockCraftingTable(31, 0);
+        BlockRegistry.CHEST = new BlockChest(32, 0);
+        BlockRegistry.BRICK = new BlockBrick(33, 0);
+        BlockRegistry.FURNACE = new BlockFurnace(34, 0);
+        BlockRegistry.BUSH = new BlockBush(35, 0);
+        BlockRegistry.FENCE = new BlockFence(36, 0, "Oak", 5);
+        BlockRegistry.WOOD_PANEL = new BlockWoodPanel(37, 0);
+
+        BlockRegistry.init = true;
+    }
+
+    static getAllBlocks() {
+        return this;
+    }
+}

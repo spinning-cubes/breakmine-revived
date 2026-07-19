@@ -1,0 +1,7 @@
+world.bin
+worlds/*
+minecraft/*
+jars/*
+players/*
+data/*
+package-lock.json
