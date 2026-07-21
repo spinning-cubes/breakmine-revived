@@ -69,7 +69,6 @@ export default class GuiContainer extends GuiScreen {
     }
 
     renderPostScreen(stack, mouseX, mouseY, partialTicks) {
-        // Draw tooltip for hovered item (render after items to be on top)
         if (this.hoverSlot) {
             let inventory = this.hoverSlot.inventory;
             let itemStack = inventory.getItemInSlot(this.hoverSlot.index);
@@ -77,19 +76,10 @@ export default class GuiContainer extends GuiScreen {
                 let hoveredTypeId = itemStack.getType();
                 let block = Block.getById(hoveredTypeId);
                 if (block && block.description) {
-                    const lines = block.description.split('\n');
-                    let maxWidth = 0;
-                    for (const line of lines) {
-                        const width = this.getStringWidth(stack, line, true);
-                        if (width > maxWidth) {
-                            maxWidth = width;
-                        }
-                    }
-                    for (let index = 0; index < lines.length; index++) {
-                        const string = lines[index];
-                        const factor = 10 * index;
-                        this.drawTooltipLine(stack, string, mouseX, mouseY + factor, maxWidth);
-                    }
+                    let slotX = this.x + this.hoverSlot.x;
+                    let slotY = this.y + this.hoverSlot.y;
+                    let tooltip = new GuiTooltip(this.minecraft, block.description, slotX, slotY, 16, 16);
+                    tooltip.render(stack, mouseX, mouseY, partialTicks);
                 }
             }
         }
@@ -204,20 +194,4 @@ export default class GuiContainer extends GuiScreen {
         return mouseX >= x && mouseX <= x + 16 && mouseY >= y && mouseY <= y + 16;
     }
 
-    drawTooltipLine(stack, text, mouseX, mouseY, maxWidth) {
-        const padding = 2;
-        const textHeight = 8;
-        const tooltipWidth = maxWidth + padding * 2;
-        const tooltipHeight = textHeight + padding * 2;
-        let x = mouseX + 4;
-        const y = mouseY - 10;
-        const screenWidth = this.width;
-
-        if (x + tooltipWidth > screenWidth) {
-            x = mouseX - 4 - tooltipWidth;
-        }
-
-        this.drawRect(stack, x, y, x + tooltipWidth, y + tooltipHeight, 'rgba(0,0,0,0.8)');
-        this.drawString(stack, text, x + padding, y + padding, 0xFFFFFFFF, true, false);
-    }
 }

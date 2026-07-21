@@ -25,7 +25,7 @@ export default class GuiContainerCreative extends GuiContainer {
         let leftButton = new GuiButton(
             this.minecraft, "<",
             this.x + 8, navY,
-            20, 14,
+            14, 14,
             () => {
                 this.container.goToPage(this.container.currentPage - 1);
                 this.container.dirty = true;
@@ -35,8 +35,8 @@ export default class GuiContainerCreative extends GuiContainer {
 
         let rightButton = new GuiButton(
             this.minecraft, ">",
-            (this.x + 188) - 20, navY,
-            20, 14,
+            (this.x + 188) - 14, navY,
+            14, 14,
             () => {
                 this.container.goToPage(this.container.currentPage + 1);
                 this.container.dirty = true;

@@ -103,8 +103,8 @@ export default class GameWindow {
             this.mouseX = event.clientX / this.scaleFactor;
             this.mouseY = event.clientY / this.scaleFactor;
 
-            this.mouseMotionX = event.movementX;
-            this.mouseMotionY = -event.movementY;
+            this.mouseMotionX += event.movementX;
+            this.mouseMotionY += -event.movementY;
 
             // Handle mouse move on screen
             let currentScreen = this.minecraft.currentScreen;

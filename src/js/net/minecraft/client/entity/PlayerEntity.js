@@ -91,7 +91,7 @@ export default class PlayerEntity extends EntityLiving {
     }
 
     turn(motionX, motionY) {
-        let sensitivity = this.minecraft.settings.sensitivity / 100;
+        let sensitivity = this.minecraft.settings.sensitivity / 500;
         this.rotationYaw = this.rotationYaw + motionX * sensitivity;
         this.rotationPitch = this.rotationPitch - motionY * sensitivity;
 
@@ -242,6 +242,10 @@ export default class PlayerEntity extends EntityLiving {
         this.motionY *= 0.8;
         this.motionZ *= slipperiness;
         this.motionY -= 0.02;
+
+        // Reset fall distance while in water
+        this.fallDistance = 0;
+        this.wasOnGround = false;
     }
 
     travel(forward, vertical, strafe) {
