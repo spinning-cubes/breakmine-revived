@@ -6,7 +6,7 @@ export default class BlockFence extends Block {
 
     constructor(id, textureSlotId, woodName, woodId) {
         super(id, textureSlotId);
-        this.name = woodName + " Fence";
+        this.description = woodName + " Fence";
         this.woodId = woodId;
 
         this.hardness = 2.0;

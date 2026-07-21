@@ -136,6 +136,13 @@ export default class Block {
         return this.boundingBox;
     }
 
+    getCollisionBoundingBox(world, x, y, z) {
+        if (this.isSolid()) {
+            return this.boundingBox;
+        }
+        return null;
+    }
+
     onBlockAdded(world, x, y, z) {
 
     }

@@ -8,10 +8,14 @@ import ItemStack from "../../item/ItemStack.js";
 
 export default class ContainerCreative extends Container {
 
+    static ITEMS_PER_PAGE = 45;
+
     constructor(player) {
         super();
 
         this.itemList = [];
+        this.currentPage = 0;
+        this.totalPages = 1;
 
         let playerInventory = player.inventory;
 
@@ -28,7 +32,7 @@ export default class ContainerCreative extends Container {
         }
 
         this.initItems();
-        this.scrollTo(0);
+        this.goToPage(0);
     }
 
     swapWithHotbar(slot, inventoryPlayer, hotbarIndex) {
@@ -54,16 +58,16 @@ export default class ContainerCreative extends Container {
     }
 
     scrollTo(scrollOffset) {
-        let xOffset = (this.itemList.length + 9 - 1) / 9 - 5;
-        let yOffset = Math.floor((scrollOffset * xOffset) + 0.5);
 
-        if (yOffset < 0) {
-            yOffset = 0;
-        }
+    }
+
+    goToPage(page) {
+        this.currentPage = Math.max(0, Math.min(page, this.totalPages - 1));
+        let startIndex = this.currentPage * ContainerCreative.ITEMS_PER_PAGE;
 
         for (let y = 0; y < 5; ++y) {
             for (let x = 0; x < 9; ++x) {
-                let index = x + (y + yOffset) * 9;
+                let index = startIndex + x + y * 9;
 
                 if (index >= 0 && index < this.itemList.length) {
                     GuiContainerCreative.inventory.setItem(x + y * 9, this.itemList[index]);
@@ -79,5 +83,6 @@ export default class ContainerCreative extends Container {
         Block.blocks.forEach((block) => {
             this.itemList.push(block.getId());
         });
+        this.totalPages = Math.ceil(this.itemList.length / ContainerCreative.ITEMS_PER_PAGE);
     }
 }

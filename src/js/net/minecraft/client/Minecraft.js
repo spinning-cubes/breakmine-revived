@@ -35,7 +35,7 @@ import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
 
 export default class Minecraft {
 
-    static VERSION = "2.0.0 (Alpha)"
+    static VERSION = "2.1.0 (Alpha)"
     static URL_GITHUB = "https://github.com/labystudio/js-minecraft";
     static PROTOCOL_VERSION = 47; //758;
 
@@ -603,7 +603,7 @@ export default class Minecraft {
 
                         // Get previous block
                         let prevTypeId = this.world.getBlockAt(x, y, z);
-                        let isReplaceable = (Block.getById(typeId).isReplaceable(this.world, x, y, z)) || (prevTypeId !== typeId && prevTypeId === 0);
+                        let isReplaceable = Block.getById(prevTypeId).isReplaceable(this.world, x, y, z) || prevTypeId === 0;
 
                         if (typeId !== 0 && isReplaceable) {
                             // Calculate block data for rotation

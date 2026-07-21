@@ -25,6 +25,7 @@ import BlockBush from "./type/BlockBush.js";
 import BlockFence from "./type/BlockFence.js";
 import BlockWoodPanel from "./type/BlockWoodPanel.js";
 import SoundGrass from "./sound/SoundGrass.js";
+import BlockWool from "./type/BlockWool.js";
 
 export class BlockRegistry {
 
@@ -73,6 +74,22 @@ export class BlockRegistry {
         BlockRegistry.BUSH = new BlockBush(35, 0);
         BlockRegistry.FENCE = new BlockFence(36, 0, "Oak", 5);
         BlockRegistry.WOOD_PANEL = new BlockWoodPanel(37, 0);
+        BlockRegistry.WHITE_WOOL = new BlockWool(38, 0, "white_wool", "White Wool");
+        BlockRegistry.ORANGE_WOOL = new BlockWool(39, 0, "orange_wool", "Orange Wool");
+        BlockRegistry.MAGENTA_WOOL = new BlockWool(40, 0, "magenta_wool", "Magenta Wool");
+        BlockRegistry.LIGHT_BLUE_WOOL = new BlockWool(41, 0, "light_blue_wool", "Light Blue Wool");
+        BlockRegistry.YELLOW_WOOL = new BlockWool(42, 0, "yellow_wool", "Yellow Wool");
+        BlockRegistry.LIME_WOOL = new BlockWool(43, 0, "lime_wool", "Lime Wool");
+        BlockRegistry.PINK_WOOL = new BlockWool(44, 0, "pink_wool", "Pink Wool");
+        BlockRegistry.GRAY_WOOL = new BlockWool(45, 0, "gray_wool", "Gray Wool");
+        BlockRegistry.LIGHT_GRAY_WOOL = new BlockWool(46, 0, "light_gray_wool", "Light Gray Wool");
+        BlockRegistry.CYAN_WOOL = new BlockWool(47, 0, "cyan_wool", "Cyan Wool");
+        BlockRegistry.PURPLE_WOOL = new BlockWool(48, 0, "purple_wool", "Purple Wool");
+        BlockRegistry.BLUE_WOOL = new BlockWool(49, 0, "blue_wool", "Blue Wool");
+        BlockRegistry.BROWN_WOOL = new BlockWool(54, 0, "brown_wool", "Brown Wool");
+        BlockRegistry.GREEN_WOOL = new BlockWool(51, 0, "green_wool", "Green Wool");
+        BlockRegistry.RED_WOOL = new BlockWool(52, 0, "red_wool", "Red Wool");
+        BlockRegistry.BLACK_WOOL = new BlockWool(53, 0, "black_wool", "Black Wool");
 
         BlockRegistry.init = true;
     }

@@ -166,15 +166,16 @@ export default class World {
             return [];
         }
 
-        // Check for blocks with custom bounding box (e.g., torch)
-        if (block.boundingBox) {
+        // Check for blocks with custom collision bounding box
+        let collisionBb = block.getCollisionBoundingBox(this, x, y, z);
+        if (collisionBb) {
             return [new BoundingBox(
-                x + block.boundingBox.minX,
-                y + block.boundingBox.minY,
-                z + block.boundingBox.minZ,
-                x + block.boundingBox.maxX,
-                y + block.boundingBox.maxY,
-                z + block.boundingBox.maxZ
+                x + collisionBb.minX,
+                y + collisionBb.minY,
+                z + collisionBb.minZ,
+                x + collisionBb.maxX,
+                y + collisionBb.maxY,
+                z + collisionBb.maxZ
             )];
         }
 

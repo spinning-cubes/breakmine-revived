@@ -161,7 +161,23 @@ export default class TextureAtlas {
             "destroy_stage_9.png",
             "oak_leaves.png",
             "oak_log.png",
-            "oak_log_top.png"
+            "oak_log_top.png",
+            "white_wool.png",
+            "orange_wool.png",
+            "magenta_wool.png",
+            "light_blue_wool.png",
+            "yellow_wool.png",
+            "lime_wool.png",
+            "pink_wool.png",
+            "gray_wool.png",
+            "light_gray_wool.png",
+            "cyan_wool.png",
+            "purple_wool.png",
+            "blue_wool.png",
+            "brown_wool.png",
+            "green_wool.png",
+            "red_wool.png",
+            "black_wool.png"
         ];
 
         // Map to the actual resource paths
