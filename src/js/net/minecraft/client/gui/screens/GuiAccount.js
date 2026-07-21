@@ -66,7 +66,7 @@ export default class GuiAccount extends GuiScreen {
     }
 
     updateButtonStates() {
-        const loggedIn = Boolean(this.minecraft?.loggedIn);
+        const loggedIn = Boolean(this.minecraft?.settings?.loggedIn);
         
         // Update the main action button text
         if (this.actionButton) {
