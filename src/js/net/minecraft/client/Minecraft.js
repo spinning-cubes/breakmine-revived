@@ -35,8 +35,8 @@ import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
 
 export default class Minecraft {
 
-    static VERSION = "2.1.0 (Alpha)"
-    static URL_GITHUB = "https://github.com/labystudio/js-minecraft";
+    static VERSION = "2.0.1a" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
+    static URL_GITHUB = "https://codeberg.org/BreakmineDevelopers/breakmine_revived";
     static PROTOCOL_VERSION = 47; //758;
 
     // TODO Add to settings
