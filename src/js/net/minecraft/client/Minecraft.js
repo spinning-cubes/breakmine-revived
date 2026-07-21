@@ -603,7 +603,8 @@ export default class Minecraft {
 
                         // Get previous block
                         let prevTypeId = this.world.getBlockAt(x, y, z);
-                        let isReplaceable = Block.getById(prevTypeId).isReplaceable(this.world, x, y, z) || prevTypeId === 0;
+                        let prevBlock = Block.getById(prevTypeId);
+                        let isReplaceable = (prevBlock && prevBlock.isReplaceable(this.world, x, y, z)) || prevTypeId === 0;
 
                         if (typeId !== 0 && isReplaceable) {
                             // Calculate block data for rotation
