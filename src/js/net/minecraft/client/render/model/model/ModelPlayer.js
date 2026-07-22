@@ -17,6 +17,8 @@ export default class ModelPlayer extends ModelBase {
         let width = 64;
         let height = 32;
 
+        // Ported from Java source code.
+
         // Create head ModelRenderer
         this.head = new ModelRenderer("head", width, height)
             .setTextureOffset(0, 0)
