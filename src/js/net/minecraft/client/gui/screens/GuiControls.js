@@ -28,7 +28,7 @@ export default class GuiControls extends GuiScreen {
 
         this.buttonList.push(new GuiSwitchButton("TV Mode", settings.tvmode, this.width / 2 - 100, y, 200, 20, (val) => {
             settings.tvmode = val;
-        }).setTooltip("For playing Breakmine on Smart TVs"));
+        }).setTooltip("For playing Breakmine on Smart TVs\n§4Arrow keys: move | Arrow Keys + Enter: Look\n§4Back: jump"));
 
         this.buttonList.push(new GuiKeyButton("Crouch", settings.keyCrouching, this.width / 2 - 100, y + 24, 98, 20, key => {
             settings.keyCrouching = key;
