@@ -7,7 +7,7 @@ export default class CaveGenerator extends Generator {
     constructor(world, seed) {
         super(world, seed);
 
-        this.chunkRange = 8;
+        this.chunkRange = 16;
     }
 
     generateInChunk(originChunkX, originChunkZ, primer) {
@@ -35,7 +35,7 @@ export default class CaveGenerator extends Generator {
         // Generate multiple caves in the given area
         for (let i = 0; i < num; i++) {
             let x = chunkX * 16 + this.random.nextInt(16);
-            let y = this.random.nextInt(this.random.nextInt(120) + 8);
+            let y = this.random.nextInt(this.random.nextInt(240) + 8);
             let z = chunkZ * 16 + this.random.nextInt(16);
 
             let amount = 1;
@@ -159,7 +159,7 @@ export default class CaveGenerator extends Generator {
             distanceToCenterX = Math.max(distanceToCenterX, 0);
             layerX = Math.min(layerX, 16);
             distanceToCenterY = Math.max(distanceToCenterY, 1);
-            layerY = Math.min(layerY, 120);
+            layerY = Math.min(layerY, 248);
             progressInvert = Math.max(progressInvert, 0);
             layerZ = Math.min(layerZ, 16);
 
@@ -169,7 +169,7 @@ export default class CaveGenerator extends Generator {
             for (let x = Math.floor(distanceToCenterX); !isWaterCave && x < layerX; x++) {
                 for (let z = Math.floor(progressInvert); !isWaterCave && z < layerZ; z++) {
                     for (let y = layerY + 1; !isWaterCave && y >= distanceToCenterY - 1; y--) {
-                        if (y < 0 || y >= 128) {
+                        if (y < 0 || y >= 256) {
                             continue;
                         }
 

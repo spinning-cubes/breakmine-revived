@@ -11,7 +11,7 @@ import * as THREE from "../../../../../../libraries/three.module.js";
 
 export default class World {
 
-    static TOTAL_HEIGHT = ChunkSection.SIZE * 8; // 128 blocks high (Y 0..127)
+    static TOTAL_HEIGHT = ChunkSection.SIZE * 16; // 256 blocks high (Y 0..255)
 
     constructor(minecraft) {
         this.minecraft = minecraft;

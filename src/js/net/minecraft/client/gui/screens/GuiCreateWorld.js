@@ -3,6 +3,7 @@ import GuiButton from "../widgets/GuiButton.js";
 import World from "../../world/World.js";
 import GuiTextField from "../widgets/GuiTextField.js";
 import GuiSwitchButton from "../widgets/GuiSwitchButton.js";
+import GuiPresets from "./GuiPresets.js";
 import Random from "../../../util/Random.js";
 import Long from "../../../../../../../libraries/long.js";
 import ChunkProviderGenerate from "../../world/provider/ChunkProviderGenerate.js";
@@ -15,7 +16,7 @@ export default class GuiCreateWorld extends GuiScreen {
         this.previousScreen = previousScreen;
         
         // Settings State
-        this.gameMode = "survival"; // survival, hardcore, creative
+        this.gameMode = "survival"; // survival, --hardcore--, creative
         this.generateStructures = true;
         this.hardcoreMode = false;
         this.isMoreOptionsMode = false;
@@ -69,8 +70,7 @@ export default class GuiCreateWorld extends GuiScreen {
 
         // Open Preset button (Positioned below the World Type button)
         this.btnOpenPreset = new GuiButton(this.minecraft, "Open Preset", this.width / 2 + 5, y + 75, 150, 20, () => {
-            // Put your preset screen navigation or logic here
-            console.log("Open Preset Clicked");
+            this.minecraft.displayScreen(new GuiPresets(this));
         });
 
         this.btnMoreOptions = new GuiButton(this.minecraft, "More World Options...", this.width / 2 - 75, y + 122, 150, 20, () => {
@@ -85,10 +85,10 @@ export default class GuiCreateWorld extends GuiScreen {
     cycleGameMode() {
         if (this.gameMode === "survival") {
             this.gameMode = "creative";
-        } else if (this.gameMode === "creative") {
+        }/* else if (this.gameMode === "creative") {
             this.gameMode = "hardcore";
             this.hardcoreMode = true;
-        } else {
+        }*/ else {
             this.gameMode = "survival";
             this.hardcoreMode = false;
         }
@@ -102,17 +102,20 @@ export default class GuiCreateWorld extends GuiScreen {
             this.gameModeLine2 = "levels, health and hunger.";
         } else if (this.gameMode === "creative") {
             this.btnGameMode.string = "Game Mode: Creative";
-            this.gameModeLine1 = "Infinite resources, free flying and";
+            this.gameModeLine1 = "Unlimited resources, free flying and";
             this.gameModeLine2 = "destroy blocks instantly.";
         } else {
             this.btnGameMode.string = "Game Mode: Hardcore";
-            this.gameModeLine1 = "Search for resources, crafting, gain";
-            this.gameModeLine2 = "levels, health and hunger. One life!";
+            this.gameModeLine1 = "Same as survival mode, locked at hardest";
+            this.gameModeLine2 = "difficulty, and one life only";
         }
     }
 
     cycleWorldType() {
         if (this.worldType === "normal") {
+            this.btnMapType.string = "World Type: Amplified";
+            this.worldType = "amplified";
+        } else if (this.worldType === "amplified") {
             this.btnMapType.string = "World Type: Flat";
             this.worldType = "flat";
         } else if (this.worldType === "flat") {
@@ -160,6 +163,13 @@ export default class GuiCreateWorld extends GuiScreen {
             name = "World";
         }
         this.folderName = name; 
+    }
+
+    setSeed(seedText) {
+        this.seedText = seedText;
+        if (this.textboxSeed) {
+            this.textboxSeed.setText(seedText);
+        }
     }
 
     handleCreateWorld() {

@@ -242,7 +242,7 @@ function tickWorldTime() {
 }
 
 function generateFlatChunkColumn(chunkX, chunkZ, worldChanges) {
-    const SECTION_COUNT = 8;
+    const SECTION_COUNT = 16;
     const BLOCK_STATE_SIZE = 4096 * 2;
     const NIBBLE_SIZE = 2048;
     const BIOME_SIZE = 256;

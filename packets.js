@@ -76,7 +76,7 @@ function sendChunks(player) {
 
 function sendSingleChunk(player, chunkX, chunkZ, worldChanges) {
     const compressedData = generateFlatChunkColumn(chunkX, chunkZ, worldChanges);
-    const bitmask = 0x00FF; // Sections 0-7 present
+    const bitmask = 0xFFFF; // Sections 0-15 present
     
     // Header: chunkX(4) + chunkZ(4) + groundUp(1) + bitmask(2) + sizeVarInt(max 5)
     const headerSize = 4 + 4 + 1 + 2 + 5;

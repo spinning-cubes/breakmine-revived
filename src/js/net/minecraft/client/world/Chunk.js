@@ -71,7 +71,7 @@ export default class Chunk {
                 }
 
                 let level = 15;
-                for (let y = targetY - 2; y < 128 && level > 0;) {
+                for (let y = targetY - 2; y < 256 && level > 0;) {
                     y++;
 
                     let section = this.getSection(y >> 4);

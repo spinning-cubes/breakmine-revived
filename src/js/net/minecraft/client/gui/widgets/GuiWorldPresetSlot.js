@@ -12,6 +12,7 @@ export default class GuiWorldPresetSlotContainer extends GuiButton {
         
         this.worldName = worldData.name;
         this.worldDetails = worldData.details;
+        this.presetSeed = worldData.seed || "";
 
         this.drawButton = () => {}; 
         
@@ -30,6 +31,9 @@ export default class GuiWorldPresetSlotContainer extends GuiButton {
         
         this.drawString(stack, this.worldName, slotX + 2, slotY + 1, WHITE, true, false);
         this.drawString(stack, this.worldDetails, slotX + 2, slotY + 12, GRAY, true, false);
+        if (this.presetSeed) {
+            this.drawString(stack, "Seed: " + this.presetSeed, slotX + 2, slotY + 22, GRAY, true, false);
+        }
     }
     
     mouseClicked(mouseX, mouseY, mouseButton) {

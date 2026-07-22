@@ -1,54 +1,42 @@
-import GuiWorldPresetSlot from "../widgets/GuiWorldPresetSlot.js";
-import GuiScreen from "../GuiScreen.js";
+import GuiWorldSlotContainer from "./GuiWorldSlotContainer.js";
+import GuiWorldPresetSlot from "./GuiWorldPresetSlot.js";
 
-export default class GuiWorldPresetSlotContainer {
+export default class GuiPresetSlotContainer extends GuiWorldSlotContainer {
 
     constructor(parentGui, listContent) {
-        super(parentGui.minecraft);
-        this.parentGui = parentGui;
-        this.selectedWorld = -1;
-        
-        this.slotList = listContent.map((data, index) => 
+        super(parentGui, listContent);
+
+        this.slotList = listContent.map((data, index) =>
             new GuiWorldPresetSlot(
-                data, 
-                5, 
-                0, 
-                this.parentGui.width - 10, 
-                24, 
+                data,
+                5,
+                0,
+                parentGui.width - 10,
+                36,
                 () => {
                     this.setSelected(index);
                 },
-                this.parentGui.minecraft
+                parentGui.minecraft
             )
         );
+    }
 
-        this.slotHeight = 24;
-        this.top = 32; 
-        this.bottom = this.parentGui.height - 64; 
-        this.amountScrolled = 0; 
-    }
-    
-    setSelected(index) {
-        this.selectedWorld = index;
-        this.parentGui.setSelectedWorld(index);
-    }
-    
     drawScreen(stack, mouseX, mouseY, partialTicks) {
         const listTop = this.top;
         const listBottom = this.bottom;
-        const slotWidth = this.parentGui.width - 10; 
+        const slotWidth = this.parentGui.width - 10;
         this.parentGui.drawBackground(stack, this.parentGui.getTexture("gui/background.png"), this.parentGui.width, this.parentGui.height);
-        
+
         stack.save();
-        
+
         stack.beginPath();
         stack.rect(0, listTop, this.parentGui.width, listBottom - listTop);
         stack.clip();
 
-        let currentY = listTop + 7 - this.amountScrolled; 
+        let currentY = listTop + 7 - this.amountScrolled;
 
         this.drawBackgroundPart(stack, this.top, this.bottom);
-        
+
         for (let i = 0; i < this.slotList.length; i++) {
             const slot = this.slotList[i];
             const slotHeight = this.slotHeight;
@@ -67,29 +55,13 @@ export default class GuiWorldPresetSlotContainer {
                 slot.y = slotTop;
                 slot.width = slotWidth;
                 slot.height = slotHeight;
-                // Ensure minecraft instance is set for rendering
                 if (!slot.minecraft && this.parentGui.minecraft) {
                     slot.minecraft = this.parentGui.minecraft;
                 }
                 slot.render(stack, mouseX, mouseY, partialTicks);
             }
         }
-        
-        stack.restore();
-    }
 
-    drawBackgroundPart(stack, top, bottom) {
-        this.parentGui.drawRect(stack, 0, top, this.parentGui.width, bottom, "rgba(0, 0, 0, 0.5)");
-    }
-    
-    mouseClicked(mouseX, mouseY, mouseButton) {
-        if (mouseY >= this.top && mouseY <= this.bottom) {
-            let relativeY = mouseY - this.top + this.amountScrolled - 4;
-            let clickedIndex = Math.floor(relativeY / this.slotHeight);
-            
-            if (clickedIndex >= 0 && clickedIndex < this.slotList.length) {
-                this.setSelected(clickedIndex);
-            }
-        }
+        stack.restore();
     }
 }

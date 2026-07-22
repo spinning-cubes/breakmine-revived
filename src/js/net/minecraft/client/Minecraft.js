@@ -35,7 +35,7 @@ import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
 
 export default class Minecraft {
 
-    static VERSION = "2.0.1a" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
+    static VERSION = "2.0.2a" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
     static URL_GITHUB = "https://codeberg.org/BreakmineDevelopers/breakmine_revived";
     static PROTOCOL_VERSION = 47; //758;
 
@@ -312,6 +312,10 @@ export default class Minecraft {
             document.title = "Breakmine | Pre-launch Environment";
         } else {
             document.title = "Breakmine";
+        }
+
+        if (Boolean(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '[::1]' )) {
+            document.title = document.title + " (localhost)";
         }
 
         // Fallback screen

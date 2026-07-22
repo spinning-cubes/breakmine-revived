@@ -10,8 +10,10 @@ import ChunkSection from "../ChunkSection.js";
 
 export default class WorldGenerator extends Generator {
 
-    constructor(world, seed) {
+    constructor(world, seed, worldType = "normal") {
         super(world, seed);
+
+        this.amplified = worldType === "amplified";
 
         this.caveGenerator = new CaveGenerator(world, seed);
 
@@ -85,8 +87,8 @@ export default class WorldGenerator extends Generator {
     generateOres(chunkX, chunkZ, primer) {
         this.setChunkSeed(chunkX, chunkZ);
 
-        // Coal ore - very common, generates at various heights (up to y=128)
-        this.generateOreVein(primer, BlockRegistry.COAL_ORE.getId(), 20, 0, 128, 40);
+        // Coal ore - very common, generates at various heights (up to y=256)
+        this.generateOreVein(primer, BlockRegistry.COAL_ORE.getId(), 20, 0, 256, 40);
 
         // Iron ore - common, generates at medium to low depths (up to y=64)
         this.generateOreVein(primer, BlockRegistry.IRON_ORE.getId(), 10, 0, 64, 30);
@@ -134,7 +136,7 @@ export default class WorldGenerator extends Generator {
             let i1 = Math.floor(d7 + f2);
             let j1 = Math.floor(d8 + f3);
 
-            if (l >= 0 && l < 16 && i1 >= 0 && i1 < 128 && j1 >= 0 && j1 < 16) {
+            if (l >= 0 && l < 16 && i1 >= 0 && i1 < 256 && j1 >= 0 && j1 < 16) {
                 if (primer.chunk.getBlockAt(l, i1, j1) === BlockRegistry.STONE.getId()) {
                     primer.chunk.setBlockAt(l, i1, j1, oreId);
                 }
@@ -146,7 +148,7 @@ export default class WorldGenerator extends Generator {
     generateTerrain(chunkX, chunkZ, primer) {
         let range = 4;
         let sizeX = range + 1;
-        let sizeZ = 17;
+        let sizeZ = 33;
         let factor = 1 / 4;
 
         // Generate terrain noise
@@ -156,7 +158,7 @@ export default class WorldGenerator extends Generator {
 
         for (let indexX = 0; indexX < range; indexX++) {
             for (let indexZ = 0; indexZ < range; indexZ++) {
-                for (let indexY = 0; indexY < 16; indexY++) {
+                for (let indexY = 0; indexY < 32; indexY++) {
                     let sec = 1 / 8;
 
                     // Terrain base noise values
@@ -262,7 +264,7 @@ export default class WorldGenerator extends Generator {
                 let innerLayerTypeId = BlockRegistry.DIRT.getId();
 
                 // For the entire height of the chunk
-                for (let y = 127; y >= 0; y--) {
+                for (let y = 255; y >= 0; y--) {
                     // Set bedrock on floor level
                     if (y <= (this.random.nextInt(6)) - 1 || y === 0) {
                         primer.set(x, y, z, BlockRegistry.BEDROCK.getId());
@@ -385,6 +387,11 @@ export default class WorldGenerator extends Generator {
                 }
 
                 out1 += 0.5;
+
+                if (this.amplified) {
+                    out1 = Math.max(out1 / 3.0, 0.01);
+                }
+
                 out2 = (out2 * height) / 16;
                 id++;
 

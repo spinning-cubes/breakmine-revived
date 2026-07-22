@@ -11,7 +11,7 @@ export default class ChunkProviderGenerate extends ChunkProvider {
         if (worldType === "flat") {
             this.generator = new FlatWorldGenerator(world, seed);
         } else {
-            this.generator = new WorldGenerator(world, seed);
+            this.generator = new WorldGenerator(world, seed, worldType);
         }
     }
 

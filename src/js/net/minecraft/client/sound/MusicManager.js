@@ -7,6 +7,7 @@ export default class MusicManager {
         this.nextTrack = null;
         this.fadeInterval = null;
         this.scheduledNext = null;
+        this.pendingCategory = null;
 
         this.menuTracks = [];
         this.gameTracks = [];
@@ -85,7 +86,25 @@ export default class MusicManager {
         this.playNext();
     }
 
+    switchWhenReady(category) {
+        if (this.currentCategory === category) {
+            return;
+        }
+
+        if (this.currentTrack) {
+            this.pendingCategory = category;
+        } else {
+            this.playMusic(category);
+        }
+    }
+
     playNext() {
+        if (this.pendingCategory) {
+            const pending = this.pendingCategory;
+            this.pendingCategory = null;
+            this.playMusic(pending);
+            return;
+        }
         if (this.tracks.length === 0) return;
 
         const track = this.pickRandom(this.tracks);
@@ -143,6 +162,7 @@ export default class MusicManager {
 
     stopMusic() {
         this.currentCategory = null;
+        this.pendingCategory = null;
         if (this.scheduledNext) {
             clearTimeout(this.scheduledNext);
             this.scheduledNext = null;

@@ -1,4 +1,5 @@
 import {BlockRegistry} from "../../block/BlockRegistry.js";
+import World from "../../World.js";
 import Generator from "../Generator.js";
 
 export default class TreeGenerator extends Generator {
@@ -12,7 +13,7 @@ export default class TreeGenerator extends Generator {
     generateAtBlock(x, y, z) {
         // Generate random height
         let height = this.random.nextInt(3) + 4;
-        if (y < 1 || y + height + 1 > 128) {
+        if (y < 1 || y + height + 1 > World.TOTAL_HEIGHT) {
             return false;
         }
 
@@ -31,7 +32,7 @@ export default class TreeGenerator extends Generator {
             // Scan radius
             for (let totalX = x - radius; totalX <= x + radius; totalX++) {
                 for (let totalZ = z - radius; totalZ <= z + radius; totalZ++) {
-                    if (totalY >= 0 && totalY < 128) {
+                    if (totalY >= 0 && totalY < World.TOTAL_HEIGHT) {
                         let typeId = this.world.getBlockAt(totalX, totalY, totalZ);
 
                         // Check if we have just air or leaves in the way
@@ -47,7 +48,7 @@ export default class TreeGenerator extends Generator {
 
         // Check if tree can grow here
         let typeIdBelowTree = this.world.getBlockAt(x, y - 1, z);
-        if (typeIdBelowTree !== BlockRegistry.GRASS.getId() && typeIdBelowTree !== BlockRegistry.DIRT.getId() || y >= 128 - height - 1) {
+        if (typeIdBelowTree !== BlockRegistry.GRASS.getId() && typeIdBelowTree !== BlockRegistry.DIRT.getId() || y >= World.TOTAL_HEIGHT - height - 1) {
             return false;
         }
 

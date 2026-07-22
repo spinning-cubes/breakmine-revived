@@ -15,12 +15,12 @@ export default class GameModeCommand extends Command {
         if (mode === "survival" || mode === "0") {
             minecraft.player.creative = false;
             minecraft.player.flying = false;
-            minecraft.musicManager.playMusic('game');
+            minecraft.musicManager.switchWhenReady('game');
             minecraft.addMessageToChat("Game mode changed to Survival");
         } else if (mode === "creative" || mode === "1") {
             minecraft.player.creative = true;
             minecraft.player.flying = true;
-            minecraft.musicManager.playMusic('creative');
+            minecraft.musicManager.switchWhenReady('creative');
             minecraft.addMessageToChat("Game mode changed to Creative");
         } else {
             return false;
