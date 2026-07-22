@@ -191,10 +191,10 @@ export default class IngameOverlay extends Gui {
             iosPlatforms = ['iPhone', 'iPad', 'iPod'],
             os = null;
 
-        if (/Tizen|SMART-TV|SmartTV/i.test(userAgent)) {
-            os = 'Samsung Tizen';
-        } else if (/webOS|Web0S/i.test(userAgent)) {
-            os = 'LG webOS';
+        if (/Tizen|SMART-TV|SmartTV/i.test(userAgent) && !/Mobile|Nexus|SM-/i.test(userAgent)) {
+            os = 'Samsung Tizen (TV)';
+        } else if (/webOS|Web0S/i.test(userAgent) && !/hp-tablet|TouchPad/i.test(userAgent)) {
+            os = 'LG webOS (TV)';
         } else if (/Roku/i.test(userAgent)) {
             os = 'Roku OS';
         } else if (/AFTS|AFTB|AFTM|AFTT|AFTKA|FireTV/i.test(userAgent)) {
@@ -209,22 +209,49 @@ export default class IngameOverlay extends Gui {
             os = 'LG NetCast';
         } else if (userAgent.includes('SmartOSS-OS')) {
             os = 'SmartOSS';
-        } else if (userAgent.includes('CrOS')) {
-            os = 'Chrome OS/Linux';
-        } else if (macosPlatforms.indexOf(platform) !== -1) {
-            os = 'Mac OS';
-        } else if (iosPlatforms.indexOf(platform) !== -1) {
+        } else if (/KaiOS|KAIOS/i.test(userAgent)) {
+            os = 'KaiOS';
+        } else if (/HarmonyOS/i.test(userAgent)) {
+            os = 'HarmonyOS';
+        } else if (iosPlatforms.indexOf(platform) !== -1 || /iPhone|iPad|iPod/i.test(userAgent)) {
             os = 'iOS';
-        } else if (windowsPlatforms.indexOf(platform) !== -1) {
-            os = 'Windows';
+        } else if (/Windows Phone|Windows Mobile|IEMobile|WPDesktop/i.test(userAgent)) {
+            os = 'Windows Phone';
+        } else if (/BlackBerry|BB10|PlayBook/i.test(userAgent)) {
+            os = 'BlackBerry OS';
+        } else if (/Symbian|SymbianOS|Series60|S60/i.test(userAgent)) {
+            os = 'Symbian OS';
+        } else if (/Sailfish/i.test(userAgent)) {
+            os = 'Sailfish OS';
+        } else if (/webOS|hp-tablet|TouchPad|PalmOS|PalmSource/i.test(userAgent)) {
+            os = 'Palm / webOS Mobile';
+        } else if (/Tizen/i.test(userAgent)) {
+            os = 'Tizen Mobile';
         } else if (/Android/.test(userAgent)) {
-            // Android TVs often contain "Large Screen", "Android TV", or "GoogleTV" tokens
             if (/GoogleTV|Android TV|Large Screen/i.test(userAgent)) {
                 os = 'Android TV';
             } else {
                 os = 'Android';
             }
-        } else if (!os && /Linux/.test(platform)) {
+        } else if (userAgent.includes('CrOS')) {
+            os = 'Chrome OS/Linux';
+        } else if (macosPlatforms.indexOf(platform) !== -1 || /Mac OS X|Macintosh/i.test(userAgent)) {
+            os = 'Mac OS';
+        } else if (windowsPlatforms.indexOf(platform) !== -1 || /Windows NT/i.test(userAgent)) {
+            os = 'Windows';
+        } else if (/FreeBSD/i.test(userAgent) || /FreeBSD/i.test(platform)) {
+            os = 'FreeBSD';
+        } else if (/OpenBSD/i.test(userAgent) || /OpenBSD/i.test(platform)) {
+            os = 'OpenBSD';
+        } else if (/NetBSD/i.test(userAgent) || /NetBSD/i.test(platform)) {
+            os = 'NetBSD';
+        } else if (/SunOS|Solaris/i.test(userAgent) || /SunOS/i.test(platform)) {
+            os = 'Solaris / SunOS';
+        } else if (/Haiku/i.test(userAgent) || /Haiku/i.test(platform)) {
+            os = 'Haiku OS';
+        } else if (/AmigaOS/i.test(userAgent) || /Amiga/i.test(platform)) {
+            os = 'AmigaOS';
+        } else if (!os && (/Linux/i.test(platform) || /Linux/i.test(userAgent))) {
             os = 'Linux';
         }
 
