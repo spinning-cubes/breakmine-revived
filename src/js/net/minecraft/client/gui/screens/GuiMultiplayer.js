@@ -6,6 +6,7 @@ import GuiConnecting from "./GuiConnecting.js";
 import GuiServerSlot from "../widgets/GuiServerSlot.js";
 import GuiYesNo from "./GuiYesNo.js";
 import Minecraft from "../../Minecraft.js";
+import { SplashTexts } from "../../../../../../resources/splashes.js";
 
 export default class GuiMultiplayer extends GuiScreen {
 

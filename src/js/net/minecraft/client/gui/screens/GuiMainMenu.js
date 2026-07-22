@@ -8,6 +8,7 @@ import Minecraft from "../../Minecraft.js";
 import GuiCreateWorld from "./GuiCreateWorld.js";
 import GuiMultiplayer from "./GuiMultiplayer.js";
 import GuiAccount from "./GuiAccount.js";
+import { SplashTexts } from "../../../../../../resources/splashes.js";
 
 export default class GuiMainMenu extends GuiScreen {
 
@@ -15,7 +16,8 @@ export default class GuiMainMenu extends GuiScreen {
         super();
 
         this.panoramaTimer = 0;
-        this.splashText = "Yay!";
+
+        this.splashText = SplashTexts.generateSplash();
     }
 
     init() {
