@@ -90,6 +90,11 @@ export default class World {
     }
 
     processBlockTicks() {
+        // Disable block ticking in multiplayer
+        if (!this.minecraft.isSingleplayer()) {
+            return;
+        }
+        
         for (let [key, tick] of this.scheduledBlockTicks) {
             if (this.time >= tick.tickTime) {
                 this.scheduledBlockTicks.delete(key);
