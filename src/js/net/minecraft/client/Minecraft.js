@@ -32,11 +32,12 @@ import BlockPosition from "../util/BlockPosition.js";
 import GuiContainerSurvival from "./gui/screens/container/GuiContainerSurvival.js";
 import CraftingRegistry from "./crafting/CraftingRegistry.js";
 import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
+import ItemEntity from "./entity/ItemEntity.js";
 
 export default class Minecraft {
 
-    static VERSION = "2.1.0a-1768110" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
-    static TIMESTAMP = "7/22/2026 01:08:49" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITTIMESTAMP
+    static VERSION = "2.1.1a-278a604" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
+    static TIMESTAMP = "7/22/2026 02:25:12" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITTIMESTAMP
     static URL_GITHUB = "https://codeberg.org/BreakmineDevelopers/breakmine_revived";
     static PROTOCOL_VERSION = 47; //758;
 
@@ -516,6 +517,22 @@ export default class Minecraft {
         if (button === "KeyG" && Keyboard.isKeyDown("F3")) {
             this.settings.showChunkBoundaries = !this.settings.showChunkBoundaries;
             this.settings.save();
+        }
+
+        // Toggle entity bounding boxes with F3 + B
+        if (button === "KeyB" && Keyboard.isKeyDown("F3")) {
+            this.settings.showEntityBoundingBoxes = !this.settings.showEntityBoundingBoxes;
+            this.settings.save();
+        }
+
+        // Drop held item
+        if (button === "KeyQ") {
+            if (this.player.inventory.getItemInSelectedSlot() !== 0 && this.player.inventory.getItemInSelectedSlot() !== null) {
+                this.world.addEntity(new ItemEntity(this, this.world, this.player.inventory.getItemInSelectedSlot(), this.player.x, this.player.y, this.player.z));
+                this.player.inventory.setItemInSelectedSlot(0);
+                this.itemRenderer.destroy("inventory");
+                this.itemRenderer.scheduleDirty("hotbar");
+            }
         }
 
         // Open inventory

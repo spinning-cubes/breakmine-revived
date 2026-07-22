@@ -1,6 +1,8 @@
 import PlayerRenderer from "./entity/PlayerRenderer.js";
 import PlayerEntity from "../../entity/PlayerEntity.js";
 import PlayerEntityMultiplayer from "../../entity/PlayerEntityMultiplayer.js";
+import ItemEntity from "../../entity/ItemEntity.js";
+import ItemRenderer from "./entity/ItemRenderer.js";
 
 export default class EntityRenderManager {
 
@@ -10,6 +12,7 @@ export default class EntityRenderManager {
         this.renderers = [];
         this.push(PlayerEntity, PlayerRenderer);
         this.push(PlayerEntityMultiplayer, PlayerRenderer);
+        this.push(ItemEntity, ItemRenderer);
     }
 
     push(entityType, entityRenderer) {

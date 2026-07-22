@@ -135,6 +135,19 @@ export default class WorldRenderer {
         this.chunkSectionLines.renderOrder = 9999;
         this.overlay.add(this.chunkSectionLines);
 
+        // Create entity bounding box helper
+        this.entityBBoxMaterial = new THREE.LineBasicMaterial({
+            color: 0x00ffff,
+            depthTest: false,
+            transparent: true,
+            opacity: 0.8
+        });
+        this.entityBBoxGroup = new THREE.Group();
+        this.entityBBoxGroup.frustumCulled = false;
+        this.entityBBoxGroup.renderOrder = 9999;
+        this.entityBBoxGroup.visible = false;
+        this.overlay.add(this.entityBBoxGroup);
+
         // Create break overlay mesh for survival block damage
         this.blockBreakGeometry = new THREE.BoxGeometry(1, 1, 1);
         this.blockBreakMaterial = new THREE.MeshBasicMaterial({
@@ -199,6 +212,9 @@ export default class WorldRenderer {
 
         // Render target block
         this.renderBlockHitBox(player, partialTicks);
+
+        // Render entity bounding boxes
+        this.updateEntityBoundingBoxes(partialTicks);
 
         // Render survival block damage overlay
         this.updateBlockBreakOverlay(partialTicks);
@@ -1079,6 +1095,44 @@ export default class WorldRenderer {
         }
 
         this.lastHitResult = hitResult;
+    }
+
+    updateEntityBoundingBoxes(partialTicks) {
+        let show = this.minecraft.settings.showEntityBoundingBoxes;
+        this.entityBBoxGroup.visible = show;
+
+        if (!show) return;
+
+        // Clear existing bbox lines
+        while (this.entityBBoxGroup.children.length > 0) {
+            this.entityBBoxGroup.remove(this.entityBBoxGroup.children[0]);
+        }
+
+        let entities = this.minecraft.world.entities;
+        let player = this.minecraft.player;
+
+        for (let entity of entities) {
+            if (!entity) continue;
+
+            let bb = entity.boundingBox;
+            let width = bb.maxX - bb.minX;
+            let height = bb.maxY - bb.minY;
+            let depth = bb.maxZ - bb.minZ;
+
+            if (width <= 0 || height <= 0 || depth <= 0) continue;
+
+            let geometry = new THREE.BoxGeometry(width, height, depth);
+            let edges = new THREE.EdgesGeometry(geometry);
+            let line = new THREE.LineSegments(edges, this.entityBBoxMaterial);
+
+            line.position.set(
+                bb.minX + width / 2,
+                bb.minY + height / 2,
+                bb.minZ + depth / 2
+            );
+
+            this.entityBBoxGroup.add(line);
+        }
     }
 
     updateBlockBreakOverlay(partialTicks) {

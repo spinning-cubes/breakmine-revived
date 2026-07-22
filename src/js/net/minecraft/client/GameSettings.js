@@ -18,6 +18,7 @@ export default class GameSettings {
         this.viewDistance = 4;
         this.debugOverlay = false;
         this.showChunkBoundaries = false;
+        this.showEntityBoundingBoxes = false;
         this.serverAddress = 'server.labystudio.de';
         this.proxyAddress = '';
         this.safePlacing = false;
