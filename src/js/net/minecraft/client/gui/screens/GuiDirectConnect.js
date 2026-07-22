@@ -20,23 +20,24 @@ export default class GuiDirectConnect extends GuiScreen {
 
         if (this.addServer) {
             this.fieldName = new GuiTextField(this.width / 2 - 100, y - 8, 200, 20);
+            this.fieldName.setText("A Breakmine Server");
             this.buttonList.push(this.fieldName);
         }
         this.fieldAddress = new GuiTextField(this.width / 2 - 100, y + 30, 200, 20);
         this.fieldProxy = new GuiTextField(this.width / 2 - 100, y + 67, 200, 20);
         this.fieldAddress.maxLength = 30;
-        this.fieldAddress.setText(this.minecraft.settings.serverAddress);
-        this.fieldAddress.tooltip = "Some proxies might ignore this";
-        this.fieldProxy.setText(this.minecraft.settings.proxy);
+        //this.fieldAddress.setText(this.minecraft.settings.serverAddress);
+        //this.fieldAddress.tooltip = "Some proxies might ignore this";
+        //this.fieldProxy.setText(this.minecraft.settings.proxy);
         this.buttonList.push(this.fieldAddress);
-        this.buttonList.push(this.fieldProxy);
+        //this.buttonList.push(this.fieldProxy);
 
         let btnTxt = this.addServer ? "Add Server" : "Connect";
         this.buttonList.push(new GuiButton(this.minecraft, btnTxt, this.width / 2 - 155, y + 110, 150, 20, () => {
             if (this.addServer) {
                 const baseData = {
                     name: this.fieldName.text,
-                    details: this.fieldProxy.text,
+                    details: this.fieldAddress.text,
                     address: this.fieldAddress.text,
                 }
     
@@ -89,7 +90,7 @@ export default class GuiDirectConnect extends GuiScreen {
         this.drawString(stack, "Server Address", this.width / 2 - 100, y + 17, -6250336);
         
         // Server proxy
-        this.drawString(stack, "Server Proxy", this.width / 2 - 100, y + 17 + 38, -6250336);
+        //this.drawString(stack, "Server Proxy", this.width / 2 - 100, y + 17 + 38, -6250336);
 
         super.drawScreen(stack, mouseX, mouseY, partialTicks);
     }

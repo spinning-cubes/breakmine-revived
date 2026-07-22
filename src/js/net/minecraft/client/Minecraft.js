@@ -504,6 +504,22 @@ export default class Minecraft {
     }
 
     onKeyPressed(button) {
+        // TV mode: color button actions
+        if (this.settings.tvmode && this.hasInGameFocus()) {
+            if (button === 'ColorRed') {
+                this.onMouseClicked(0);
+            }
+            if (button === 'ColorGreen') {
+                this.onMouseClicked(2);
+            }
+            if (button === 'ColorYellow') {
+                this.displayScreen(this.player.creative ? new GuiContainerCreative(this.player) : new GuiContainerSurvival(this.player));
+            }
+            if (button === 'ColorBlue') {
+                this.player.inventory.shiftSelectedSlot(1);
+            }
+        }
+
         // Select slot
         for (let i = 1; i <= 9; i++) {
             if (button === 'Digit' + i) {
