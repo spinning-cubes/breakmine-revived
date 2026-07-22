@@ -1,6 +1,7 @@
 const { readVarInt, readString, broadcast } = require('./protocol');
 const { addPlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState } = require('./players');
 const { addWorldChange, saveWorld, getBlockAt, getAllBlockInventoriesState } = require('./world');
+const { addItemEntity, removeItemEntity, getItemEntity } = require('./entities');
 const { handleCommand } = require('./commands');
 const {
     sendLoginSuccess,
@@ -13,6 +14,7 @@ const {
     createSpawnPlayerPacket,
     createEntityTeleportPacket,
     createDestroyEntityPacket,
+    createSpawnObjectPacket,
     sendPlayerListEntry,
     sendPlayerListData,
     createDisconnectPacket
@@ -152,6 +154,13 @@ function handleLoginPacket(player, packetId, buffer, offset) {
             p.ws.send(sendPlayerListEntry([player], 0));
         }
 
+        // Send existing item entities to the new player
+        const { getAllItemEntities } = require('./entities');
+        const allItems = getAllItemEntities();
+        for (const item of allItems) {
+            player.ws.send(createSpawnObjectPacket(item));
+        }
+
         sendChatMessage(`§e${player.username} joined the game.`);
     } else {
         log.error('Server', `Unknown login packet ID: 0x${packetId.toString(16)}`);
@@ -233,6 +242,16 @@ function handlePlayPacket(player, packetId, buffer, offset) {
                     broadcastEntityMetadata(player);
                 }
             }
+            break;
+        }
+
+        case 0x09: { // Client Drop Item
+            handleDropItem(player, buffer, offset);
+            break;
+        }
+
+        case 0x0D: { // Client Pickup Item
+            handlePickupItem(player, buffer, offset);
             break;
         }
     }
@@ -372,6 +391,52 @@ function broadcastAnimation(player) {
     for (const [eid, p] of players) {
         if (eid === player.eid) continue;
         p.ws.send(packet);
+    }
+}
+
+function handleDropItem(player, buffer, offset) {
+    const blockId = buffer.readInt16BE(offset);
+
+    // Calculate spawn position slightly in front of player
+    const yaw = ((player.yaw % 360) + 360) % 360;
+    const rad = yaw * Math.PI / 180;
+    const spawnX = player.x - Math.sin(rad) * 0.5;
+    const spawnY = player.y + 1.0;
+    const spawnZ = player.z + Math.cos(rad) * 0.5;
+
+    // Motion: throw forward and up
+    const motionX = -Math.sin(rad) * 0.15;
+    const motionY = 0.2;
+    const motionZ = Math.cos(rad) * 0.15;
+
+    const entity = addItemEntity(blockId, spawnX, spawnY, spawnZ, motionX, motionY, motionZ, player.eid);
+
+    // Broadcast spawn to all players
+    const packet = createSpawnObjectPacket(entity);
+    const players = getPlayers();
+    for (const p of players.values()) {
+        if (p.ws.readyState === 1) {
+            p.ws.send(packet);
+        }
+    }
+}
+
+function handlePickupItem(player, buffer, offset) {
+    const [entityId, eidBytes] = readVarInt(buffer, offset);
+
+    const entity = getItemEntity(entityId);
+    if (!entity) return;
+
+    // Remove from server tracking
+    removeItemEntity(entityId);
+
+    // Broadcast destroy to all players
+    const destroyPacket = createDestroyEntityPacket(entityId);
+    const players = getPlayers();
+    for (const p of players.values()) {
+        if (p.ws.readyState === 1) {
+            p.ws.send(destroyPacket);
+        }
     }
 }
 

@@ -18,6 +18,7 @@ import GuiMainMenu from "./gui/screens/GuiMainMenu.js";
 import GuiLoadingScreen from "./gui/screens/GuiLoadingScreen.js";
 import * as THREE from "../../../../../libraries/three.module.js";
 import ParticleRenderer from "./render/particle/ParticleRenderer.js";
+import ClientDropItemPacket from "./network/packet/play/client/ClientDropItemPacket.js";
 import GuiChat from "./gui/screens/GuiChat.js";
 import CommandHandler from "./command/CommandHandler.js";
 import GuiContainerCreative from "./gui/screens/container/GuiContainerCreative.js";
@@ -560,8 +561,26 @@ export default class Minecraft {
         // Drop held item
         if (button === "KeyQ") {
             if (this.player.inventory.getItemInSelectedSlot() !== 0 && this.player.inventory.getItemInSelectedSlot() !== null) {
-                this.world.addEntity(new ItemEntity(this, this.world, this.player.inventory.getItemInSelectedSlot(), this.player.x, this.player.y, this.player.z));
-                this.player.inventory.setItemInSelectedSlot(0);
+                let itemStack = this.player.inventory.getItemInSelectedSlot();
+
+                if (this.isSingleplayer()) {
+                    // Singleplayer: create entity locally
+                    this.world.addEntity(new ItemEntity(this, this.world, itemStack.typeId, this.player.x, this.player.y, this.player.z));
+                } else {
+                    // Multiplayer: tell server to spawn item for all players
+                    this.playerController.getNetworkHandler().sendPacket(new ClientDropItemPacket(itemStack.typeId));
+                }
+
+                // Play drop sound
+                this.soundManager.playSound('random.pop', this.player.x, this.player.y, this.player.z, 1.0, 1.0);
+
+                // Decrease stack count by 1, or clear if only 1 item
+                if (itemStack.count > 1) {
+                    itemStack.count--;
+                    this.player.inventory.setItemInSelectedSlot(itemStack);
+                } else {
+                    this.player.inventory.setItemInSelectedSlot(0);
+                }
                 this.itemRenderer.destroy("inventory");
                 this.itemRenderer.scheduleDirty("hotbar");
             }

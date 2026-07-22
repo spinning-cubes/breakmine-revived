@@ -17,6 +17,7 @@ export default class World {
         this.minecraft = minecraft;
 
         this.entities = [];
+        this.nextEntityId = 3;
 
         this.group = new THREE.Object3D();
         this.group.matrixAutoUpdate = false;
@@ -825,13 +826,18 @@ export default class World {
     }
 
     addEntity(entity) {
+        // Assign unique ID if entity doesn't have one
+        if (entity.id === -2 || entity.id === undefined) {
+            entity.id = this.nextEntityId++;
+        }
+
         // Check if entity with same ID already exists
         let existing = this.getEntityById(entity.id);
         if (existing !== null) {
             console.warn(`Entity with ID ${entity.id} already exists, removing old entity`);
             this.removeEntityById(entity.id);
         }
-        
+
         this.entities.push(entity);
         try {
             entity.initRenderer();

@@ -7,6 +7,7 @@ import ClientPlayerPositionRotationPacket from "../packet/play/client/ClientPlay
 import PlayerEntity from "../../entity/PlayerEntity.js";
 import ServerAnimationPacket from "../packet/play/server/ServerAnimationPacket.js";
 import ClientConfirmTransactionPacket from "../packet/play/client/ClientConfirmTransactionPacket.js";
+import ItemEntity from "../../entity/ItemEntity.js";
 
 export default class NetworkPlayHandler extends PacketHandler {
 
@@ -252,6 +253,22 @@ export default class NetworkPlayHandler extends PacketHandler {
     handleDestroyEntities(packet) {
         for (let entityId of packet.getEntityIds()) {
             this.minecraft.world.removeEntityById(entityId);
+        }
+    }
+
+    handleServerSpawnObject(packet) {
+        let world = this.minecraft.world;
+
+        // Type 1 = Item
+        if (packet.getType() === 1) {
+            let x = packet.getX() / 32;
+            let y = packet.getY() / 32;
+            let z = packet.getZ() / 32;
+            let blockId = packet.getObjectData();
+
+            let entity = new ItemEntity(this.minecraft, world, blockId, x, y, z);
+            entity.id = packet.getEntityId();
+            world.addEntity(entity);
         }
     }
 

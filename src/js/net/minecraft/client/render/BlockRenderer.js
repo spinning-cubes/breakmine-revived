@@ -574,4 +574,13 @@ export default class BlockRenderer {
 
         this.addFace(null, EnumBlockFace.NORTH, false, 0, 0, 0, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV);
     }
+
+    renderBlockInNullWorld(group, block, brightness) {
+        this.tessellator.startDrawing();
+        this.renderBlock(null, block, false, 0, 0, 0);
+        this.tessellator.transformBrightness(brightness);
+        let mesh = this.tessellator.draw(group);
+        mesh.geometry.center();
+        return mesh;
+    }
 }

@@ -18,6 +18,8 @@ import ClientPlayerPositionPacket from "./packet/play/client/ClientPlayerPositio
 import ClientPlayerPositionRotationPacket from "./packet/play/client/ClientPlayerPositionRotationPacket.js";
 import ClientPlayerBlockPlacementPacket from "./packet/play/client/ClientPlayerBlockPlacementPacket.js";
 import ClientPlayerDiggingPacket from "./packet/play/client/ClientPlayerDiggingPacket.js";
+import ClientDropItemPacket from "./packet/play/client/ClientDropItemPacket.js";
+import ClientPickupItemPacket from "./packet/play/client/ClientPickupItemPacket.js";
 import ServerChunkDataPacket from "./packet/play/server/ServerChunkDataPacket.js";
 import ServerMultiChunkDataPacket from "./packet/play/server/ServerMultiChunkDataPacket.js";
 import ServerBlockChangePacket from "./packet/play/server/ServerBlockChangePacket.js";
@@ -43,6 +45,7 @@ import ServerSpawnPositionPacket from "./packet/play/server/ServerSpawnPositionP
 import ClientConfirmTransactionPacket from "./packet/play/client/ClientConfirmTransactionPacket.js";
 import ServerResetWorldPacket from "./packet/play/server/ServerResetWorldPacket.js";
 import ServerTimeUpdatePacket from "./packet/play/server/ServerTimeUpdatePacket.js";
+import ServerSpawnObjectPacket from "./packet/play/server/ServerSpawnObjectPacket.js";
 
 export default class PacketRegistry {
 
@@ -75,6 +78,7 @@ export default class PacketRegistry {
         this.registerServer(ProtocolState.PLAY, 0x08, ServerPlayerPositionRotationPacket);
         this.registerServer(ProtocolState.PLAY, 0x0B, ServerAnimationPacket);
         this.registerServer(ProtocolState.PLAY, 0x0C, ServerSpawnPlayerPacket);
+        this.registerServer(ProtocolState.PLAY, 0x0E, ServerSpawnObjectPacket);
         this.registerServer(ProtocolState.PLAY, 0x13, ServerDestroyEntitiesPacket);
         this.registerServer(ProtocolState.PLAY, 0x14, ServerEntityMovementPacket);
         this.registerServer(ProtocolState.PLAY, 0x15, ServerEntityPositionPacket);
@@ -103,6 +107,8 @@ export default class PacketRegistry {
         this.registerClient(ProtocolState.PLAY, 0x0F, ClientConfirmTransactionPacket);
         this.registerClient(ProtocolState.PLAY, 0x07, ClientPlayerDiggingPacket);
         this.registerClient(ProtocolState.PLAY, 0x08, ClientPlayerBlockPlacementPacket);
+        this.registerClient(ProtocolState.PLAY, 0x09, ClientDropItemPacket);
+        this.registerClient(ProtocolState.PLAY, 0x0D, ClientPickupItemPacket);
     }
 
     registerClient(state, id, packet) {

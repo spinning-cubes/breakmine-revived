@@ -1,6 +1,7 @@
 import EntityRenderer from "../EntityRenderer.js";
 import Tessellator from "../../Tessellator.js";
 import MathHelper from "../../../../util/MathHelper.js";
+import * as THREE from "../../../../../../../../libraries/three.module.js";
 
 export default class ItemRenderer extends EntityRenderer {
     constructor(worldRenderer) {
@@ -34,7 +35,7 @@ export default class ItemRenderer extends EntityRenderer {
         this.fillMeta(entity, meta);
         this.group.buildMeta = meta;
 
-        this.disposeMesh(); 
+        this.disposeMesh();
 
         const block = entity.getBlock();
 
@@ -42,16 +43,14 @@ export default class ItemRenderer extends EntityRenderer {
             this.group.visible = true;
             let brightness = meta.brightness;
             this.mesh = this.blockRenderer.renderBlockInNullWorld(
-                this.group, 
-                block, 
-                brightness, 
-                entity.x,
-                entity.y + 0.5,
-                entity.z
+                this.group,
+                block,
+                brightness
             );
 
             if (this.mesh) {
                 this.geometry = this.mesh.geometry;
+                this.mesh.position.set(0, 0.2, 0);
             }
         } else {
             this.group.visible = false;
@@ -59,38 +58,55 @@ export default class ItemRenderer extends EntityRenderer {
     }
 
     render(entity, partialTicks) {
-        this.rebuild(entity);
-    
         if (entity.isDead) {
-            this.group.visible = false; 
+            this.group.visible = false;
             return;
         }
 
-        let interpolatedX = entity.x;
-        let interpolatedY = entity.y;
-        let interpolatedZ = entity.z;
-
-        if (this.mesh) {
-            this.mesh.scale.set(0.25, 0.25, 0.25);
-            this.mesh.position.set(interpolatedX, interpolatedY + 0.5, interpolatedZ);
+        // Rebuild only when needed
+        if (this.isRebuildRequired(entity)) {
+            this.rebuild(entity);
         }
-        
-        let rotationPitch = entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks;
-        
+
+        // Interpolate entity position
+        let interpolatedX = entity.prevX + (entity.x - entity.prevX) * partialTicks;
+        let interpolatedY = entity.prevY + (entity.y - entity.prevY) * partialTicks;
+        let interpolatedZ = entity.prevZ + (entity.z - entity.prevZ) * partialTicks;
+
+        // Set group position to interpolated entity position
+        this.group.position.set(interpolatedX, interpolatedY, interpolatedZ);
+        this.group.updateMatrix();
+
+        // Set mesh transformations
         if (this.mesh) {
-            this.mesh.rotation.y = MathHelper.toRadians(rotationPitch);
+            this.mesh.position.set(0, 0.2, 0);
+            this.mesh.scale.set(0.25, 0.25, 0.25);
+            this.mesh.rotation.y = MathHelper.toRadians(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks);
+            this.mesh.updateMatrix();
         }
 
         this.group.visible = true;
     }
 
     prepareModel(entity) {
-        this.rebuild(entity);
+        if (this.isRebuildRequired(entity)) {
+            this.rebuild(entity);
+        }
     }
     
     fillMeta(entity, meta) {
         meta.brightness = entity.getEntityBrightness();
         meta.blockId = entity.getBlockId();
-        meta.tickCount = entity.tickCount;
+    }
+
+    isRebuildRequired(entity) {
+        if (typeof this.group.buildMeta === "undefined") {
+            return true;
+        }
+
+        let currentMeta = {};
+        this.fillMeta(entity, currentMeta);
+        let previousMeta = this.group.buildMeta;
+        return JSON.stringify(currentMeta) !== JSON.stringify(previousMeta);
     }
 }

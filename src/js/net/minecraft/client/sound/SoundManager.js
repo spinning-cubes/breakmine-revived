@@ -35,6 +35,9 @@ export default class SoundManager {
             // Load sound types
             this.loadSoundPool(sound.getStepSound());
         }
+
+        // Preload item pickup sound
+        this.loadSoundPool("random.pop");
     }
 
     loadSoundPool(name) {
@@ -45,18 +48,24 @@ export default class SoundManager {
         let path = name.replace(".", "/");
         for (let i = 0; i < amount; i++) {
             try {
-                /*// Try wav first, then ogg
-                let sound = this.loadSound('src/resources/sound/' + path + (i + 1) + '.wav');
-                if (!sound || !sound.hasBuffer) {
-                    sound = this.loadSound('src/resources/sound/' + path + (i + 1) + '.ogg');
-                }*/
-
                 let sound = this.loadSound('src/resources/sound/' + path + (i + 1) + '.ogg');
                 if (sound) {
                     pool.push(sound);
                 }
             } catch (e) {
                 console.warn('Skipping sound file:', path + (i + 1), e);
+            }
+        }
+
+        // Fallback to unnumbered file if no numbered variants loaded
+        if (pool.length === 0) {
+            try {
+                let sound = this.loadSound('src/resources/sound/' + path + '.ogg');
+                if (sound) {
+                    pool.push(sound);
+                }
+            } catch (e) {
+                console.warn('Skipping sound file:', path, e);
             }
         }
 
@@ -109,7 +118,10 @@ export default class SoundManager {
         if (typeof pool === "undefined") {
             // Load sound pool
             this.loadSoundPool(name);
-        } else if (pool.length > 0) {
+            pool = this.soundPool[name];
+        }
+
+        if (pool && pool.length > 0) {
             // Play random sound in pool
             let sound = pool[Math.floor(Math.random() * pool.length)];
             if (typeof volume === "undefined" || typeof sound === "undefined") {

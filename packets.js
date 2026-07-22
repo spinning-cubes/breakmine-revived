@@ -251,6 +251,25 @@ function createAnimationPacket(player) {
     return makePacket(0x0B, data.subarray(0, offset));
 }
 
+function createSpawnObjectPacket(entity) {
+    const data = Buffer.alloc(64);
+    let offset = 0;
+
+    offset += writeVarInt(data, entity.id, offset);
+    data.writeUInt8(entity.type, offset); offset += 1;  // Object type (1 = Item)
+    data.writeInt32BE(Math.floor(entity.x * 32), offset); offset += 4;
+    data.writeInt32BE(Math.floor(entity.y * 32), offset); offset += 4;
+    data.writeInt32BE(Math.floor(entity.z * 32), offset); offset += 4;
+    data.writeUInt8(0, offset); offset += 1;  // Pitch
+    data.writeUInt8(0, offset); offset += 1;  // Yaw
+    data.writeInt32BE(entity.blockId, offset); offset += 4;  // Object data (blockId for items)
+    data.writeUInt16BE(0, offset); offset += 2;  // Velocity X
+    data.writeUInt16BE(0, offset); offset += 2;  // Velocity Y
+    data.writeUInt16BE(0, offset); offset += 2;  // Velocity Z
+
+    return makePacket(0x0E, data.subarray(0, offset));
+}
+
 function sendPlayerListEntry(players, action = 0) {
     // Action 0: ADD_PLAYER
     const data = Buffer.alloc(1024);
@@ -315,6 +334,7 @@ module.exports = {
     createDestroyEntityPacket,
     createEntityMetadataPacket,
     createAnimationPacket,
+    createSpawnObjectPacket,
     sendPlayerListEntry,
     sendPlayerListData
 };
