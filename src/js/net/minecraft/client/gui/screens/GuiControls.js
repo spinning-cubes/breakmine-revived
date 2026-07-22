@@ -3,6 +3,7 @@ import GuiKeyButton from "../widgets/GuiKeyButton.js";
 import GuiButton from "../widgets/GuiButton.js";
 import GuiSliderButton from "../widgets/GuiSliderButton.js";
 import GuiSwitchButton from "../widgets/GuiSwitchButton.js";
+import GuiTooltip from "../widgets/GuiTooltip.js"
 
 export default class GuiControls extends GuiScreen {
 
@@ -28,7 +29,7 @@ export default class GuiControls extends GuiScreen {
 
         this.buttonList.push(new GuiSwitchButton("TV Mode", settings.tvmode, this.width / 2 - 100, y, 200, 20, (val) => {
             settings.tvmode = val;
-        }).setTooltip("For playing Breakmine on Smart TVs\n§4Arrow keys: move | Arrow Keys + Enter: Look\n§4Back: jump"));
+        }));
 
         this.buttonList.push(new GuiKeyButton("Crouch", settings.keyCrouching, this.width / 2 - 100, y + 24, 98, 20, key => {
             settings.keyCrouching = key;
@@ -53,6 +54,12 @@ export default class GuiControls extends GuiScreen {
         this.buttonList.push(new GuiButton(this.minecraft, "Done", this.width / 2 - 100, y + 130, 200, 20, () => {
             this.minecraft.displayScreen(this.previousScreen);
         }));
+
+        this.guiTooltip = new GuiTooltip(this.minecraft, `For playing Breakmine on Smart TVs
+§7Arrow keys: move | Arrow Keys + Enter: Look
+§7Back/return: pause / go back
+§7Red: Break | Green: Place
+§7Yellow: Open inventory | Blue: Cycle hotbar`, this.width / 2 - 100, y, 200, 20);
     }
 
     drawScreen(stack, mouseX, mouseY, partialTicks) {
@@ -63,6 +70,9 @@ export default class GuiControls extends GuiScreen {
         this.drawCenteredString(stack, "Controls", this.width / 2, 50);
 
         super.drawScreen(stack, mouseX, mouseY, partialTicks);
+        
+        // Draw tooltip
+        this.guiTooltip.render(stack, mouseX, mouseY, partialTicks);
     }
 
     onClose() {

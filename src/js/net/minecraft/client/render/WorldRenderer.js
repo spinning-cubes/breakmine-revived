@@ -262,11 +262,7 @@ export default class WorldRenderer {
         // Render actual scene
         this.webRenderer.render(this.scene, this.camera);
 
-        // Render overlay with a static FOV
-        this.camera.fov = 70;
-        this.camera.updateProjectionMatrix();
-        
-        // --- FIX: Update overlay matrices as well ---
+        // Render overlay with the same FOV as the world
         this.overlay.updateMatrixWorld(true);
         this.webRenderer.render(this.overlay, this.camera);
     }
