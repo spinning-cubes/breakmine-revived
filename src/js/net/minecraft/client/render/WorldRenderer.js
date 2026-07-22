@@ -1110,10 +1110,25 @@ export default class WorldRenderer {
         for (let entity of entities) {
             if (!entity) continue;
 
-            let bb = entity.boundingBox;
-            let width = bb.maxX - bb.minX;
-            let height = bb.maxY - bb.minY;
-            let depth = bb.maxZ - bb.minZ;
+            // Skip player bounding box in first-person view
+            if (entity === player && this.minecraft.settings.thirdPersonView === 0) {
+                continue;
+            }
+
+            // Interpolate between previous and current bounding box
+            let prevBB = entity.prevBoundingBox;
+            let currBB = entity.boundingBox;
+
+            let minX = prevBB.minX + (currBB.minX - prevBB.minX) * partialTicks;
+            let minY = prevBB.minY + (currBB.minY - prevBB.minY) * partialTicks;
+            let minZ = prevBB.minZ + (currBB.minZ - prevBB.minZ) * partialTicks;
+            let maxX = prevBB.maxX + (currBB.maxX - prevBB.maxX) * partialTicks;
+            let maxY = prevBB.maxY + (currBB.maxY - prevBB.maxY) * partialTicks;
+            let maxZ = prevBB.maxZ + (currBB.maxZ - prevBB.maxZ) * partialTicks;
+
+            let width = maxX - minX;
+            let height = maxY - minY;
+            let depth = maxZ - minZ;
 
             if (width <= 0 || height <= 0 || depth <= 0) continue;
 
@@ -1122,9 +1137,9 @@ export default class WorldRenderer {
             let line = new THREE.LineSegments(edges, this.entityBBoxMaterial);
 
             line.position.set(
-                bb.minX + width / 2,
-                bb.minY + height / 2,
-                bb.minZ + depth / 2
+                minX + width / 2,
+                minY + height / 2,
+                minZ + depth / 2
             );
 
             this.entityBBoxGroup.add(line);

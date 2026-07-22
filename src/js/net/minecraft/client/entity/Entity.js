@@ -51,6 +51,7 @@ export default class Entity {
         this.metaData = {};
 
         this.boundingBox = new BoundingBox();
+        this.prevBoundingBox = new BoundingBox();
         this.setPosition(this.x, this.y, this.z);
     }
 
@@ -122,6 +123,8 @@ export default class Entity {
 
         this.prevRotationPitch = this.rotationPitch;
         this.prevRotationYaw = this.rotationYaw;
+
+        this.prevBoundingBox = this.boundingBox.clone();
 
         this.ticksExisted++;
     }
