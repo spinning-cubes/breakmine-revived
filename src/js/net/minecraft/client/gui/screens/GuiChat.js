@@ -68,7 +68,7 @@ export default class GuiChat extends GuiScreen {
                 }
             }
 
-            this.inputField.text = this.historyIndex < 0 ? "" : history[this.historyIndex];
+            this.inputField.setText(this.historyIndex < 0 ? "" : history[this.historyIndex])
             return;
         }
 

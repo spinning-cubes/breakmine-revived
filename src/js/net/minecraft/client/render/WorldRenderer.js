@@ -814,6 +814,12 @@ export default class WorldRenderer {
         for (let i = 0; i < translucentMeshes.length; i++) {
             translucentMeshes[i].mesh.renderOrder = i;
         }
+
+        // Sort individual faces within each translucent mesh back-to-front
+        let cameraPos = { x: cameraX, y: cameraY, z: cameraZ };
+        for (let i = 0; i < translucentMeshes.length; i++) {
+            this.sortTranslucentGeometry(translucentMeshes[i].mesh, cameraPos);
+        }
     }
 
     sortTranslucentMeshes() {
