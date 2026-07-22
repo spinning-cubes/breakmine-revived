@@ -78,7 +78,7 @@ export default class GuiContainer extends GuiScreen {
                 if (block && block.description) {
                     let slotX = this.x + this.hoverSlot.x;
                     let slotY = this.y + this.hoverSlot.y;
-                    let tooltip = new GuiTooltip(this.minecraft, block.description, slotX, slotY, 16, 16);
+                    let tooltip = new GuiTooltip(this.minecraft, `${block.description}\n§9${block.mod ?? "Unknown Mod"}§r`, slotX, slotY, 16, 16);
                     tooltip.render(stack, mouseX, mouseY, partialTicks);
                 }
             }

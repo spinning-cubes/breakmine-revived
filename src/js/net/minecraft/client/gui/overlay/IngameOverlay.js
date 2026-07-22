@@ -183,6 +183,54 @@ export default class IngameOverlay extends Gui {
         stack.drawImage(canvas, 0, 0);
     }
 
+    getOSInfo() {
+        var userAgent = window.navigator.userAgent,
+            platform = window.navigator.platform,
+            macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
+            windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
+            iosPlatforms = ['iPhone', 'iPad', 'iPod'],
+            os = null;
+
+        if (/Tizen|SMART-TV|SmartTV/i.test(userAgent)) {
+            os = 'Samsung Tizen';
+        } else if (/webOS|Web0S/i.test(userAgent)) {
+            os = 'LG webOS';
+        } else if (/Roku/i.test(userAgent)) {
+            os = 'Roku OS';
+        } else if (/AFTS|AFTB|AFTM|AFTT|AFTKA|FireTV/i.test(userAgent)) {
+            os = 'Fire OS (Amazon)';
+        } else if (/SmartCast/i.test(userAgent)) {
+            os = 'Vizio SmartCast';
+        } else if (/VIDAA/i.test(userAgent)) {
+            os = 'VIDAA (Hisense)';
+        } else if (/Viera/i.test(userAgent)) {
+            os = 'Panasonic Viera';
+        } else if (/NetCast/i.test(userAgent)) {
+            os = 'LG NetCast';
+        } else if (userAgent.includes('SmartOSS-OS')) {
+            os = 'SmartOSS';
+        } else if (userAgent.includes('CrOS')) {
+            os = 'Chrome OS/Linux';
+        } else if (macosPlatforms.indexOf(platform) !== -1) {
+            os = 'Mac OS';
+        } else if (iosPlatforms.indexOf(platform) !== -1) {
+            os = 'iOS';
+        } else if (windowsPlatforms.indexOf(platform) !== -1) {
+            os = 'Windows';
+        } else if (/Android/.test(userAgent)) {
+            // Android TVs often contain "Large Screen", "Android TV", or "GoogleTV" tokens
+            if (/GoogleTV|Android TV|Large Screen/i.test(userAgent)) {
+                os = 'Android TV';
+            } else {
+                os = 'Android';
+            }
+        } else if (!os && /Linux/.test(platform)) {
+            os = 'Linux';
+        }
+
+        return os;
+    }
+
     renderLeftDebugOverlay(stack, filters = []) {
         let world = this.minecraft.world;
         let player = this.minecraft.player;
@@ -260,7 +308,7 @@ export default class IngameOverlay extends Gui {
         let towards = "Towards " + (facing.isPositive() ? "positive" : "negative") + " " + (facing.isXAxis() ? "X" : "Z");
 
         let lines = [
-            "Breakmine " + Minecraft.VERSION,
+            "Breakmine " + Minecraft.VERSION + ", updated at " + Minecraft.TIMESTAMP,
             fps + " fps (" + chunkUpdates + " chunk updates) T: " + this.minecraft.maxFps,
             "C: " + visibleChunks + "/" + loadedChunks + " D: " + viewDistance + ", L: " + lightUpdates,
             "E: " + visibleEntities + "/" + entities + ", P: " + particles,
@@ -287,6 +335,8 @@ export default class IngameOverlay extends Gui {
             lines.push("Looking at: " + hit.x + " " + hit.y + " " + hit.z);
         }
 
+        const lineHeight = FontRenderer.FONT_HEIGHT + 1;
+
         // Draw lines
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].length === 0 || filters.length !== 0 && !filters.includes(i)) {
@@ -297,23 +347,23 @@ export default class IngameOverlay extends Gui {
             if (filters.length !== 0) {
                 stack.clearRect(
                     1,
-                    1 + FontRenderer.FONT_HEIGHT * i,
+                    1 + lineHeight * i,
                     this.getStringWidth(stack, lines[i]) + 1,
-                    FontRenderer.FONT_HEIGHT
+                    lineHeight
                 );
             }
 
             // Draw background
             this.drawRect(stack,
                 1,
-                1 + FontRenderer.FONT_HEIGHT * i,
+                1 + lineHeight * i,
                 1 + this.getStringWidth(stack, lines[i]) + 1,
-                1 + FontRenderer.FONT_HEIGHT * i + FontRenderer.FONT_HEIGHT,
+                1 + lineHeight * i + lineHeight,
                 '#50505090'
             );
 
             // Draw line
-            this.drawString(stack, lines[i], 2, 2 + FontRenderer.FONT_HEIGHT * i, 0xffe0e0e0, false);
+            this.drawString(stack, lines[i], 2, 2 + lineHeight * i, 0xffe0e0e0, false);
         }
 
     }
@@ -337,6 +387,8 @@ export default class IngameOverlay extends Gui {
             this.window.getGPUName()
         ];
 
+        const lineHeight = FontRenderer.FONT_HEIGHT + 1;
+
         // Draw lines
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].length === 0) {
@@ -346,14 +398,14 @@ export default class IngameOverlay extends Gui {
             // Draw background
             this.drawRect(stack,
                 this.window.width - this.getStringWidth(stack, lines[i]) - 3,
-                1 + FontRenderer.FONT_HEIGHT * i,
+                1 + lineHeight * i,
                 this.window.width - 1,
-                1 + FontRenderer.FONT_HEIGHT * i + FontRenderer.FONT_HEIGHT,
+                1 + lineHeight * i + lineHeight,
                 '#50505090'
             );
 
             // Draw line
-            this.drawRightString(stack, lines[i], this.window.width - 2, 2 + FontRenderer.FONT_HEIGHT * i, 0xffe0e0e0, false);
+            this.drawRightString(stack, lines[i], this.window.width - 2, 2 + lineHeight * i, 0xffe0e0e0, false);
         }
     }
 

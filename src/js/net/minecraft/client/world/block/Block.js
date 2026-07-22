@@ -31,6 +31,8 @@ export default class Block {
         this.path = false;
         this.noFaceCull = false;
         this.multipart = false;
+
+        this.mod = "Breakmine";
     }
 
     isReplaceable(world, x, y, z) {

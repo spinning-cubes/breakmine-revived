@@ -79,6 +79,7 @@ export default class GuiMainMenu extends GuiScreen {
         this.drawLogo(stack, x, y);
 
         // Draw version
+        this.drawString(stack, "Updated at " + Minecraft.TIMESTAMP, 2, this.height - 20, 0xFFFFFFff);
         this.drawString(stack, "Breakmine " + Minecraft.VERSION, 2, this.height - 10, 0xFFFFFFff);
 
         // Draw copyright
