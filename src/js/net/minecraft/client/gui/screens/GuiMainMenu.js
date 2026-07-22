@@ -34,6 +34,7 @@ export default class GuiMainMenu extends GuiScreen {
             btntemp.setTooltip("§4Development build, no login needed.");
             //btntemp.setTooltip("You must be logged in\n§7Don't worry, it's free!");
         }
+        this.buttonList.push(btntemp);
 
         this.buttonList.push(new GuiButton(this.minecraft, "Account", this.width / 2 - 100, y + 24 * 2, 98, 20, () => {
             this.minecraft.displayScreen(new GuiAccount(this));
@@ -49,7 +50,6 @@ export default class GuiMainMenu extends GuiScreen {
         this.buttonList.push(new GuiButton(this.minecraft, "Quit Game", this.width / 2 + 2, y + 72 + 12, 98, 20, () => {
             this.minecraft.stop();
         }).setEnabled(false));
-        this.buttonList.push(btntemp);
         
 
         this.initPanoramaRenderer();
@@ -120,7 +120,11 @@ export default class GuiMainMenu extends GuiScreen {
     }
 
     keyTyped(key) {
-        // Cancel key inputs
+        // In TV mode, allow navigation keys through to parent
+        if (this.minecraft && this.minecraft.settings.tvmode) {
+            super.keyTyped(key);
+        }
+        // Cancel other key inputs
     }
 
     mouseClicked(mouseX, mouseY, mouseButton) {

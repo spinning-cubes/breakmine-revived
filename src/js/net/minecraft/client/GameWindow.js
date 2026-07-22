@@ -39,6 +39,13 @@ export default class GameWindow {
 
         // Create keyboard
         Keyboard.create();
+
+        // TV mode: auto-lock focus and enable keyboard immediately
+        if (this.minecraft.settings.tvmode) {
+            this.mouseInsideWindow = true;
+            Keyboard.setEnabled(true);
+            this.updateFocusState(FocusStateType.LOCKED);
+        }
     }
 
     initializeElements(canvasWrapperId) {
@@ -132,6 +139,11 @@ export default class GameWindow {
             }
         });
         this.registerListener(document, 'pointerlockchange', event => {
+            // Skip pointer lock handling in TV mode
+            if (this.minecraft.settings.tvmode) {
+                return;
+            }
+
             let intentState = this.focusState.getIntent(); // Get target state we want to switch into
             let isCursorLocked = this.isCursorLockedToCanvas(); // Get current state of the canvas lock
             let isLockIntent = intentState === FocusStateType.LOCKED; // Check if we want to lock the cursor
@@ -182,8 +194,8 @@ export default class GameWindow {
                 this.updateWindowSize();
             }
 
-            // Ignore key input if mouse is not inside window
-            if (!this.mouseInsideWindow) {
+            // Ignore key input if mouse is not inside window (skip in TV mode)
+            if (!this.mouseInsideWindow && !this.minecraft.settings.tvmode) {
                 return;
             }
 
@@ -455,6 +467,20 @@ export default class GameWindow {
         let prevLock = this.focusState.isLock();
         let nextLock = state.isLock();
 
+        // In TV mode, replace pointer-lock states with final states
+        if (this.minecraft.settings.tvmode) {
+            if (state === FocusStateType.REQUEST_LOCK) {
+                state = FocusStateType.LOCKED;
+            } else if (state === FocusStateType.REQUEST_EXIT) {
+                state = FocusStateType.EXITED;
+            }
+            // Re-check after TV mode override
+            nextLock = state.isLock();
+            if (prevLock === nextLock && this.focusState === state) {
+                return;
+            }
+        }
+
         // Update state
         this.focusState = state;
 
@@ -482,6 +508,11 @@ export default class GameWindow {
     }
 
     requestCursorUpdate() {
+        // Skip pointer lock in TV mode
+        if (this.minecraft.settings.tvmode) {
+            return;
+        }
+
         // Check if the current state doesn't match the canvas lock
         if (this.mouseInsideWindow && this.focusState.isLock() !== this.isCursorLockedToCanvas()) {
             // Request cursor lock depending on the state

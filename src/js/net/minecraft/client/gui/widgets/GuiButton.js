@@ -27,11 +27,12 @@ export default class GuiButton extends Gui {
         }
 
         this.enabled = true;
+        this.focused = false;
         this.tooltip = null;
     }
 
     render(stack, mouseX, mouseY, partialTicks) {
-        let mouseOver = this.isMouseOver(mouseX, mouseY);
+        let mouseOver = this.isMouseOver(mouseX, mouseY) || this.focused;
         this.drawButton(stack, this.enabled, mouseOver, this.x, this.y, this.width, this.height);
         this.drawCenteredString(stack, (this.enabled ? (mouseOver ? "§e" : "") : "§7") + this.string, this.x + this.width / 2, this.y + this.height / 2 - 4, 0xFFFFFFFF, false);
 
@@ -93,6 +94,10 @@ export default class GuiButton extends Gui {
         this.tooltipString = string;
         this.tooltip = null;
         return this;
+    }
+
+    isSelectable() {
+        return this.enabled;
     }
 
     setEnabled(enabled) {

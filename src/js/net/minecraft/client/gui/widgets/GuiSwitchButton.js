@@ -11,6 +11,10 @@ export default class GuiSwitchButton extends GuiButton {
         this.string = this.getDisplayName();
     }
 
+    isSelectable() {
+        return true;
+    }
+
     onPress() {
         // Play click sound
         if (this.minecraft && this.minecraft.soundManager) {

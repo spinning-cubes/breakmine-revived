@@ -33,11 +33,12 @@ import GuiContainerSurvival from "./gui/screens/container/GuiContainerSurvival.j
 import CraftingRegistry from "./crafting/CraftingRegistry.js";
 import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
 import ItemEntity from "./entity/ItemEntity.js";
+import { Version } from "../../../../resources/version.js";
 
 export default class Minecraft {
 
-    static VERSION = "2.1.2a-169362f" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
-    static TIMESTAMP = "7/22/2026 02:36:20" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITTIMESTAMP
+    static VERSION = Version.VERSION //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
+    static TIMESTAMP = Version.TIMESTAMP //SCRIPT_SPECIAL_TOKEN_REPLACE_GITTIMESTAMP
     static URL_GITHUB = "https://codeberg.org/BreakmineDevelopers/breakmine_revived";
     static PROTOCOL_VERSION = 47; //758;
 
@@ -65,6 +66,18 @@ export default class Minecraft {
 
         this.settings = new GameSettings();
         this.settings.load();
+
+        // Auto-detect Smart TV platform and enable TV mode on first visit
+        if (!this.settings.tvmode && !document.cookie.includes('tvmode=')) {
+            let ua = window.navigator.userAgent;
+            if (/Tizen|SMART-TV|SmartTV/i.test(ua) && !/Mobile|Nexus|SM-/i.test(ua)) {
+                this.settings.tvmode = true;
+                this.settings.save();
+            } else if (/webOS|Web0S|Roku|AFTS|AFTB|AFTM|AFTT|AFTKA|FireTV|GoogleTV|Android TV|Large Screen|VIDAA|Viera|NetCast/i.test(ua)) {
+                this.settings.tvmode = true;
+                this.settings.save();
+            }
+        }
 
         // Load session from settings
         if (this.settings.session === null) {
@@ -222,6 +235,9 @@ export default class Minecraft {
     }
 
     hasInGameFocus() {
+        if (this.settings.tvmode) {
+            return this.currentScreen === null && this.isInGame();
+        }
         return this.window.isLocked() && this.currentScreen === null;
     }
 

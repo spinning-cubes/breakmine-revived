@@ -24,6 +24,8 @@ export default class GameSettings {
         this.safePlacing = false;
         this.proxy = '';
 
+        this.tvmode = false;
+
         this.token = ''; // TODO: Make more secure
         this.username = '';
 

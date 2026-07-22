@@ -26,9 +26,9 @@ export default class GuiControls extends GuiScreen {
             return name + ": " + value + "%";
         }));
 
-        this.buttonList.push(new GuiSwitchButton("Safe Placing", settings.safePlacing, this.width / 2 - 100, y, 200, 20, (val) => {
-            settings.safePlacing = val;
-        }).setTooltip("Place blocks at a cooldown of 0.5 seconds"));
+        this.buttonList.push(new GuiSwitchButton("TV Mode", settings.tvmode, this.width / 2 - 100, y, 200, 20, (val) => {
+            settings.tvmode = val;
+        }).setTooltip("For playing Breakmine on Smart TVs"));
 
         this.buttonList.push(new GuiKeyButton("Crouch", settings.keyCrouching, this.width / 2 - 100, y + 24, 98, 20, key => {
             settings.keyCrouching = key;
