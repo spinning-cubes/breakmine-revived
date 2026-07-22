@@ -90,6 +90,11 @@ export default class GuiMainMenu extends GuiScreen {
 
         // Draw splash text
         this.drawSplash(stack);
+
+        // Draw warning
+        let pageText = "In development, expect bugs and breaking changes.";
+        let centerX = Math.floor(this.width / 2);
+        this.drawString(stack, pageText, centerX - this.getStringWidth(stack, pageText) / 2, 10, 0xFF6363, false);
     }
 
     updateScreen() {

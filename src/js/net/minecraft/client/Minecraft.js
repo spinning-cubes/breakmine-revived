@@ -36,8 +36,8 @@ import ItemEntity from "./entity/ItemEntity.js";
 
 export default class Minecraft {
 
-    static VERSION = "2.1.1a-278a604" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
-    static TIMESTAMP = "7/22/2026 02:25:12" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITTIMESTAMP
+    static VERSION = "2.1.2a-169362f" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
+    static TIMESTAMP = "7/22/2026 02:36:20" //SCRIPT_SPECIAL_TOKEN_REPLACE_GITTIMESTAMP
     static URL_GITHUB = "https://codeberg.org/BreakmineDevelopers/breakmine_revived";
     static PROTOCOL_VERSION = 47; //758;
 
