@@ -154,6 +154,14 @@ export default class PlayerRenderer extends EntityRenderer {
                 if (block !== null) {
                     let group = this.model.rightArm.bone;
                     this.worldRenderer.blockRenderer.renderBlockInHandThirdPerson(group, block, entity.getEntityBrightness());
+
+                    // Prevent legs from overwriting item in depth buffer
+                    if (group.children.length > 0) {
+                        let itemMesh = group.children[group.children.length - 1];
+                        itemMesh.material.depthTest = false;
+                        itemMesh.material.depthWrite = false;
+                        itemMesh.renderOrder = 1;
+                    }
                 }
             }
 
