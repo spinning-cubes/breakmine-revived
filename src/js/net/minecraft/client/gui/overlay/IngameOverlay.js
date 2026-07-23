@@ -159,6 +159,8 @@ export default class IngameOverlay extends Gui {
     }
 
     renderPostItem(stack, mouseX, mouseY, partialTicks) {
+        if (this.minecraft.player.spectator) return;
+
         const x = this.window.width / 2 - 91;
         const y = this.window.height - 22;
 

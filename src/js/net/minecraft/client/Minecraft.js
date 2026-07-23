@@ -27,6 +27,7 @@ import UUID from "../util/UUID.js";
 import FocusStateType from "../util/FocusStateType.js";
 import Session from "../util/Session.js";
 import PlayerControllerMultiplayer from "./network/controller/PlayerControllerMultiplayer.js";
+import ChunkProviderGenerateWorker from "./world/provider/ChunkProviderGenerateWorker.js";
 import FileSystem from "./fs/Filesystem.js";
 import generateUsername from "./UsernameGenerator.js";
 import BlockPosition from "../util/BlockPosition.js";
@@ -192,6 +193,10 @@ export default class Minecraft {
 
             if (this.world !== null) {
                 this.world.cleanup();
+                const provider = this.world.getChunkProvider();
+                if (provider instanceof ChunkProviderGenerateWorker) {
+                    provider.terminate();
+                }
                 this.world.getChunkProvider().getChunks().clear();
                 this.world.clearEntities();
                 this.world = null;
@@ -227,12 +232,51 @@ export default class Minecraft {
             }
 
             // Load spawn chunks and respawn player
-            this.world.loadSpawnChunks();
-            this.player.respawn();
-
-            // Start game music
-            this.musicManager.playMusic('game');
+            if (this.world.getChunkProvider() instanceof ChunkProviderGenerateWorker) {
+                this._loadWorldAsync(world);
+            } else {
+                this.world.loadSpawnChunks();
+                this.player.respawn();
+                this.musicManager.playMusic('game');
+            }
         }
+    }
+
+    async _loadWorldAsync(world) {
+        const provider = world.getChunkProvider();
+        const viewDistance = this.settings.viewDistance;
+        const spawnChunkX = world.spawn.x >> 4;
+        const spawnChunkZ = world.spawn.z >> 4;
+
+        const coords = [];
+        for (let x = -viewDistance; x <= viewDistance; x++) {
+            for (let z = -viewDistance; z <= viewDistance; z++) {
+                coords.push([spawnChunkX + x, spawnChunkZ + z]);
+            }
+        }
+
+        const BATCH_SIZE = 16;
+        for (let i = 0; i < coords.length; i += BATCH_SIZE) {
+            const batch = coords.slice(i, i + BATCH_SIZE);
+            await provider.loadChunksBatchAsync(batch);
+
+            if (this.loadingScreen !== null) {
+                const progress = Math.min(1, (i + batch.length) / coords.length);
+                this.loadingScreen.setProgress(progress);
+            }
+
+            await new Promise(r => setTimeout(r, 0));
+        }
+
+        world.spawn.y = world.getHeightAt(world.spawn.x, world.spawn.z) + 8;
+        this.player.respawn();
+
+        if (this.loadingScreen !== null) {
+            this.loadingScreen = null;
+            this.displayScreen(null);
+        }
+
+        this.musicManager.playMusic('game');
     }
 
     hasInGameFocus() {
@@ -393,8 +437,9 @@ export default class Minecraft {
             this.currentScreen.updateScreen();
         }
 
-        // Update loading progress
-        if (this.loadingScreen !== null && this.isInGame()) {
+        // Update loading progress (sync provider only; worker uses _loadWorldAsync)
+        if (this.loadingScreen !== null && this.isInGame()
+            && !(this.world.getChunkProvider() instanceof ChunkProviderGenerateWorker)) {
             let cameraChunkX = Math.floor(this.player.x) >> 4;
             let cameraChunkZ = Math.floor(this.player.z) >> 4;
 

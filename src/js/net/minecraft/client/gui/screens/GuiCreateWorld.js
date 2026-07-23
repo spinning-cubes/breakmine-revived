@@ -7,6 +7,7 @@ import GuiPresets from "./GuiPresets.js";
 import Random from "../../../util/Random.js";
 import Long from "../../../../../../../libraries/long.js";
 import ChunkProviderGenerate from "../../world/provider/ChunkProviderGenerate.js";
+import ChunkProviderGenerateWorker from "../../world/provider/ChunkProviderGenerateWorker.js";
 import PlayerController from "../../network/controller/PlayerController.js";
 
 export default class GuiCreateWorld extends GuiScreen {
@@ -192,17 +193,14 @@ export default class GuiCreateWorld extends GuiScreen {
         }
 
         let world = new World(this.minecraft);
-        world.setChunkProvider(new ChunkProviderGenerate(world, seedLong, this.worldType));
-        world.getChunkProvider().findSpawn();
+        let provider = new ChunkProviderGenerateWorker(world, seedLong, this.worldType);
+        world.setChunkProvider(provider);
 
         this.minecraft.playerController = new PlayerController(this.minecraft);
         this.minecraft.loadWorld(world);
         this.minecraft.ingameOverlay.chatOverlay.clearChat();
-
-        this.minecraft.player.setPosition(world.spawn.x, world.spawn.y, world.spawn.z);
         this.minecraft.player.creative = (this.gameMode === "creative");
 
-        // Start music based on game mode
         if (this.minecraft.player.creative) {
             this.minecraft.musicManager.playMusic('creative');
         }

@@ -1,12 +1,10 @@
 import NoiseGeneratorOctaves from "./noise/NoiseGeneratorOctaves.js";
-import Chunk from "../Chunk.js";
 import Primer from "./Primer.js";
 import CaveGenerator from "./structure/CaveGenerator.js";
 import {BlockRegistry} from "../block/BlockRegistry.js";
 import TreeGenerator from "./structure/TreeGenerator.js";
 import BigTreeGenerator from "./structure/BigTreeGenerator.js";
 import Generator from "./Generator.js";
-import ChunkSection from "../ChunkSection.js";
 
 export default class WorldGenerator extends Generator {
 
@@ -30,10 +28,10 @@ export default class WorldGenerator extends Generator {
         this.populationNoiseGenerator = new NoiseGeneratorOctaves(this.random, 8);
     }
 
-    newChunk(world, chunkX, chunkZ) {
+    newChunk(world, chunkX, chunkZ, ChunkClass) {
         this.random.setSeed(chunkX * 0x4f9939f508 + chunkZ * 0x1ef1565bd5);
 
-        let chunk = new Chunk(world, chunkX, chunkZ);
+        let chunk = new ChunkClass(world, chunkX, chunkZ);
         let primer = new Primer(chunk);
 
         this.generateInChunk(chunkX, chunkZ, primer);
@@ -231,7 +229,7 @@ export default class WorldGenerator extends Generator {
 
     naturalize(chunkX, chunkZ, primer) {
         let strength = 1 / 32;
-        let chunkSize = ChunkSection.SIZE;
+        let chunkSize = Generator.CHUNK_SIZE;
 
         // Generate noise for nature painting
         let natureNoise1 = this.natureGenerator1.generateNoiseOctaves(

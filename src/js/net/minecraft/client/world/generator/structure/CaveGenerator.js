@@ -240,7 +240,7 @@ export default class CaveGenerator extends Generator {
 
                                 if (y < 10) {
                                     // Lava cave
-                                    primer.set(x, totalY, z, BlockRegistry.WATER.getId()); // TODO LAVA STILL
+                                    primer.set(x, totalY, z, BlockRegistry.LAVA.getId());
                                 } else {
                                     // Normal cave
                                     primer.set(x, totalY, z, 0);

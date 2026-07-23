@@ -130,6 +130,10 @@ export default class Block {
         return false;
     }
 
+    isLava() {
+        return false;
+    }
+
     getSound() {
         return this.sound;
     }

@@ -1,4 +1,3 @@
-import Chunk from "../Chunk.js";
 import Primer from "./Primer.js";
 import Generator from "./Generator.js";
 import { BlockRegistry } from "../block/BlockRegistry.js";
@@ -34,10 +33,10 @@ export default class FlatWorldGenerator extends Generator {
         }
     }
     
-    newChunk(world, chunkX, chunkZ) {
+    newChunk(world, chunkX, chunkZ, ChunkClass) {
         this.random.setSeed(chunkX * 0x4f9939f508 + chunkZ * 0x1ef1565bd5);
 
-        let chunk = new Chunk(world, chunkX, chunkZ);
+        let chunk = new ChunkClass(world, chunkX, chunkZ);
         let primer = new Primer(chunk);
 
         this.generateInChunk(chunkX, chunkZ, primer);

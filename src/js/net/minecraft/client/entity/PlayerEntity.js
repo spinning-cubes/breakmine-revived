@@ -187,6 +187,19 @@ export default class PlayerEntity extends EntityLiving {
         return this.world.getBlockAt(this.getBlockPosX(), this.getBlockPosY(), this.getBlockPosZ()) === BlockRegistry.WATER.getId();
     }
 
+    isInLava() {
+        return this.world.getBlockAt(this.getBlockPosX(), this.getBlockPosY(), this.getBlockPosZ()) === BlockRegistry.LAVA.getId();
+    }
+
+    isHeadInLava() {
+        let cameraPosition = this.world.minecraft.worldRenderer.camera.position;
+        return this.world.getBlockAt(
+            Math.floor(cameraPosition.x),
+            Math.floor(cameraPosition.y + 0.12),
+            Math.floor(cameraPosition.z)
+        ) === BlockRegistry.LAVA.getId()
+    }
+
     isHeadInWater() {
         let cameraPosition = this.world.minecraft.worldRenderer.camera.position;
         return this.world.getBlockAt(
@@ -232,6 +245,23 @@ export default class PlayerEntity extends EntityLiving {
         }
     }
 
+    travelInLava(forward, vertical, strafe) {
+        let slipperiness = 0.8;
+        let friction = 0.02;
+
+        this.moveRelative(forward, vertical, strafe, friction);
+        this.collision = this.moveCollide(-this.motionX, this.motionY, -this.motionZ);
+
+        this.motionX *= slipperiness;
+        this.motionY *= 0.8;
+        this.motionZ *= slipperiness;
+        this.motionY -= 0.02;
+
+        // Reset fall distance while in lava
+        this.fallDistance = 0;
+        this.wasOnGround = false;
+    }
+
     travelInWater(forward, vertical, strafe) {
         let slipperiness = 0.8;
         let friction = 0.02;
@@ -275,9 +305,10 @@ export default class PlayerEntity extends EntityLiving {
             // Move
             if (this.spectator) {
                 // Spectator noclip: same movement, no collision
-                this.x -= this.motionX;
-                this.y += this.motionY;
-                this.z -= this.motionZ;
+                this.boundingBox.move(-this.motionX, this.motionY, -this.motionZ);
+                this.x = (this.boundingBox.minX + this.boundingBox.maxX) / 2.0;
+                this.y = this.boundingBox.minY;
+                this.z = (this.boundingBox.minZ + this.boundingBox.maxZ) / 2.0;
                 this.onGround = false;
                 this.collision = false;
             } else {

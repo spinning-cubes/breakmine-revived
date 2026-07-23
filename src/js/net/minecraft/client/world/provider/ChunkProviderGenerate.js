@@ -2,6 +2,7 @@ import ChunkProvider from "./ChunkProvider.js";
 import WorldGenerator from "../generator/WorldGenerator.js";
 import FlatWorldGenerator from "../generator/FlatWorldGenerator.js";
 import Random from "../../../util/Random.js";
+import Chunk from "../Chunk.js";
 
 export default class ChunkProviderGenerate extends ChunkProvider {
 
@@ -16,7 +17,7 @@ export default class ChunkProviderGenerate extends ChunkProvider {
     }
 
     generateChunk(x, z) {
-        return this.generator.newChunk(this.world, x, z);
+        return this.generator.newChunk(this.world, x, z, Chunk);
     }
 
     populateChunk(chunk) {

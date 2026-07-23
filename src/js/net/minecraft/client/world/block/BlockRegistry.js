@@ -26,6 +26,8 @@ import BlockFence from "./type/BlockFence.js";
 import BlockWoodPanel from "./type/BlockWoodPanel.js";
 import SoundGrass from "./sound/SoundGrass.js";
 import BlockWool from "./type/BlockWool.js";
+import BlockLava from "./type/BlockLava.js";
+import BlockLogic from "./type/BlockLogic.js";
 
 export class BlockRegistry {
 
@@ -90,6 +92,8 @@ export class BlockRegistry {
         BlockRegistry.GREEN_WOOL = new BlockWool(51, 0, "green_wool", "Green Wool");
         BlockRegistry.RED_WOOL = new BlockWool(52, 0, "red_wool", "Red Wool");
         BlockRegistry.BLACK_WOOL = new BlockWool(53, 0, "black_wool", "Black Wool");
+        BlockRegistry.LAVA = new BlockLava(55, 0);
+        BlockRegistry.LOGIC = new BlockLogic(56, 0);
 
         BlockRegistry.init = true;
     }

@@ -3,6 +3,9 @@ import Long from "../../../../../../../libraries/long.js";
 
 export default class Generator {
 
+    static CHUNK_SIZE = 16;
+    static TOTAL_HEIGHT = 256;
+
     constructor(world, seed) {
         this.world = world;
         this.seed = seed;

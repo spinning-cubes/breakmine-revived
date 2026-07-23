@@ -338,8 +338,9 @@ export default class WorldRenderer {
     }
 
     onTick() {
-        // Rebuild 2 chunk sections each tick
-        for (let i = 0; i < 2; i++) {
+        // Rebuild chunk sections each tick
+        let rebuildCount = Math.min(32, this.chunkSectionUpdateQueue.length);
+        for (let i = 0; i < rebuildCount; i++) {
             if (this.chunkSectionUpdateQueue.length !== 0) {
                 let chunkSection = this.chunkSectionUpdateQueue.shift();
                 if (chunkSection != null) {
@@ -467,10 +468,10 @@ export default class WorldRenderer {
         this.frustum.setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse));
 
         // Setup fog
-        this.setupFog(x, z, player.isHeadInWater(), partialTicks);
+        this.setupFog(x, z, player.isHeadInWater(), partialTicks, player.isHeadInLava());
     }
 
-     generateSky() {
+    generateSky() {
         // Create background center group
         this.backgroundCenter = new THREE.Object3D();
         this.background.add(this.backgroundCenter);
@@ -672,11 +673,15 @@ export default class WorldRenderer {
         this.cycleGroup.rotation.set(angle * Math.PI * 2 + Math.PI / 2, 0, 0);
     }
 
-    setupFog(x, z, inWater, partialTicks) {
+    setupFog(x, z, inWater, partialTicks, inLava) {
         if (inWater) {
             let color = new THREE.Color(0.2, 0.2, 0.4);
             this.background.background = color;
             this.scene.fog = new THREE.Fog(color, 0.0025, 5);
+        } else if (inLava) {
+            let color = new THREE.Color(0.6, 0.1, 0.0);
+            this.background.background = color;
+            this.scene.fog = new THREE.Fog(color, 0.0025, 3);
         } else {
             let world = this.minecraft.world;
 
