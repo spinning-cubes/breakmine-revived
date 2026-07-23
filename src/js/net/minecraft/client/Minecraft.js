@@ -235,9 +235,7 @@ export default class Minecraft {
             if (this.world.getChunkProvider() instanceof ChunkProviderGenerateWorker) {
                 this._loadWorldAsync(world);
             } else {
-                this.world.loadSpawnChunks();
-                this.player.respawn();
-                this.musicManager.playMusic('game');
+                // Sync path: progress is tracked in onTick; spawn loading happens when done
             }
         }
     }
@@ -444,7 +442,7 @@ export default class Minecraft {
             let cameraChunkZ = Math.floor(this.player.z) >> 4;
 
             let renderDistance = this.settings.viewDistance;
-            let requiredChunks = this.isSingleplayer() ? Math.pow(renderDistance * 2 - 1, 2) : 1;
+            let requiredChunks = Math.pow(renderDistance * 2 - 1, 2);
             let loadedChunks = this.world.getChunkProvider().getChunks().size;
 
             // Load chunks and count
@@ -462,6 +460,9 @@ export default class Minecraft {
 
             // Finish loading
             if (progress >= 0.99) {
+                this.world.loadSpawnChunks();
+                this.player.respawn();
+                this.musicManager.playMusic('game');
                 this.loadingScreen = null;
                 this.displayScreen(null);
             }

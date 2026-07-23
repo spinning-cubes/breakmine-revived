@@ -171,11 +171,18 @@ class ChunkStub {
                 this.notifyNeighbors(x, z);
             }
         }
+        for (let x = 0; x < 16; x++) {
+            for (let z = 0; z < 16; z++) {
+                const height = this.getHeightAt(x, z);
+                for (let y = height; y < WORLD_TOTAL_HEIGHT; y++) {
+                    this.setLightAt(EnumSkyBlock.SKY, x, y, z, 15);
+                }
+            }
+        }
         this.setModifiedAllSections();
     }
 
     generateBlockLightMap() {
-        let targetY = 32;
         for (let x = 0; x < 16; x++) {
             for (let z = 0; z < 16; z++) {
                 for (let y = 0; y < WORLD_TOTAL_HEIGHT; y++) {
@@ -186,21 +193,6 @@ class ChunkStub {
                     if (blockLight > 0) {
                         section.setLightAt(EnumSkyBlock.BLOCK, x, y & 15, z, blockLight);
                     }
-                }
-
-                let level = 15;
-                for (let y = targetY - 2; y < 256 && level > 0;) {
-                    y++;
-                    const section = this.getSection(y >> 4);
-                    const typeId = section.getBlockAt(x, y & 15, z);
-                    const block = Block.getById(typeId);
-                    const opacity = typeId === 0 ? 0 : block.getOpacity();
-                    const blockLight = typeId === 0 ? 0 : block.getLightValue();
-                    let effectiveOpacity = opacity === 0 ? 1 : opacity;
-                    level -= effectiveOpacity;
-                    if (blockLight > level) level = blockLight;
-                    if (level < 0) level = 0;
-                    section.setLightAt(EnumSkyBlock.BLOCK, x, y & 15, z, blockLight);
                 }
             }
         }

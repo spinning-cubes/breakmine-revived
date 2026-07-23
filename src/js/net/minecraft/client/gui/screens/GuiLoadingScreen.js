@@ -4,6 +4,7 @@ export default class GuiLoadingScreen extends GuiScreen {
 
     constructor() {
         super();
+        this.progress = 0;
     }
 
     init() {
@@ -39,6 +40,10 @@ export default class GuiLoadingScreen extends GuiScreen {
             this.height / 2 + progressHeight / 2,
             '#80ff80',
         );
+
+        // Render progress percentage
+        let percent = Math.floor(this.progress * 100);
+        this.drawCenteredString(stack, percent + '%', this.width / 2, this.height / 2 + 6);
 
         super.drawScreen(stack, mouseX, mouseY, partialTicks);
     }

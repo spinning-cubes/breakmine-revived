@@ -17,7 +17,7 @@ export default class GuiCreateWorld extends GuiScreen {
         this.previousScreen = previousScreen;
         
         // Settings State
-        this.gameMode = "survival"; // survival, --hardcore--, creative
+        this.gameMode = "survival"; // survival, --hardcore--, creative, spectator
         this.generateStructures = true;
         this.hardcoreMode = false;
         this.isMoreOptionsMode = false;
@@ -86,12 +86,10 @@ export default class GuiCreateWorld extends GuiScreen {
     cycleGameMode() {
         if (this.gameMode === "survival") {
             this.gameMode = "creative";
-        }/* else if (this.gameMode === "creative") {
-            this.gameMode = "hardcore";
-            this.hardcoreMode = true;
-        }*/ else {
+        } else if (this.gameMode === "creative") {
+            this.gameMode = "spectator";
+        } else {
             this.gameMode = "survival";
-            this.hardcoreMode = false;
         }
         this.updateGameModeStrings();
     }
@@ -106,9 +104,9 @@ export default class GuiCreateWorld extends GuiScreen {
             this.gameModeLine1 = "Unlimited resources, free flying and";
             this.gameModeLine2 = "destroy blocks instantly.";
         } else {
-            this.btnGameMode.string = "Game Mode: Hardcore";
-            this.gameModeLine1 = "Same as survival mode, locked at hardest";
-            this.gameModeLine2 = "difficulty, and one life only";
+            this.btnGameMode.string = "Game Mode: Spectator";
+            this.gameModeLine1 = "Can look through blocks, fly through";
+            this.gameModeLine2 = "walls. Can't interact with blocks.";
         }
     }
 
@@ -200,6 +198,7 @@ export default class GuiCreateWorld extends GuiScreen {
         this.minecraft.loadWorld(world);
         this.minecraft.ingameOverlay.chatOverlay.clearChat();
         this.minecraft.player.creative = (this.gameMode === "creative");
+        this.minecraft.player.spectator = (this.gameMode === "spectator");
 
         if (this.minecraft.player.creative) {
             this.minecraft.musicManager.playMusic('creative');

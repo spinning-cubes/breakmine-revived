@@ -90,7 +90,7 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
                     ? (sectionData.skyLight[byteIndex] >> 4) & 0xF
                     : sectionData.skyLight[byteIndex] & 0xF;
                 if (bl !== 0) section.blockLight[i] = bl;
-                if (sl !== 0) section.skyLight[i] = sl;
+                section.skyLight[i] = sl;
             }
         }
 
