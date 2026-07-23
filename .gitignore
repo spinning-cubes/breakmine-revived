@@ -10,3 +10,4 @@ vcs.py
 vcs2.py
 node_modules/*
 package-lock.json
+dist/

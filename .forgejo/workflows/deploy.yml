@@ -12,12 +12,24 @@ jobs:
       - name: Checkout main branch
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
       - name: Deploy to Pages branch
         uses: actions/push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.CODEBERG_PAGES_TOKEN }}
         with:
-          source-directory: '.'
+          source-directory: 'dist'
           destination-github-username: 'BreakmineDevelopers'
           destination-repository-name: 'breakmine_revived'
           target-branch: 'pages'
