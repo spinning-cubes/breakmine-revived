@@ -424,7 +424,7 @@ export default class Minecraft {
     }
 
     handleMiningTicks() {
-        if (!this.window.isLocked() || this.player.creative === true) {
+        if (!this.window.isLocked() || this.player.creative === true || this.player.spectator === true) {
             this.miningTimer = 0;
             this.lastBlockPos = null;
             return;
@@ -560,6 +560,7 @@ export default class Minecraft {
 
         // Drop held item
         if (button === "KeyQ") {
+            if (this.player.spectator) return;
             if (this.player.inventory.getItemInSelectedSlot() !== 0 && this.player.inventory.getItemInSelectedSlot() !== null) {
                 let itemStack = this.player.inventory.getItemInSelectedSlot();
 
@@ -588,12 +589,16 @@ export default class Minecraft {
 
         // Open inventory
         if (button === this.settings.keyOpenInventory) {
+            if (this.player.spectator) return;
             this.displayScreen(this.player.creative ? new GuiContainerCreative(this.player) : new GuiContainerSurvival(this.player));
         }
     }
 
     onMouseClicked(button) {
         if (this.window.isLocked()) {
+            // Spectators cannot interact with the world
+            if (this.player.spectator) return;
+
             let hitResult = this.player.rayTrace(5, this.timer.partialTicks);
 
             // Destroy block

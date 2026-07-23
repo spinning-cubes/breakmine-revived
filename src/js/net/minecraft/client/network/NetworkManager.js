@@ -179,6 +179,17 @@ export default class NetworkManager {
                 const inventory = new InventoryBasic(payload.inventory?.size || 27);
                 inventory.applyNetworkState(payload.inventory);
                 world.blockInventories.set(payload.key, inventory);
+            } else if (payload.type === 'gamemode') {
+                const player = this.minecraft.player;
+                if (!player) return;
+                const gamemode = payload.gamemode;
+                player.creative = (gamemode === 1);
+                player.spectator = (gamemode === 3);
+                if (gamemode === 0) {
+                    player.flying = false;
+                } else if (gamemode === 1 || gamemode === 3) {
+                    player.flying = true;
+                }
             }
         } catch (error) {
             console.error("Failed to parse JSON network message", error);

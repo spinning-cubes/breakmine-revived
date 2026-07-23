@@ -15,6 +15,9 @@ function handleCommand(player, command) {
         case '/tp':
             handleTp(player, args);
             break;
+        case '/gamemode':
+            handleGamemode(player, args);
+            break;
         case '/help':
             handleHelp(player);
             break;
@@ -68,12 +71,40 @@ function handleTp(player, args) {
 function handleHelp(player) {
     sendChatMessageToPlayer(player, '§6Available commands:');
     sendChatMessageToPlayer(player, '§e/tp <x> <y> <z> §7- Teleport to coordinates');
+    sendChatMessageToPlayer(player, '§e/gamemode <survival|creative|spectator> §7- Change game mode');
     sendChatMessageToPlayer(player, '§e/time §7- Show current in-game time');
     sendChatMessageToPlayer(player, '§e/time set <number> §7- Set time to specific tick value');
     sendChatMessageToPlayer(player, '§e/time set <day|night|midnight|noon> §7- Set time to preset');
     sendChatMessageToPlayer(player, '§e/world [name] §7- Show current world or switch worlds');
     sendChatMessageToPlayer(player, '§e/world list §7- List all available worlds');
     sendChatMessageToPlayer(player, '§e/help §7- Show this help message');
+}
+
+function handleGamemode(player, args) {
+    if (args.length < 1) {
+        sendChatMessageToPlayer(player, '§cUsage: /gamemode <survival|creative|spectator  0|1|3>');
+        return;
+    }
+
+    const mode = args[0].toLowerCase();
+    let gamemode;
+
+    if (mode === 'survival' || mode === '0') {
+        gamemode = 0;
+    } else if (mode === 'creative' || mode === '1') {
+        gamemode = 1;
+    } else if (mode === 'spectator' || mode === '3') {
+        gamemode = 3;
+    } else {
+        sendChatMessageToPlayer(player, '§cInvalid gamemode. Use: survival (0), creative (1), or spectator (3)');
+        return;
+    }
+
+    // Send gamemode change to the client via JSON message
+    player.ws.send(JSON.stringify({ type: 'gamemode', gamemode: gamemode }));
+
+    const modeName = gamemode === 0 ? 'Survival' : gamemode === 1 ? 'Creative' : 'Spectator';
+    sendChatMessage(`§e${player.username}'s game mode has been updated to ${modeName}`);
 }
 
 function handleTime(player, args) {

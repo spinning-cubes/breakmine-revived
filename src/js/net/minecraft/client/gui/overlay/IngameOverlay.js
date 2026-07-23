@@ -34,11 +34,13 @@ export default class IngameOverlay extends Gui {
             this.renderCrosshair(stack, this.window.width / 2, this.window.height / 2)
         }
 
-        // Render hotbar
-        this.renderHotbar(stack, this.window.width / 2 - 91, this.window.height - 22);
+        // Render hotbar (hidden in spectator)
+        if (!this.minecraft.player.spectator) {
+            this.renderHotbar(stack, this.window.width / 2 - 91, this.window.height - 22);
+        }
 
-        // Render health bar
-        if (!this.minecraft.player.creative) {
+        // Render health bar (hidden in creative and spectator)
+        if (!this.minecraft.player.creative && !this.minecraft.player.spectator) {
             this.renderHealth(stack, this.window.width / 2 - 91, this.window.height - 22 - 10)
         }
 

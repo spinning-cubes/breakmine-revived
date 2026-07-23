@@ -45,6 +45,10 @@ export default class CaveGenerator extends Generator {
                 amount += this.random.nextInt(4);
             }
 
+            if (this.random.nextInt(5) === 0) {
+                this.generateBlobCaveAtBlock(originChunkX, originChunkZ, primer, x, y, z);
+            }
+
             for (let j = 0; j < amount; j++) {
                 let rotation1 = this.random.nextFloat() * Math.PI * 2.0;
                 let rotation2 = ((this.random.nextFloat() - 0.5) * 2.0) / 8;
@@ -60,6 +64,17 @@ export default class CaveGenerator extends Generator {
             1.0 + this.random.nextFloat() * 6,
             0.0, 0.0,
             -1, -1, 0.5
+        );
+    }
+
+    generateBlobCaveAtBlock(originChunkX, originChunkZ, primer, x, y, z) {
+        let radius = 3.0 + this.random.nextFloat() * 4.0;
+        this.generateCaveAtBlock(
+            originChunkX, originChunkZ, primer,
+            x, y, z,
+            radius,
+            0.0, 0.0,
+            -1, -1, 1.2
         );
     }
 
@@ -122,6 +137,11 @@ export default class CaveGenerator extends Generator {
                     absoluteX, absoluteY, absoluteZ,
                     random.nextFloat() * 0.5 + 0.5, rotation1 + 1.570796, rotation2 / 3, progress, distance, 1.0
                 );
+
+                if (random.nextInt(4) === 0) {
+                    this.generateBlobCaveAtBlock(originChunkX, originChunkZ, primer, absoluteX, absoluteY, absoluteZ);
+                }
+
                 return;
             }
 

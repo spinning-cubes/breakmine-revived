@@ -965,6 +965,9 @@ export default class WorldRenderer {
         let stack = player.renderer.firstPersonGroup;
         stack.visible = false;
 
+        // Hide hand in spectator mode
+        if (player.spectator) return;
+
         let firstPerson = this.minecraft.settings.thirdPersonView === 0;
         let itemStack = firstPerson ? this.itemToRender : player.inventory.getItemInSelectedSlot();
         let hasItem = !itemStack.isEmpty();

@@ -20,6 +20,7 @@ export default class PlayerEntity extends EntityLiving {
         this.username = "Player";
 
         this.creative = true;
+        this.spectator = false;
         this.health = 20;
         this.isDead = false;
 
@@ -131,8 +132,8 @@ export default class PlayerEntity extends EntityLiving {
             if (this.flyToggleTimer === 0) {
                 this.flyToggleTimer = 7;
             } else {
-                // Only allow flying in creative mode
-                if (this.creative) {
+                // Only allow flying in creative or spectator mode
+                if (this.creative || this.spectator) {
                     this.flying = !this.flying;
                     this.flyToggleTimer = 0;
                     this.updateFOVModifier();
@@ -272,7 +273,16 @@ export default class PlayerEntity extends EntityLiving {
             let slipperiness = this.getBlockSlipperiness() * 0.91;
 
             // Move
-            this.collision = this.moveCollide(-this.motionX, this.motionY, -this.motionZ);
+            if (this.spectator) {
+                // Spectator noclip: same movement, no collision
+                this.x -= this.motionX;
+                this.y += this.motionY;
+                this.z -= this.motionZ;
+                this.onGround = false;
+                this.collision = false;
+            } else {
+                this.collision = this.moveCollide(-this.motionX, this.motionY, -this.motionZ);
+            }
 
             // Gravity
             if (!this.flying) {
@@ -285,7 +295,7 @@ export default class PlayerEntity extends EntityLiving {
             this.motionZ *= slipperiness;
 
             // Fall damage tracking
-            if (!this.creative) {
+            if (!this.creative && !this.spectator) {
                 if (!this.onGround) {
                     // Accumulate fall distance while in air
                     if (this.motionY < 0) {
