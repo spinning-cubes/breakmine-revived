@@ -466,6 +466,17 @@ export default class Minecraft {
                 this.displayScreen(null);
             }
         }
+
+        // Worker provider: request chunks around player during gameplay
+        if (this.isInGame() && this.world !== null
+            && this.world.getChunkProvider() instanceof ChunkProviderGenerateWorker
+            && this.loadingScreen === null) {
+            let cameraChunkX = Math.floor(this.player.x) >> 4;
+            let cameraChunkZ = Math.floor(this.player.z) >> 4;
+            let renderDistance = this.settings.viewDistance;
+
+            this.world.getChunkProvider().requestChunksInRadius(cameraChunkX, cameraChunkZ, renderDistance);
+        }
     }
 
     handleMiningTicks() {

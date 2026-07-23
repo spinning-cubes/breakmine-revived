@@ -1,6 +1,7 @@
 import ChunkProvider from "./ChunkProvider.js";
 import Chunk from "../Chunk.js";
 import ChunkSection from "../ChunkSection.js";
+import EnumSkyBlock from "../../../util/EnumSkyBlock.js";
 import Random from "../../../util/Random.js";
 import Long from "../../../../../../../libraries/long.js";
 
@@ -18,60 +19,51 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
         this.worker = new Worker(workerUrl, { type: "module" });
 
         this.worker.onmessage = (e) => this._onWorkerMessage(e.data);
+        this.worker.onerror = (e) => {
+            console.error("WorldGen worker error:", e.message, e);
+        };
     }
 
     _onWorkerMessage(data) {
-        if (data.type === "chunkGenerated") {
+        if (data.type === "chunkGenerated" || data.type === "batchGenerated") {
             const results = data.results;
             for (const result of results) {
                 const key = result.x + (result.z << 16);
                 const pending = this.pendingChunks.get(key);
                 if (pending) {
                     this.pendingChunks.delete(key);
-                    pending.resolve(result);
+                    try {
+                        const chunk = this._deserializeChunk(result);
+                        chunk.loaded = true;
+                        this.chunks.set(key, chunk);
+                        this.world.group.add(chunk.group);
+
+                        this.world.updateLight(EnumSkyBlock.SKY,
+                            chunk.x * ChunkSection.SIZE, 0,
+                            chunk.z * ChunkSection.SIZE,
+                            chunk.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
+                            ChunkSection.SIZE * 16,
+                            chunk.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
+                        );
+                        this.world.updateLight(EnumSkyBlock.BLOCK,
+                            chunk.x * ChunkSection.SIZE, 0,
+                            chunk.z * ChunkSection.SIZE,
+                            chunk.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
+                            ChunkSection.SIZE * 16,
+                            chunk.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
+                        );
+                    } catch (err) {
+                        console.error("Failed to deserialize chunk", result.x, result.z, err);
+                    }
                 }
             }
         }
-
-        if (data.type === "batchGenerated") {
-            const results = data.results;
-            for (const result of results) {
-                const key = result.x + (result.z << 16);
-                const pending = this.pendingChunks.get(key);
-                if (pending) {
-                    this.pendingChunks.delete(key);
-                    pending.resolve(result);
-                }
-            }
-        }
-    }
-
-    _requestChunkFromWorker(chunkX, chunkZ) {
-        const key = chunkX + (chunkZ << 16);
-
-        if (this.pendingChunks.has(key)) {
-            return this.pendingChunks.get(key).promise;
-        }
-
-        const promise = new Promise((resolve) => {
-            this.pendingChunks.set(key, { resolve });
-        });
-
-        this.worker.postMessage({
-            type: "generate",
-            chunkX,
-            chunkZ,
-            seed: this.seedData,
-            worldType: this.worldType,
-        });
-
-        return promise;
     }
 
     _deserializeChunk(result) {
         const chunk = new Chunk(this.world, result.x, result.z);
 
-        for (let y = 0; y < ChunkSection.SIZE * 16 / ChunkSection.SIZE; y++) {
+        for (let y = 0; y < 16; y++) {
             if ((result.sectionMask & (1 << y)) === 0) continue;
 
             const sectionData = result.sections[y];
@@ -110,43 +102,97 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
         return chunk;
     }
 
+    getChunkAt(chunkX, chunkZ) {
+        const index = chunkX + (chunkZ << 16);
+        const existing = this.chunks.get(index);
+        if (existing) return existing;
+
+        if (this.pendingChunks.has(index)) return null;
+
+        this.pendingChunks.set(index, { resolve: null });
+
+        this.worker.postMessage({
+            type: "generate",
+            chunkX,
+            chunkZ,
+            seed: this.seedData,
+            worldType: this.worldType,
+        });
+
+        return null;
+    }
+
+    requestChunksInRadius(centerX, centerZ, radius) {
+        const needed = [];
+        for (let x = -radius + 1; x < radius; x++) {
+            for (let z = -radius + 1; z < radius; z++) {
+                const cx = centerX + x;
+                const cz = centerZ + z;
+                const index = cx + (cz << 16);
+                if (!this.chunks.has(index) && !this.pendingChunks.has(index)) {
+                    needed.push([cx, cz, x * x + z * z]);
+                }
+            }
+        }
+
+        if (needed.length === 0) return;
+
+        needed.sort((a, b) => a[2] - b[2]);
+
+        const BATCH = 32;
+        const batch = needed.slice(0, BATCH);
+
+        for (const [cx, cz] of batch) {
+            const key = cx + (cz << 16);
+            this.pendingChunks.set(key, { resolve: null });
+        }
+
+        this.worker.postMessage({
+            type: "generateBatch",
+            coords: batch.map(([cx, cz]) => [cx, cz]),
+            seed: this.seedData,
+            worldType: this.worldType,
+        });
+    }
+
     async getChunkAtAsync(chunkX, chunkZ) {
         const index = chunkX + (chunkZ << 16);
         const existing = this.chunks.get(index);
         if (existing) return existing;
 
-        const result = await this._requestChunkFromWorker(chunkX, chunkZ);
+        const result = await new Promise((resolve) => {
+            this.pendingChunks.set(index, { resolve });
+
+            this.worker.postMessage({
+                type: "generate",
+                chunkX,
+                chunkZ,
+                seed: this.seedData,
+                worldType: this.worldType,
+            });
+        });
 
         const chunk = this._deserializeChunk(result);
         chunk.loaded = true;
         this.chunks.set(index, chunk);
         this.world.group.add(chunk.group);
 
-        return chunk;
-    }
-
-    getChunkAt(chunkX, chunkZ) {
-        const index = chunkX + (chunkZ << 16);
-        const existing = this.chunks.get(index);
-        if (existing) return existing;
-
-        const pending = this.pendingChunks.get(index);
-        if (pending) return null;
-
-        this._requestChunkFromWorker(chunkX, chunkZ);
-        return null;
-    }
-
-    async loadChunksAsync(chunkCoords) {
-        const results = await Promise.all(
-            chunkCoords.map(([x, z]) => this.getChunkAtAsync(x, z))
+        this.world.updateLight(EnumSkyBlock.SKY,
+            chunk.x * ChunkSection.SIZE, 0,
+            chunk.z * ChunkSection.SIZE,
+            chunk.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
+            ChunkSection.SIZE * 16,
+            chunk.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
+        );
+        this.world.updateLight(EnumSkyBlock.BLOCK,
+            chunk.x * ChunkSection.SIZE, 0,
+            chunk.z * ChunkSection.SIZE,
+            chunk.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
+            ChunkSection.SIZE * 16,
+            chunk.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
         );
 
-        for (const chunk of results) {
-            this.populateChunk(chunk);
-        }
-
-        return results;
+        return chunk;
     }
 
     async loadChunksBatchAsync(chunkCoords) {
@@ -159,32 +205,24 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
         }
 
         if (unloadedCoords.length === 0) {
-            for (const [x, z] of chunkCoords) {
-                const chunk = this.chunks.get(x + (z << 16));
-                if (chunk) this.populateChunk(chunk);
-            }
             return chunkCoords.map(([x, z]) => this.chunks.get(x + (z << 16))).filter(Boolean);
         }
 
         const batchPromise = new Promise((resolve) => {
-            for (const [x, z] of unloadedCoords) {
-                const key = x + (z << 16);
-                this.pendingChunks.set(key, { resolve: (result) => {
-                    const chunk = this._deserializeChunk(result);
-                    chunk.loaded = true;
-                    this.chunks.set(key, chunk);
-                    this.world.group.add(chunk.group);
-                }});
-            }
-
-            const prevHandler = this.worker.onmessage;
-            this.worker.onmessage = (e) => {
-                prevHandler(e);
+            const handler = (e) => {
                 if (e.data.type === "batchGenerated") {
-                    this.worker.onmessage = prevHandler;
+                    this.worker.removeEventListener("message", handler);
                     resolve();
                 }
             };
+            this.worker.addEventListener("message", handler);
+
+            for (const [x, z] of unloadedCoords) {
+                const key = x + (z << 16);
+                if (!this.pendingChunks.has(key)) {
+                    this.pendingChunks.set(key, { resolve: null });
+                }
+            }
 
             this.worker.postMessage({
                 type: "generateBatch",
@@ -196,56 +234,10 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
 
         await batchPromise;
 
-        const loaded = [];
-        for (const [x, z] of chunkCoords) {
-            const chunk = this.chunks.get(x + (z << 16));
-            if (chunk) {
-                this.populateChunk(chunk);
-                loaded.push(chunk);
-            }
-        }
-
-        return loaded;
+        return chunkCoords.map(([x, z]) => this.chunks.get(x + (z << 16))).filter(Boolean);
     }
 
     populateChunk(chunk) {
-        const x = chunk.x;
-        const z = chunk.z;
-
-        if (!chunk.isTerrainPopulated
-            && this.chunkExists(x + 1, z + 1)
-            && this.chunkExists(x, z + 1)
-            && this.chunkExists(x + 1, z)) {
-            this._populateChunkAt(x, z);
-        }
-        if (this.chunkExists(x - 1, z)
-            && !this.getChunkAt(x - 1, z)?.isTerrainPopulated
-            && this.chunkExists(x - 1, z + 1)
-            && this.chunkExists(x, z + 1)
-            && this.chunkExists(x - 1, z)) {
-            this._populateChunkAt(x - 1, z);
-        }
-        if (this.chunkExists(x, z - 1)
-            && !this.getChunkAt(x, z - 1)?.isTerrainPopulated
-            && this.chunkExists(x + 1, z - 1)
-            && this.chunkExists(x, z - 1)
-            && this.chunkExists(x + 1, z)) {
-            this._populateChunkAt(x, z - 1);
-        }
-        if (this.chunkExists(x - 1, z - 1)
-            && !this.getChunkAt(x - 1, z - 1)?.isTerrainPopulated
-            && this.chunkExists(x - 1, z - 1)
-            && this.chunkExists(x, z - 1)
-            && this.chunkExists(x - 1, z)) {
-            this._populateChunkAt(x - 1, z - 1);
-        }
-    }
-
-    _populateChunkAt(x, z) {
-        const chunk = this.getChunkAt(x, z);
-        if (chunk && !chunk.isTerrainPopulated) {
-            chunk.isTerrainPopulated = true;
-        }
     }
 
     async findSpawnAsync() {

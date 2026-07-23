@@ -21,7 +21,11 @@ export default class SetBlockCommand extends Command {
             return false;
         }
 
-        minecraft.world.setBlockAt(x, y, z, block);
+        if (minecraft && minecraft.world) {
+            minecraft.world.setBlockAt(x, y, z, block);
+        } else {
+            minecraft.addMessageToChat("Failed to place block, world is null");
+        }
         minecraft.addMessageToChat("Set block to " + block + " at " + x + " " + y + " " + z);
 
         return true;

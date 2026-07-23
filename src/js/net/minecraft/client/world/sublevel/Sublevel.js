@@ -27,7 +27,7 @@ export default class Sublevel {
             let z = block[2];
             let typeId = block[3];
 
-            this.minecraft.worldRenderer.blockRenderer.renderBlock(this.world, Block.getById(typeId), false, x, y, z);
+            this.minecraft.worldRenderer.blockRenderer.renderBlock(this.world, Block.getById(typeId), true, x, y, z);
         })
         let tessellator = this.minecraft.worldRenderer.blockRenderer.tessellator;
 

@@ -453,15 +453,20 @@ function generateChunks(chunkCoords, seedData, worldType) {
 self.onmessage = function(e) {
     const msg = e.data;
 
-    if (msg.type === "generate") {
-        const { chunkX, chunkZ, seed, worldType } = msg;
-        const results = generateChunks([[chunkX, chunkZ]], seed, worldType);
-        self.postMessage({ type: "chunkGenerated", results });
-    }
+    try {
+        if (msg.type === "generate") {
+            const { chunkX, chunkZ, seed, worldType } = msg;
+            const results = generateChunks([[chunkX, chunkZ]], seed, worldType);
+            self.postMessage({ type: "chunkGenerated", results });
+        }
 
-    if (msg.type === "generateBatch") {
-        const { coords, seed, worldType } = msg;
-        const results = generateChunks(coords, seed, worldType);
-        self.postMessage({ type: "batchGenerated", results });
+        if (msg.type === "generateBatch") {
+            const { coords, seed, worldType } = msg;
+            const results = generateChunks(coords, seed, worldType);
+            self.postMessage({ type: "batchGenerated", results });
+        }
+    } catch (err) {
+        console.error("Worker generation error:", err);
+        self.postMessage({ type: msg.type === "generateBatch" ? "batchGenerated" : "chunkGenerated", results: [] });
     }
 };
