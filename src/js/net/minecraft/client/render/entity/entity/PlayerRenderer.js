@@ -197,7 +197,7 @@ export default class PlayerRenderer extends EntityRenderer {
 
         // Render nametag for other players, or for local player in third person
         let isThirdPerson = this.worldRenderer.minecraft.settings.thirdPersonView !== 0;
-        if ((entity !== this.worldRenderer.minecraft.player || isThirdPerson) && entity.username) {
+        if ((entity !== this.worldRenderer.minecraft.player || isThirdPerson) && entity.username && !entity.isSneaking()) {
             this.renderNametag(entity, partialTicks);
         } else {
             this.nametagGroup.visible = false;
