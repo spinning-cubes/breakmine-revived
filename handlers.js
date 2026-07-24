@@ -178,7 +178,10 @@ function handlePlayPacket(player, packetId, buffer, offset) {
                 log.info('Chat', `<${player.username}> executed command: ${msg}`);
             } else {
                 log.info('Chat', `<${player.username}>: ${msg}`);
-                sendChatMessage(`§7<${player.username}> §f${msg}`);
+                let newname = player.username;
+                if (player.username === "AlexMinecrafter") newname = '§d' + player.username;
+                if (player.username === "kai") newname = '§e' + player.username;
+                sendChatMessage(`§7<${newname}> §f${msg}`);
             }
             break;
         }
