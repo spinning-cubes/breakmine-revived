@@ -298,7 +298,7 @@ export default class PlayerRenderer extends EntityRenderer {
         this.nametagGroup.position.set(interpolatedX, interpolatedY + 2.0, interpolatedZ);
 
         // Scale sprite in world units
-        const worldScale = 0.024;
+        const worldScale = 0.016;
         this.nametagSprite.scale.set(
             this.nametagTexture.image.width * worldScale,
             this.nametagTexture.image.height * worldScale,
