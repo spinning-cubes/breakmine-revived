@@ -10,6 +10,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
+const sharp = require('sharp');
 const Logger = require('./logger');
 
 const SECRETS_FILE = './data/secrets.json';
@@ -245,7 +246,7 @@ app.post('/api/upload_skin', authenticateToken, upload.single('file'), (req, res
     }
 });
 
-app.get('/skin/:username', (req, res) => {
+app.get('/skin/:username', async (req, res) => {
     try {
         const usernameVal = validateUsername(req.params.username);
         if (!usernameVal.valid) return res.status(400).json({ error: 'Invalid username' });
@@ -259,8 +260,15 @@ app.get('/skin/:username', (req, res) => {
             return res.status(404).json({ error: 'Skin not found' });
         }
 
-        res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=3600' });
-        res.sendFile(skinPath);
+        const image = sharp(skinPath);
+        const metadata = await image.metadata();
+        if (metadata.width === 64 && metadata.height === 64) {
+            res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=3600' });
+            image.extract({ left: 0, top: 0, width: 64, height: 32 }).png().pipe(res);
+        } else {
+            res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=3600' });
+            res.sendFile(skinPath);
+        }
     } catch (err) {
         Logger.error('Skin', `GetSkin failed: ${err.message}`);
         res.status(500).json({ error: 'Internal server error' });

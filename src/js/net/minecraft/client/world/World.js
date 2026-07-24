@@ -858,6 +858,12 @@ export default class World {
             if (entity.renderer && entity.renderer.group) {
                 this.group.remove(entity.renderer.group);
             }
+            if (entity.renderer && entity.renderer.nametagGroup) {
+                this.minecraft.worldRenderer.scene.remove(entity.renderer.nametagGroup);
+                if (entity.renderer.nametagTexture) {
+                    entity.renderer.nametagTexture.dispose();
+                }
+            }
         }
     }
 

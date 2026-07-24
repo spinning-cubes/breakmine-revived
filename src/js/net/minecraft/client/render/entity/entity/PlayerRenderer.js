@@ -31,11 +31,11 @@ export default class PlayerRenderer extends EntityRenderer {
         this.firstPersonGroup = new THREE.Object3D();
         this.worldRenderer.overlay.add(this.firstPersonGroup);
 
-        // Nametag group
+        // Nametag group (added to scene directly, not entity group, to avoid entity scale)
         this.nametagGroup = new THREE.Object3D();
         this.nametagSprite = null;
         this.nametagTexture = null;
-        this.group.add(this.nametagGroup);
+        this.worldRenderer.scene.add(this.nametagGroup);
     }
 
     static invalidateSkinCache(username) {
@@ -198,7 +198,9 @@ export default class PlayerRenderer extends EntityRenderer {
         // Render nametag for other players, or for local player in third person
         let isThirdPerson = this.worldRenderer.minecraft.settings.thirdPersonView !== 0;
         if ((entity !== this.worldRenderer.minecraft.player || isThirdPerson) && entity.username) {
-            this.renderNametag(entity);
+            this.renderNametag(entity, partialTicks);
+        } else {
+            this.nametagGroup.visible = false;
         }
     }
 
@@ -233,7 +235,7 @@ export default class PlayerRenderer extends EntityRenderer {
         meta.itemInHand = firstPerson ? this.worldRenderer.itemToRender : entity.inventory.getItemInSelectedSlot();
     }
 
-    renderNametag(entity) {
+    renderNametag(entity, partialTicks) {
         // Create or update nametag texture
         if (!this.nametagTexture || this.nametagUsername !== entity.username) {
             this.nametagUsername = entity.username;
@@ -280,14 +282,19 @@ export default class PlayerRenderer extends EntityRenderer {
         // Update sprite texture
         this.nametagSprite.material.map = this.nametagTexture;
 
-        // Position nametag above player
-        this.nametagGroup.position.set(0, 2.5, 0);
+        // Interpolate entity position for smooth rendering
+        let interpolatedX = entity.prevX + (entity.x - entity.prevX) * partialTicks;
+        let interpolatedY = entity.prevY + (entity.y - entity.prevY) * partialTicks;
+        let interpolatedZ = entity.prevZ + (entity.z - entity.prevZ) * partialTicks;
 
-        // Scale sprite based on canvas size
-        const scale = 0.01;
+        // Position nametag above player head in world space
+        this.nametagGroup.position.set(interpolatedX, interpolatedY + 2.5, interpolatedZ);
+
+        // Scale sprite in world units
+        const worldScale = 0.012;
         this.nametagSprite.scale.set(
-            this.nametagTexture.image.width * scale,
-            this.nametagTexture.image.height * scale,
+            this.nametagTexture.image.width * worldScale,
+            this.nametagTexture.image.height * worldScale,
             1
         );
 
