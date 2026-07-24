@@ -8,7 +8,7 @@ Client: Runs behind NAT, tunnels a local port to server's public port.
 
 Usage:
     Server:  python3 noport.py server
-    Client:  python3 noport.py client --server 174.169.230.116 --local-port 8080
+    Client:  python3 noport.py client --local-port 8080
 """
 
 import socket
@@ -28,6 +28,7 @@ MSG_CLOSE_CONN = 0x02
 MSG_TUNNEL_REQ = 0x03
 MSG_TUNNEL_RESP= 0x04
 
+DEFAULT_SERVER_IP  = "174.169.230.116"
 DEFAULT_CONTROL_PORT = 7000
 DEFAULT_MIN_PORT     = 7000
 DEFAULT_MAX_PORT     = 10000
@@ -457,20 +458,20 @@ def main():
         prog='noport',
         description='NoPort — tunnel local ports through a server you can reach',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        epilog=f"""
 examples:
   # Start the server (on your VPS with forwarded ports)
   python3 noport.py server
   python3 noport.py server --control-port 7000 --min-port 7001 --max-port 8000
 
-  # Expose a local web server
-  python3 noport.py client --server 174.169.230.116 --local-port 8080
+  # Expose a local web server (174.169.230.116 is default)
+  python3 noport.py client --local-port 8080
 
   # Expose a Minecraft server
-  python3 noport.py client --server 174.169.230.116 --local-port 25565
+  python3 noport.py client --local-port 25565
 
   # Expose an SSH server on a non-loopback address
-  python3 noport.py client --server 174.169.230.116 --local-port 22 --local-host 192.168.1.50
+  python3 noport.py client --local-port 22 --local-host 192.168.1.50
 """
     )
     sub = parser.add_subparsers(dest='mode')
@@ -488,8 +489,8 @@ examples:
 
     # ── client ───────────────────────────────────────────────────────────
     cp = sub.add_parser('client', help='Run tunnel client')
-    cp.add_argument('--server', required=True,
-                    help='Server IP or hostname')
+    cp.add_argument('--server', default=DEFAULT_SERVER_IP,
+                    help=f'Server IP or hostname (default: {DEFAULT_SERVER_IP})')
     cp.add_argument('--server-port', type=int, default=DEFAULT_CONTROL_PORT,
                     help=f'Server control port (default: {DEFAULT_CONTROL_PORT})')
     cp.add_argument('--local-port', type=int, required=True,
