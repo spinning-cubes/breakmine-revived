@@ -109,6 +109,8 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
 
         if (this.pendingChunks.has(index)) return null;
 
+        if (!this.worker) return null;
+
         this.pendingChunks.set(index, { resolve: null });
 
         this.worker.postMessage({
@@ -123,6 +125,8 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
     }
 
     requestChunksInRadius(centerX, centerZ, radius) {
+        if (!this.worker) return;
+
         const needed = [];
         for (let x = -radius + 1; x < radius; x++) {
             for (let z = -radius + 1; z < radius; z++) {

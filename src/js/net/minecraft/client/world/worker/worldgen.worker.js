@@ -434,6 +434,10 @@ function generateChunks(chunkCoords, seedData, worldType) {
         world.addChunk(chunk);
     }
 
+    for (const [cx, cz] of chunkCoords) {
+        generator.populateChunk(cx, cz);
+    }
+
     const requested = [];
     for (const [cx, cz] of chunkCoords) {
         const chunk = world.getChunkAt(cx, cz);

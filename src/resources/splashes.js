@@ -8,6 +8,9 @@ Hollow was here!
 Soup was here!
 Martwixgame was here!
 SpinningCubes was here!
+Blaise was here!
+Dinny was here!
+Chlodog was here!
 Cool!
 Modern!
 Runs on a TV!
@@ -19,7 +22,12 @@ Minetest Land!
 Bleh!
 Zombies (coming soon)!
 Coming soon to a browser near you!
-Smartfridge compatible!`.split('\n');
+Smartfridge compatible!
+Dorfleetus!
+Déjà vu!
+Made by SpinningCubes!
+RUNNNNNNNNNNNNNNNNNNNNNN!!!
+4 + 4 = 44!`.split('\n');
 
     static generateSplash() {
         return this.SPLASHES[Math.floor(Math.random() * this.SPLASHES.length)];

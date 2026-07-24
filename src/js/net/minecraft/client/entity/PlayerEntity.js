@@ -240,7 +240,7 @@ export default class PlayerEntity extends EntityLiving {
         this.motionY = prevMotionY * 0.6;
         this.jumpMovementFactor = prevJumpMovementFactor;
 
-        if (this.onGround) {
+        if (this.onGround && !this.spectator) {
             this.flying = false;
         }
     }

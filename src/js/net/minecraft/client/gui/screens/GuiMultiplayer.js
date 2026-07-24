@@ -77,16 +77,16 @@ export default class GuiMultiplayer extends GuiScreen {
         // Add default server if it doesn't exist, then load all servers
         const defaultServer = {
             name: "Public Server",
-            address: "174.169.230.116:6003",
-            details: "174.169.230.116:6003"
+            address: "174.169.230.116:6008",
+            details: "174.169.230.116:6008"
         };
         const defaultServerFileName = "Public_Server.json";
 
         this.saveList = [
             {
                 name: "Public Server",
-                date: "174.169.230.116:6003",
-                details: "174.169.230.116:6003"
+                date: "174.169.230.116:6008",
+                details: "174.169.230.116:6008"
             }
         ];
 
