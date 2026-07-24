@@ -254,13 +254,13 @@ export default class PlayerRenderer extends EntityRenderer {
             let padX = 4;
             let padY = 2;
             canvas.width = textWidth + padX * 2;
-            canvas.height = 12 + padY * 2;
+            canvas.height = 8 + padY * 2;
 
             // Disable smoothing for pixel-perfect text
             ctx.imageSmoothingEnabled = false;
 
             // Draw semi-transparent black background
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Render text using font renderer's internal method
@@ -295,7 +295,7 @@ export default class PlayerRenderer extends EntityRenderer {
         let interpolatedZ = entity.prevZ + (entity.z - entity.prevZ) * partialTicks;
 
         // Position nametag above player head in world space
-        this.nametagGroup.position.set(interpolatedX, interpolatedY + 2.5, interpolatedZ);
+        this.nametagGroup.position.set(interpolatedX, interpolatedY + 2.0, interpolatedZ);
 
         // Scale sprite in world units
         const worldScale = 0.024;
