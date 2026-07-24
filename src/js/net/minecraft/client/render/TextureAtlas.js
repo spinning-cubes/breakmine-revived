@@ -178,6 +178,7 @@ export default class TextureAtlas {
             "green_wool.png",
             "red_wool.png",
             "black_wool.png",
+            "tan_wool.png",
             "lava.png",
             "logic.png"
         ];

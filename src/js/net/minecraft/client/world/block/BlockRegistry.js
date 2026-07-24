@@ -94,6 +94,7 @@ export class BlockRegistry {
         BlockRegistry.BLACK_WOOL = new BlockWool(53, 0, "black_wool", "Black Wool");
         BlockRegistry.LAVA = new BlockLava(55, 0);
         BlockRegistry.LOGIC = new BlockLogic(56, 0);
+        BlockRegistry.TAN_WOOL = new BlockWool(57, 0, "tan_wool", "Tan Wool");
 
         BlockRegistry.init = true;
     }
