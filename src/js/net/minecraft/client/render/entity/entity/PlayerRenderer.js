@@ -250,14 +250,21 @@ export default class PlayerRenderer extends EntityRenderer {
             for (let i = 0; i < entity.username.length; i++) {
                 textWidth += fontRenderer.charWidths[entity.username.charCodeAt(i)] || 6;
             }
-            canvas.width = textWidth + 4;
-            canvas.height = 12;
+
+            let padX = 4;
+            let padY = 2;
+            canvas.width = textWidth + padX * 2;
+            canvas.height = 12 + padY * 2;
 
             // Disable smoothing for pixel-perfect text
             ctx.imageSmoothingEnabled = false;
 
+            // Draw semi-transparent black background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             // Render text using font renderer's internal method
-            fontRenderer.drawStringRaw(ctx, entity.username, 2, 2, 0xFFFFFF, false, "8", false);
+            fontRenderer.drawStringRaw(ctx, entity.username, padX, padY, 0xFFFFFF, false, "8", false);
 
             // Create texture from canvas
             if (this.nametagTexture) {
@@ -291,7 +298,7 @@ export default class PlayerRenderer extends EntityRenderer {
         this.nametagGroup.position.set(interpolatedX, interpolatedY + 2.5, interpolatedZ);
 
         // Scale sprite in world units
-        const worldScale = 0.012;
+        const worldScale = 0.024;
         this.nametagSprite.scale.set(
             this.nametagTexture.image.width * worldScale,
             this.nametagTexture.image.height * worldScale,
