@@ -5,6 +5,7 @@ import {BlockRegistry} from "../block/BlockRegistry.js";
 import TreeGenerator from "./structure/TreeGenerator.js";
 import BigTreeGenerator from "./structure/BigTreeGenerator.js";
 import Generator from "./Generator.js";
+import UndergroundHouseGenerator from "./structure/UndergroundHouseGenerator.js";
 
 export default class WorldGenerator extends Generator {
 
@@ -57,8 +58,8 @@ export default class WorldGenerator extends Generator {
 
         // Access noise data for population
         let absoluteX = chunkX * 16;
-        let absoluteY = chunkZ * 16;
-        let amount = Math.floor((this.populationNoiseGenerator.perlin(absoluteX * 0.5, absoluteY * 0.5) / 8 + this.random.nextDouble() * 4 + 4) / 3);
+        let absoluteZ = chunkZ * 16;
+        let amount = Math.floor((this.populationNoiseGenerator.perlin(absoluteX * 0.5, absoluteZ * 0.5) / 8 + this.random.nextDouble() * 4 + 4) / 3);
         if (amount < 0) {
             amount = 0;
         }
@@ -74,11 +75,31 @@ export default class WorldGenerator extends Generator {
         // Plant the trees in the chunk
         for (let i = 0; i < amount; i++) {
             let totalX = absoluteX + this.random.nextInt(16) + 8;
-            let totalZ = absoluteY + this.random.nextInt(16) + 8;
+            let totalZ = absoluteZ + this.random.nextInt(16) + 8;
             let totalY = this.world.getHeightAt(totalX, totalZ);
 
             // Generate tree at position
             treeGenerator.generateAtBlock(totalX, totalY, totalZ);
+        }
+
+        let houseGenerator = new UndergroundHouseGenerator(this.world, this.random.seed);
+        const UNDERGROUND_Y = 40; 
+        const RARE_CHANCE_FACTOR = 30;
+
+        if (this.random.nextInt(RARE_CHANCE_FACTOR) === 0) {
+            let houseAttempts = 1; 
+            for (let i = 0; i < houseAttempts; i++) {
+                let totalX = absoluteX + this.random.nextInt(16) + 8;
+                let totalZ = absoluteZ + this.random.nextInt(16) + 8;
+                let totalY = UNDERGROUND_Y; 
+
+                if (this.world.getBlockAt(totalX, totalY, totalZ) === 0) continue;
+                
+                let typeIdBelow = this.world.getBlockAt(totalX, totalY, totalZ);
+                if (typeIdBelow !== BlockRegistry.STONE.getId()) continue;
+
+                houseGenerator.generateAtBlock(totalX, totalY, totalZ);
+            }
         }
     }
 

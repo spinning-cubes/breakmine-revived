@@ -4,6 +4,7 @@ import TeleportCommand from "./command/TeleportCommand.js";
 import GameModeCommand from "./command/GameModeCommand.js";
 import UtilCommand from "./command/UtilCommand.js";
 import SetBlockCommand from "./command/SetBlockCommand.js"
+import PlaceCommand from "./command/PlaceCommand.js"
 
 export default class CommandHandler {
 
@@ -17,6 +18,7 @@ export default class CommandHandler {
         this.commands.push(new GameModeCommand());
         this.commands.push(new UtilCommand());
         this.commands.push(new SetBlockCommand());
+        this.commands.push(new PlaceCommand());
     }
 
     handleMessage(message) {

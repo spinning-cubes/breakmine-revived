@@ -180,7 +180,8 @@ export default class TextureAtlas {
             "black_wool.png",
             "tan_wool.png",
             "lava.png",
-            "logic.png"
+            "logic.png",
+            "mossy_cobblestone.png"
         ];
 
         // Map to the actual resource paths

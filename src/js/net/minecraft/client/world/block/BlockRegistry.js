@@ -28,6 +28,7 @@ import SoundGrass from "./sound/SoundGrass.js";
 import BlockWool from "./type/BlockWool.js";
 import BlockLava from "./type/BlockLava.js";
 import BlockLogic from "./type/BlockLogic.js";
+import BlockMossyCobblestone from "./type/BlockMossyCobblestone.js";
 
 export class BlockRegistry {
 
@@ -50,6 +51,7 @@ export class BlockRegistry {
         BlockRegistry.DIRT = new BlockDirt(3, 2);
         BlockRegistry.COBBLE_STONE = new BlockCobblestone(4, 14);
         BlockRegistry.WOOD = new BlockWood(5, 10);
+        BlockRegistry.MOSSY_COBBLESTONE = new BlockMossyCobblestone(6, 14);
         BlockRegistry.BEDROCK = new BlockBedrock(7, 11);
         BlockRegistry.GRAVEL = new BlockGravel(13, 13);
         BlockRegistry.LOG = new BlockLog(17, 4);
