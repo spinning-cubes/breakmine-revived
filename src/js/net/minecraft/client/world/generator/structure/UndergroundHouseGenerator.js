@@ -29,7 +29,6 @@ export default class UndergroundHouseGenerator extends Generator {
     }
 
     loadStructure(structure, x, y, z, randomCobblestone = false, e = false, w = false, n = false, s = false, t = false, b = false) {
-        console.log(e, w, n, s, t, b);
         Object.keys(structure).forEach(key => {
             const pos = key.split(',');
             if (structure[key]) {
@@ -100,8 +99,6 @@ export default class UndergroundHouseGenerator extends Generator {
         // Helper to generate a unique string key for coordinates (must be in scope)
         const getCoordKey = (x, y, z) => `${x},${y},${z}`;
 
-        console.log(`\n--- Starting Dungeon Generation (Max: ${MAX_STRUCTURES}) ---`);
-
         // --- 1. Place Origin Structure ---
         const originKey = getCoordKey(x1, y1, z1);
         if (placedCoords.has(originKey)) return false;
@@ -112,7 +109,6 @@ export default class UndergroundHouseGenerator extends Generator {
         // We'll leave the origin flags as FALSE for simplicity and let the next loop handle neighbors.
         const originNeighborFlags = { e: false, w: false, n: false, s: false, t: false, b: false };
 
-        console.log(`generating dungeon at ${x1} ${y1} ${z1}`);
         this.loadStructure(
             this.getRandomStructure(), 
             x1, y1, z1, 
@@ -188,7 +184,6 @@ export default class UndergroundHouseGenerator extends Generator {
             }
         }
 
-        console.log(`--- Dungeon Generation Complete. Final Structures: ${structureCount} ---`);
         return true;
     }
 }
