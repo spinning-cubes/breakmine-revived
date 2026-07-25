@@ -2,13 +2,14 @@ import Block from "../Block.js";
 
 export default class BlockWood extends Block {
 
-    constructor(id, textureSlotId) {
+    constructor(id, textureSlotId, woodType = "oak", displayName = "Oak Planks") {
         super(id, textureSlotId);
-        this.description = "Oak Planks";
+        this.description = displayName;
+        this.woodType = woodType;
         this.hardness = 2.0;
     }
 
     getTextureForFace(face) {
-        return 'planks_oak';
+        return this.woodType + '_planks';
     }
 }

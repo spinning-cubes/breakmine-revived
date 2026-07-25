@@ -19,6 +19,10 @@ export default class CraftingRegistry {
 
     static registerAllRecipes() {
         this.registerShapelessRecipe(BlockRegistry.WOOD.id, 4, [BlockRegistry.LOG.id]);
+        this.registerShapelessRecipe(BlockRegistry.SPRUCE_PLANKS.id, 4, [BlockRegistry.SPRUCE_LOG.id]);
+        this.registerShapelessRecipe(BlockRegistry.BIRCH_PLANKS.id, 4, [BlockRegistry.BIRCH_LOG.id]);
+        this.registerShapelessRecipe(BlockRegistry.JUNGLE_PLANKS.id, 4, [BlockRegistry.JUNGLE_LOG.id]);
+        this.registerShapelessRecipe(BlockRegistry.ACACIA_PLANKS.id, 4, [BlockRegistry.ACACIA_LOG.id]);
         this.registerShapedRecipe(BlockRegistry.CRAFTING_TABLE.id, 1, 2, 2, [BlockRegistry.WOOD.id, BlockRegistry.WOOD.id, BlockRegistry.WOOD.id, BlockRegistry.WOOD.id]);
     }
 

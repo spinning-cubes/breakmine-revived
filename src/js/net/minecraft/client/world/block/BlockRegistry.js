@@ -50,11 +50,11 @@ export class BlockRegistry {
         BlockRegistry.GRASS = new BlockGrass(2, 1);
         BlockRegistry.DIRT = new BlockDirt(3, 2);
         BlockRegistry.COBBLE_STONE = new BlockCobblestone(4, 14);
-        BlockRegistry.WOOD = new BlockWood(5, 10);
+        BlockRegistry.WOOD = new BlockWood(5, 10, "oak", "Oak Planks");
         BlockRegistry.MOSSY_COBBLESTONE = new BlockMossyCobblestone(6, 14);
         BlockRegistry.BEDROCK = new BlockBedrock(7, 11);
         BlockRegistry.GRAVEL = new BlockGravel(13, 13);
-        BlockRegistry.LOG = new BlockLog(17, 4);
+        BlockRegistry.LOG = new BlockLog(17, 4, "oak", "Oak Log");
         BlockRegistry.LEAVE = new BlockLeave(18, 6);
         BlockRegistry.GLASS = new BlockGlass(20, 12);
         BlockRegistry.WATER = new BlockWater(9, 7);
@@ -76,7 +76,7 @@ export class BlockRegistry {
         BlockRegistry.BRICK = new BlockBrick(33, 0);
         BlockRegistry.FURNACE = new BlockFurnace(34, 0);
         BlockRegistry.BUSH = new BlockBush(35, 0);
-        BlockRegistry.FENCE = new BlockFence(36, 0, "Oak", 5);
+        BlockRegistry.FENCE = new BlockFence(36, 0, "oak", 5);
         BlockRegistry.WOOD_PANEL = new BlockWoodPanel(37, 0);
         BlockRegistry.WHITE_WOOL = new BlockWool(38, 0, "white_wool", "White Wool");
         BlockRegistry.ORANGE_WOOL = new BlockWool(39, 0, "orange_wool", "Orange Wool");
@@ -97,6 +97,26 @@ export class BlockRegistry {
         BlockRegistry.LAVA = new BlockLava(55, 0);
         BlockRegistry.LOGIC = new BlockLogic(56, 0);
         BlockRegistry.TAN_WOOL = new BlockWool(57, 0, "tan_wool", "Tan Wool");
+
+        // Spruce
+        BlockRegistry.SPRUCE_PLANKS = new BlockWood(58, 0, "spruce", "Spruce Planks");
+        BlockRegistry.SPRUCE_LOG = new BlockLog(59, 0, "spruce", "Spruce Log");
+        BlockRegistry.SPRUCE_FENCE = new BlockFence(60, 0, "spruce", 58);
+
+        // Birch
+        BlockRegistry.BIRCH_PLANKS = new BlockWood(61, 0, "birch", "Birch Planks");
+        BlockRegistry.BIRCH_LOG = new BlockLog(62, 0, "birch", "Birch Log");
+        BlockRegistry.BIRCH_FENCE = new BlockFence(63, 0, "birch", 61);
+
+        // Jungle
+        BlockRegistry.JUNGLE_PLANKS = new BlockWood(64, 0, "jungle", "Jungle Planks");
+        BlockRegistry.JUNGLE_LOG = new BlockLog(65, 0, "jungle", "Jungle Log");
+        BlockRegistry.JUNGLE_FENCE = new BlockFence(66, 0, "jungle", 64);
+
+        // Acacia
+        BlockRegistry.ACACIA_PLANKS = new BlockWood(67, 0, "acacia", "Acacia Planks");
+        BlockRegistry.ACACIA_LOG = new BlockLog(68, 0, "acacia", "Acacia Log");
+        BlockRegistry.ACACIA_FENCE = new BlockFence(69, 0, "acacia", 67);
 
         BlockRegistry.init = true;
     }

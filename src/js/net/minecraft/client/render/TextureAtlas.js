@@ -181,7 +181,21 @@ export default class TextureAtlas {
             "tan_wool.png",
             "lava.png",
             "logic.png",
-            "mossy_cobblestone.png"
+            "mossy_cobblestone.png",
+            "spruce_planks.png",
+            "birch_planks.png",
+            "jungle_planks.png",
+            "acacia_planks.png",
+            "oak_log.png",
+            "oak_log_top.png",
+            "spruce_log.png",
+            "spruce_log_top.png",
+            "birch_log.png",
+            "birch_log_top.png",
+            "jungle_log.png",
+            "jungle_log_top.png",
+            "acacia_log.png",
+            "acacia_log_top.png"
         ];
 
         // Map to the actual resource paths

@@ -6,8 +6,9 @@ export default class BlockFence extends Block {
 
     constructor(id, textureSlotId, woodName, woodId) {
         super(id, textureSlotId);
-        this.description = woodName + " Fence";
+        this.description = woodName.charAt(0).toUpperCase() + woodName.slice(1) + " Fence";
         this.woodId = woodId;
+        this.woodName = woodName;
 
         this.hardness = 2.0;
         this.multipart = true;
@@ -23,7 +24,7 @@ export default class BlockFence extends Block {
     }
 
     getTextureForFace(face, data, x, y, z, world) {
-        return 'planks_oak';
+        return `${this.woodName}_planks`;
     }
 
     onBlockPlaced(world, x, y, z, face) {
