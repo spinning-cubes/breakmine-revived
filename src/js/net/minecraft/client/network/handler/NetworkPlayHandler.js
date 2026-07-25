@@ -79,6 +79,18 @@ export default class NetworkPlayHandler extends PacketHandler {
                             playerInfo.displayName = entry.displayName;
                             break;
                     }
+
+                    if (packet.getAction() === 0 || packet.getAction() === 1) {
+                        if (this.minecraft && this.minecraft.world) {
+                            for (const e of this.minecraft.world.entities) {
+                                if (e.uuid === uuid) {
+                                    e.creative = (entry.gameType === 1);
+                                    e.spectator = (entry.gameType === 3);
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -159,17 +171,26 @@ export default class NetworkPlayHandler extends PacketHandler {
         entity.setPosition(x, y, z);
         entity.setRotation(yaw, pitch);
 
+        let uuid = packet.getUUID().toString();
+        entity.uuid = uuid;
+
         // Set username from metadata (index 2 is custom name)
         let metaData = packet.getMetaData();
         if (metaData && metaData[2] && metaData[2].value) {
             entity.username = metaData[2].value;
         } else {
             // Fallback to player info map
-            let uuid = packet.getUUID().toString();
             let playerInfo = this.playerInfoMap.get(uuid);
             if (playerInfo && playerInfo.profile && playerInfo.profile.getUsername()) {
                 entity.username = playerInfo.profile.getUsername();
             }
+        }
+
+        // Set creative/spectator flags from player info
+        let playerInfo = this.playerInfoMap.get(uuid);
+        if (playerInfo) {
+            entity.creative = (playerInfo.gameType === 1);
+            entity.spectator = (playerInfo.gameType === 3);
         }
 
         world.addEntity(entity);

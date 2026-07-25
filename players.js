@@ -56,6 +56,7 @@ function normalizeInventoryState(inventory) {
 function addPlayer(player) {
     player.eid = nextEntityId++;
     player.joinTime = Date.now();
+    player.gamemode = 1; // Default: Creative
     player.inventory = normalizeInventoryState(player.inventory);
     players.set(player.eid, player);
 }

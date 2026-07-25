@@ -27,7 +27,7 @@ function sendJoinGame(player) {
     let offset = 0;
 
     data.writeInt32BE(player.eid, offset); offset += 4;
-    data.writeUInt8(1, offset); offset += 1;           // Gamemode: Creative
+    data.writeUInt8(player.gamemode ?? 1, offset); offset += 1;           // Gamemode
     data.writeUInt8(0, offset); offset += 1;           // Dimension: Overworld
     data.writeUInt8(1, offset); offset += 1;           // Difficulty: Normal
     data.writeUInt8(60, offset); offset += 1;          // Max Players
@@ -42,7 +42,7 @@ function sendRespawn(player, dimension) {
     let offset = 0;
 
     data.writeInt32BE(player.eid, offset); offset += 4;
-    data.writeUInt8(1, offset); offset += 1;           // Gamemode: Creative
+    data.writeUInt8(player.gamemode ?? 1, offset); offset += 1;           // Gamemode
     data.writeUInt8(dimension, offset); offset += 1;   // Dimension
     data.writeUInt8(1, offset); offset += 1;           // Difficulty: Normal
     data.writeUInt8(60, offset); offset += 1;          // Max Players
@@ -291,8 +291,8 @@ function sendPlayerListEntry(players, action = 0) {
         // Properties count (0)
         offset += writeVarInt(data, 0, offset);
 
-        // Game mode (1 = Creative)
-        offset += writeVarInt(data, 1, offset);
+        // Game mode
+        offset += writeVarInt(data, player.gamemode ?? 1, offset);
 
         // Ping (0)
         offset += writeVarInt(data, 0, offset);

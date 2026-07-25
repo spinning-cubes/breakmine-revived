@@ -83,6 +83,23 @@ wss.on('connection', (ws) => {
                     setBlockInventory(blockKey, payload.inventory);
                     saveWorld();
                 }
+            } else if (payload && payload.type === 'death' && player) {
+                const deathMsg = `${payload.username} ${payload.message}`;
+                const { sendChatMessage } = require('./packets');
+                sendChatMessage(deathMsg);
+            } else if (payload && payload.type === 'attack' && player) {
+                const targetId = payload.target;
+                const damage = payload.damage || 2;
+                const attacker = player.username;
+                if (targetId != null) {
+                    const players = getPlayers();
+                    const hurtPacket = JSON.stringify({ type: 'hurt', eid: targetId, damage, attacker });
+                    for (const [eid, p] of players) {
+                        if (eid !== player.eid && p.ws.readyState === 1) {
+                            p.ws.send(hurtPacket);
+                        }
+                    }
+                }
             }
         } catch (err) {
             // Ignore non-JSON text messages.

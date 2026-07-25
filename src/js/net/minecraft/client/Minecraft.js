@@ -30,11 +30,14 @@ import PlayerControllerMultiplayer from "./network/controller/PlayerControllerMu
 import ChunkProviderGenerateWorker from "./world/provider/ChunkProviderGenerateWorker.js";
 import FileSystem from "./fs/Filesystem.js";
 import generateUsername from "./UsernameGenerator.js";
+import Vector3 from "../util/Vector3.js";
+import MathHelper from "../util/MathHelper.js";
 import BlockPosition from "../util/BlockPosition.js";
 import GuiContainerSurvival from "./gui/screens/container/GuiContainerSurvival.js";
 import CraftingRegistry from "./crafting/CraftingRegistry.js";
 import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
 import ItemEntity from "./entity/ItemEntity.js";
+import PlayerEntity from "./entity/PlayerEntity.js";
 import { Version } from "../../../../resources/version.js";
 
 export default class Minecraft {
@@ -658,8 +661,22 @@ export default class Minecraft {
 
             let hitResult = this.player.rayTrace(5, this.timer.partialTicks);
 
-            // Destroy block
+            // Attack entity
             if (button === 0) {
+                let entity = this.rayTraceEntity(5, this.timer.partialTicks);
+                if (entity && entity !== this.player && entity instanceof PlayerEntity && !entity.creative && !entity.spectator) {
+                    if (entity.renderer) {
+                        entity.renderer.hurtTimestamp = performance.now();
+                    }
+                    entity.damageEntity(2, this.player.username);
+                    if (!this.isSingleplayer()) {
+                        const nm = this.playerController.getNetworkHandler().getNetworkManager();
+                        if (nm) nm.sendJson({ type: 'attack', target: entity.id, damage: 2, attacker: this.player.username });
+                    }
+                    this.player.swingArm();
+                    return;
+                }
+
                 if (hitResult != null) {
                     if (this.player.creative) {
                         // Get previous block
@@ -875,6 +892,74 @@ export default class Minecraft {
         context.imageSmoothingEnabled = false;
         context.drawImage(image, 0, 0, image.width, image.height);
         return new THREE.CanvasTexture(canvas);
+    }
+
+    rayTraceEntity(reach, partialTicks) {
+        let from = this.player.getPositionEyes(partialTicks);
+        let look = this.player.getLook(partialTicks);
+        let to = new Vector3(
+            from.x + look.x * reach,
+            from.y + look.y * reach,
+            from.z + look.z * reach
+        );
+
+        let closest = null;
+        let closestDist = reach;
+
+        for (let entity of this.world.entities) {
+            if (entity === this.player || !entity.boundingBox) continue;
+
+            let bb = entity.boundingBox.grow(0.1, 0.1, 0.1);
+            let hit = this.intersectRayAABB(from, to, bb);
+            if (hit !== null) {
+                let dist = from.distanceTo(hit);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = entity;
+                }
+            }
+        }
+
+        return closest;
+    }
+
+    intersectRayAABB(from, to, bb) {
+        let dir = new Vector3(to.x - from.x, to.y - from.y, to.z - from.z);
+
+        let tMin = -Infinity;
+        let tMax = Infinity;
+
+        if (dir.x !== 0) {
+            let tx1 = (bb.minX - from.x) / dir.x;
+            let tx2 = (bb.maxX - from.x) / dir.x;
+            tMin = Math.max(tMin, Math.min(tx1, tx2));
+            tMax = Math.min(tMax, Math.max(tx1, tx2));
+        } else if (from.x < bb.minX || from.x > bb.maxX) {
+            return null;
+        }
+
+        if (dir.y !== 0) {
+            let ty1 = (bb.minY - from.y) / dir.y;
+            let ty2 = (bb.maxY - from.y) / dir.y;
+            tMin = Math.max(tMin, Math.min(ty1, ty2));
+            tMax = Math.min(tMax, Math.max(ty1, ty2));
+        } else if (from.y < bb.minY || from.y > bb.maxY) {
+            return null;
+        }
+
+        if (dir.z !== 0) {
+            let tz1 = (bb.minZ - from.z) / dir.z;
+            let tz2 = (bb.maxZ - from.z) / dir.z;
+            tMin = Math.max(tMin, Math.min(tz1, tz2));
+            tMax = Math.min(tMax, Math.max(tz1, tz2));
+        } else if (from.z < bb.minZ || from.z > bb.maxZ) {
+            return null;
+        }
+
+        if (tMin > tMax || tMax < 0) return null;
+
+        let t = tMin < 0 ? tMax : tMin;
+        return new Vector3(from.x + dir.x * t, from.y + dir.y * t, from.z + dir.z * t);
     }
 
     getFaceValue(face) {

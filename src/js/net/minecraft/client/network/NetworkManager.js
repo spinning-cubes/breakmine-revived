@@ -190,6 +190,14 @@ export default class NetworkManager {
                 } else if (gamemode === 1 || gamemode === 3) {
                     player.flying = true;
                 }
+            } else if (payload.type === 'hurt' && this.minecraft?.world) {
+                const entity = this.minecraft.world.getEntityById(payload.eid);
+                if (entity && entity.renderer) {
+                    entity.renderer.hurtTimestamp = performance.now();
+                    if (payload.damage) {
+                        entity.damageEntity(payload.damage, payload.attacker);
+                    }
+                }
             }
         } catch (error) {
             console.error("Failed to parse JSON network message", error);

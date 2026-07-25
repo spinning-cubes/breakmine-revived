@@ -8,6 +8,7 @@ export default class EntityRenderer {
         this.model = model;
         this.tessellator = new Tessellator();
         this.group = new THREE.Object3D();
+        this.hurtTimestamp = 0;
     }
 
     rebuild(entity) {
@@ -74,6 +75,22 @@ export default class EntityRenderer {
         let timeAlive = entity.ticksExisted + partialTicks;
         let stack = entity.renderer.group;
         this.model.render(stack, limbSwing, limbSwingStrength, timeAlive, yaw, pitch, partialTicks);
+
+        if (performance.now() - this.hurtTimestamp < 300) {
+            this.group.traverse(child => {
+                if (child.isMesh) {
+                    child.material.color.setHex(0xffaaaa);
+                    child.material.vertexColors = false;
+                }
+            });
+        } else {
+            this.group.traverse(child => {
+                if (child.isMesh) {
+                    child.material.color.setHex(0xffffff);
+                    child.material.vertexColors = true;
+                }
+            });
+        }
     }
 
     interpolateRotation(prevValue, value, partialTicks) {

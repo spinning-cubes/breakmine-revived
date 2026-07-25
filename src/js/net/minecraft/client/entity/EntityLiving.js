@@ -29,10 +29,15 @@ export default class EntityLiving extends Entity {
         this.prevLimbSwingStrength = 0;
 
         this.health = 20.0;
+
+        this.hurtTime = 0;
     }
 
     onUpdate() {
         super.onUpdate();
+        if (this.hurtTime > 0) {
+            this.hurtTime--;
+        }
         this.onLivingUpdate();
         this.updateBodyRotation();
 
@@ -250,6 +255,19 @@ export default class EntityLiving extends Entity {
     setRotationYawHead(yaw) {
         this.targetYaw = yaw; // TODO should be rotationYawHead
         // this.rotationYawHead = yaw;
+    }
+
+    damageEntity(amount, attackerName) {
+        this.health -= amount;
+        this.hurtTime = 10;
+        if (this.health <= 0) {
+            this.health = 0;
+            this.isDead = true;
+            this.typeOfDeath = attackerName ? `was slain by ${attackerName}` : 'died';
+            if (typeof this.die === 'function') {
+                this.die();
+            }
+        }
     }
 
 }

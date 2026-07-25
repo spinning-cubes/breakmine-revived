@@ -59,7 +59,7 @@ export function convert(component, options = {}) {
 export function convertOld(text) {
     let c = {text: ""};
     const extra = [];
-    for (const [i, t] of text.split(/ยง(.)/).entries()) {
+    for (const [i, t] of text.split(/§(.)/).entries()) {
         if (i === 0) {
             c.text = t;
         } else if (i % 2 === 0) {

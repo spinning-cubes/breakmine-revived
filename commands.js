@@ -100,11 +100,24 @@ function handleGamemode(player, args) {
         return;
     }
 
+    // Store gamemode on player
+    player.gamemode = gamemode;
+
     // Send gamemode change to the client via JSON message
     player.ws.send(JSON.stringify({ type: 'gamemode', gamemode: gamemode }));
 
+    // Broadcast player list entry update to all players (including self)
+    const { sendPlayerListEntry } = require('./packets');
+    const updatePacket = sendPlayerListEntry([player], 0);
+    const players = getPlayers();
+    for (const p of players.values()) {
+        if (p.ws.readyState === 1) {
+            p.ws.send(updatePacket);
+        }
+    }
+
     const modeName = gamemode === 0 ? 'Survival' : gamemode === 1 ? 'Creative' : 'Spectator';
-    sendChatMessage(`§e${player.username}'s game mode has been updated to ${modeName}`);
+    sendChatMessageToPlayer(player, `Your game mode has been updated to ${modeName}`);
 }
 
 function handleTime(player, args) {

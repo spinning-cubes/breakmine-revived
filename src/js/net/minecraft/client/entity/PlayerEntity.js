@@ -18,6 +18,7 @@ export default class PlayerEntity extends EntityLiving {
         this.inventory = new InventoryPlayer();
         this.inventory.setInventoryChangeListener(() => this.handleInventoryChanged());
         this.username = "Player";
+        this.uuid = null;
 
         this.creative = true;
         this.spectator = false;
@@ -564,8 +565,15 @@ export default class PlayerEntity extends EntityLiving {
     }
 
     die() {
-        // Display death screen
-        this.minecraft.displayScreen(new GuiDeath(this));
+        if (this === this.minecraft.player) {
+            this.minecraft.displayScreen(new GuiDeath(this));
+            if (!this.minecraft.isSingleplayer()) {
+                try {
+                    const nm = this.minecraft.playerController?.getNetworkHandler?.()?.getNetworkManager?.();
+                    if (nm) nm.sendJson({ type: 'death', username: this.username, message: this.typeOfDeath });
+                } catch (e) {}
+            }
+        }
     }
 
     respawn() {
