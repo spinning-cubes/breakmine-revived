@@ -31,6 +31,7 @@ import BlockLogic from "./type/BlockLogic.js";
 import BlockMossyCobblestone from "./type/BlockMossyCobblestone.js";
 import BlockSlab from "./type/BlockSlab.js";
 import BlockBeans from "./type/BlockBeans.js";
+import BlockMoldyBeans from "./type/BlockMoldyBeans.js";
 
 export class BlockRegistry {
 
@@ -131,6 +132,7 @@ export class BlockRegistry {
         BlockRegistry.BRICK_SLAB = new BlockSlab(77, 0, "brick", "Brick Slab", Block.sounds.stone);
 
         BlockRegistry.BEANS = new BlockBeans(78, 0);
+        BlockRegistry.MOLDY_BEANS = new BlockMoldyBeans(79, 0);
 
         BlockRegistry.init = true;
     }
