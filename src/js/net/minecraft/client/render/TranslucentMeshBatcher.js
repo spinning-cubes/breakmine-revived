@@ -127,11 +127,19 @@ export default class TranslucentMeshBatcher {
 
         for (let i = 0; i < faceCount; i++) {
             let idx = i * 6;
-            let vIdx = this.indices[idx];
 
-            let dx = this.positions[vIdx * 3]     - cameraPos.x;
-            let dy = this.positions[vIdx * 3 + 1] - cameraPos.y;
-            let dz = this.positions[vIdx * 3 + 2] - cameraPos.z;
+            let v0 = this.indices[idx];
+            let v1 = this.indices[idx + 2];
+            let v2 = this.indices[idx + 1];
+            let v3 = this.indices[idx + 4];
+
+            let cx = (this.positions[v0 * 3]     + this.positions[v1 * 3]     + this.positions[v2 * 3]     + this.positions[v3 * 3])     * 0.25;
+            let cy = (this.positions[v0 * 3 + 1] + this.positions[v1 * 3 + 1] + this.positions[v2 * 3 + 1] + this.positions[v3 * 3 + 1]) * 0.25;
+            let cz = (this.positions[v0 * 3 + 2] + this.positions[v1 * 3 + 2] + this.positions[v2 * 3 + 2] + this.positions[v3 * 3 + 2]) * 0.25;
+
+            let dx = cx - cameraPos.x;
+            let dy = cy - cameraPos.y;
+            let dz = cz - cameraPos.z;
 
             this.faces[i].start = idx;
             this.faces[i].dist = dx * dx + dy * dy + dz * dz;

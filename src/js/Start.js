@@ -1,5 +1,6 @@
 import Minecraft from './net/minecraft/client/Minecraft.js';
 import * as aesjs from '../../libraries/aes.js';
+import MixinEngine from './net/minecraft/client/mixin/MixinEngine.js';
 
 // Handle unhandled promise rejections globally
 window.addEventListener('unhandledrejection', event => {

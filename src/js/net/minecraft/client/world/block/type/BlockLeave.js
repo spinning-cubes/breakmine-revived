@@ -14,7 +14,20 @@ export default class BlockLeave extends Block {
     getTextureForFace(face) {
         return 'oak_leaves';
     }
-    
+
+    shouldRenderFace(world, x, y, z, face) {
+        let typeId = world.getBlockAtFace(x, y, z, face);
+        return typeId === 0 || typeId !== this.id || typeId === this.id;
+    }
+
+    isTranslucent() {
+        return true;
+    }
+
+    canCastAmbientOcclusion() {
+        return true;
+    }
+
     getDrop(world, x, y, z) {
         return [0, 1];
     }

@@ -1,4 +1,5 @@
 import Block from "../Block.js";
+import { BlockRegistry } from "../BlockRegistry.js";
 
 export default class BlockBush extends Block {
 
@@ -14,5 +15,18 @@ export default class BlockBush extends Block {
     getTextureForFace(face, data, x, y, z, world) {
         const value = (x + y + z) % 3;
         return value == 0 ? 'bush' : value == 1 ? 'bush2' : 'bush3';
+    }
+
+    shouldRenderFace(world, x, y, z, face) {
+        let typeId = world.getBlockAtFace(x, y, z, face);
+        return typeId === 0 || typeId !== this.id || typeId === this.id || typeId === BlockRegistry.LEAVE.getId();
+    }
+
+    isTranslucent() {
+        return true;
+    }
+
+    canCastAmbientOcclusion() {
+        return true;
     }
 }
