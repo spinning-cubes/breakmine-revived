@@ -136,6 +136,9 @@ export class BlockRegistry {
         BlockRegistry.MOLDY_BEANS = new BlockMoldyBeans(79, 0);
         BlockRegistry.REDSTONE_DUST = new BlockRedstoneDust(80, 0);
 
+        BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
+        BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");
+
         BlockRegistry.init = true;
     }
 

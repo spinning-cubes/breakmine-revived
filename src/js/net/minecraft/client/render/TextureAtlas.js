@@ -204,7 +204,9 @@ export default class TextureAtlas {
             "redstone_dust_line1.png",
             "redstone_dust_cross.png",
             "redstone_dust_overlay.png",
-            "none.png"
+            "none.png",
+            "sapphire_ore.png",
+            "sapphire_block.png"
         ];
 
         // Map to the actual resource paths
