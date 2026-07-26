@@ -57,7 +57,7 @@ export default class World {
 
         this.clouds = new THREE.Mesh(planeGeometry, cloudMaterial);
         this.clouds.rotation.x = -Math.PI / 2;
-        this.clouds.position.y = World.TOTAL_HEIGHT + 100;
+        this.clouds.position.y = 192;
         this.group.add(this.clouds);
         
         this.cloudOffset = 0;
