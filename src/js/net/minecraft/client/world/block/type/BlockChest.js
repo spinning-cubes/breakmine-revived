@@ -13,15 +13,31 @@ export default class BlockChest extends Block {
         this.noFaceCull = true;
     }
 
-    getTextureForFace(face) {
+    getTextureForFace(face, data) {
+        let facing = data & 7;
         switch (face) {
             case EnumBlockFace.NORTH:
-                return 'chest_front';
+                return facing === 2 ? 'chest_front' : 'chest_side';
+            case EnumBlockFace.SOUTH:
+                return facing === 3 ? 'chest_front' : 'chest_side';
+            case EnumBlockFace.WEST:
+                return facing === 4 ? 'chest_front' : 'chest_side';
+            case EnumBlockFace.EAST:
+                return facing === 5 ? 'chest_front' : 'chest_side';
             case EnumBlockFace.TOP:
             case EnumBlockFace.BOTTOM:
                 return 'chest_bottom';
             default:
                 return 'chest_side';
+        }
+    }
+
+    onBlockPlaced(world, x, y, z, face) {
+        if (world && world.minecraft && world.minecraft.player) {
+            let player = world.minecraft.player;
+            let dirIndex = Math.floor((player.rotationYaw * 4 / 360) + 0.5) & 3;
+            let data = [2, 5, 3, 4][dirIndex];
+            world.setBlockDataAt(x, y, z, data);
         }
     }
 

@@ -9,16 +9,32 @@ export default class BlockFurnace extends Block {
         this.hardness = 3.5;
     }
 
-    getTextureForFace(face) {
+    getTextureForFace(face, data) {
+        let facing = data & 7;
         switch (face) {
             case EnumBlockFace.NORTH:
-                return 'furnace_front_off';
+                return facing === 2 ? 'furnace_front_off' : 'furnace_side';
+            case EnumBlockFace.SOUTH:
+                return facing === 3 ? 'furnace_front_off' : 'furnace_side';
+            case EnumBlockFace.WEST:
+                return facing === 4 ? 'furnace_front_off' : 'furnace_side';
+            case EnumBlockFace.EAST:
+                return facing === 5 ? 'furnace_front_off' : 'furnace_side';
             case EnumBlockFace.TOP:
                 return 'furnace_top';
             case EnumBlockFace.BOTTOM:
                 return 'furnace_bottom';
             default:
                 return 'furnace_side';
+        }
+    }
+
+    onBlockPlaced(world, x, y, z, face) {
+        if (world && world.minecraft && world.minecraft.player) {
+            let player = world.minecraft.player;
+            let dirIndex = Math.floor((player.rotationYaw * 4 / 360) + 0.5) & 3;
+            let data = [2, 5, 3, 4][dirIndex];
+            world.setBlockDataAt(x, y, z, data);
         }
     }
 

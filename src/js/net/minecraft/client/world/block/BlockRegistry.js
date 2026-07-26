@@ -29,6 +29,7 @@ import BlockWool from "./type/BlockWool.js";
 import BlockLava from "./type/BlockLava.js";
 import BlockLogic from "./type/BlockLogic.js";
 import BlockMossyCobblestone from "./type/BlockMossyCobblestone.js";
+import BlockSlab from "./type/BlockSlab.js";
 
 export class BlockRegistry {
 
@@ -117,6 +118,16 @@ export class BlockRegistry {
         BlockRegistry.ACACIA_PLANKS = new BlockWood(67, 0, "acacia", "Acacia Planks");
         BlockRegistry.ACACIA_LOG = new BlockLog(68, 0, "acacia", "Acacia Log");
         BlockRegistry.ACACIA_FENCE = new BlockFence(69, 0, "acacia", 67);
+
+        // Slabs
+        BlockRegistry.COBBLESTONE_SLAB = new BlockSlab(70, 0, "cobblestone", "Cobblestone Slab", Block.sounds.stone);
+        BlockRegistry.OAK_SLAB = new BlockSlab(71, 0, "oak_planks", "Oak Slab", Block.sounds.wood);
+        BlockRegistry.SPRUCE_SLAB = new BlockSlab(72, 0, "spruce_planks", "Spruce Slab", Block.sounds.wood);
+        BlockRegistry.BIRCH_SLAB = new BlockSlab(73, 0, "birch_planks", "Birch Slab", Block.sounds.wood);
+        BlockRegistry.JUNGLE_SLAB = new BlockSlab(74, 0, "jungle_planks", "Jungle Slab", Block.sounds.wood);
+        BlockRegistry.ACACIA_SLAB = new BlockSlab(75, 0, "acacia_planks", "Acacia Slab", Block.sounds.wood);
+        BlockRegistry.MOSSY_COBBLESTONE_SLAB = new BlockSlab(76, 0, "mossy_cobblestone", "Mossy Cobblestone Slab", Block.sounds.stone);
+        BlockRegistry.BRICK_SLAB = new BlockSlab(77, 0, "brick", "Brick Slab", Block.sounds.stone);
 
         BlockRegistry.init = true;
     }

@@ -772,6 +772,19 @@ export default class Minecraft {
                                 }
                             }
 
+                            // Slab top/bottom based on placement face
+                            if (block.constructor.name === 'BlockSlab') {
+                                if (hitResult.face.y === -1) {
+                                    blockData = 1; // Top slab
+                                }
+                            }
+
+                            // Chest/furnace facing based on player yaw
+                            if (block.constructor.name === 'BlockChest' || block.constructor.name === 'BlockFurnace') {
+                                let dirIndex = Math.floor((this.player.rotationYaw * 4 / 360) + 0.5) & 3;
+                                blockData = [2, 5, 3, 4][dirIndex]; // 2=N, 3=S, 4=W, 5=E — front faces player
+                            }
+
                             // Place block
                             this.world.setBlockAt(x, y, z, typeId, blockData);
 
