@@ -35,6 +35,33 @@ export default class World {
         // Store interval ID for cleanup
         this.lightUpdateInterval = null;
 
+        const textureLoader = new THREE.TextureLoader();
+        this.cloudTexture = textureLoader.load('src/resources/terrain/clouds.png', () => {
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.magFilter = THREE.NearestFilter;
+            texture.minFilter = THREE.NearestFilter;
+            texture.repeat.set(0.7, 0.7);
+        });
+
+        const cloudPlaneSize = 4096;
+        const planeGeometry = new THREE.PlaneGeometry(cloudPlaneSize, cloudPlaneSize);
+        
+        const cloudMaterial = new THREE.MeshBasicMaterial({
+            map: this.cloudTexture,
+            transparent: true,
+            depthTest: true,
+            alphaTest: true,
+            side: THREE.DoubleSide
+        });
+
+        this.clouds = new THREE.Mesh(planeGeometry, cloudMaterial);
+        this.clouds.rotation.x = -Math.PI / 2;
+        this.clouds.position.y = World.TOTAL_HEIGHT + 100;
+        this.group.add(this.clouds);
+        
+        this.cloudOffset = 0;
+
         // Update lights async
         let scope = this;
         this.lightUpdateInterval = setInterval(function () {
@@ -68,6 +95,14 @@ export default class World {
             this.entities[i].onUpdate();
         }
 
+        if (this.minecraft.player) {
+            this.cloudTexture.offset.x =  this.minecraft.player.x * 0.0001 + this.cloudOffset;
+            this.cloudTexture.offset.y = -this.minecraft.player.z * 0.0001;
+            
+            this.clouds.position.x = this.minecraft.player.x; // / 2 * 1.5;
+            this.clouds.position.z = this.minecraft.player.z; // / 2 * 1.5;
+        }
+
         // Process scheduled block ticks
         this.processBlockTicks();
 
@@ -79,6 +114,9 @@ export default class World {
             // Rebuild all chunks
             this.minecraft.worldRenderer.rebuildAll();
         }
+
+        // Update clouds
+        this.cloudOffset += 0.00001;
 
         // Update world time
         this.time++;
