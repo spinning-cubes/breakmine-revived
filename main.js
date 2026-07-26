@@ -33,6 +33,16 @@ function createWindow() {
         win.setFullScreen(!win.isFullScreen());
         event.preventDefault();
       }
+      
+      // Reload page (Ctrl+R or Cmd+R)
+      if ((input.control || input.meta) && input.key.toLowerCase() === 'r') {
+        if (input.shift) {
+          win.webContents.reloadIgnoringCache(); // Ctrl+Shift+R
+        } else {
+          win.webContents.reload(); // Ctrl+R
+        }
+        event.preventDefault();
+      }
     }
   });
 
