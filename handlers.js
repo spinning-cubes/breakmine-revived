@@ -117,7 +117,26 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         sendLoginSuccess(player);
         sendJoinGame(player);
         sendSpawnPosition(player);
+
+        // Initialize chunk tracking BEFORE sending chunks so checkAndSendChunks
+        // can track which chunks have already been sent
+        const sentChunks = new Set();
+        // Pre-populate with the 5x5 spawn chunks that sendChunks will send
+        for (let cx = -2; cx <= 2; cx++) {
+            for (let cz = -2; cz <= 2; cz++) {
+                sentChunks.add(`${cx},${cz}`);
+            }
+        }
+        playerChunks.set(player.eid, sentChunks);
+
+        // Send initial 5x5 spawn chunks + PlayerPositionLook
         sendChunks(player);
+
+        // Immediately send the rest of the render distance worth of chunks
+        // without waiting for the client's position response round-trip.
+        // This prevents the loading screen from getting stuck at low progress
+        // on slow connections.
+        checkAndSendChunks(player);
 
         if (player.ws.readyState === 1) {
             player.ws.send(JSON.stringify({
@@ -129,16 +148,6 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         // Send initial time to client
         const { getWorldTime } = require('./world');
         sendTimeUpdate(player, getWorldTime());
-
-        // Initialize chunk tracking for this player AFTER sending chunks
-        // Track the spawn chunks that were just sent
-        const sentChunks = new Set();
-        for (let cx = -2; cx <= 2; cx++) {
-            for (let cz = -2; cz <= 2; cz++) {
-                sentChunks.add(`${cx},${cz}`);
-            }
-        }
-        playerChunks.set(player.eid, sentChunks);
 
         // Send player list to the new player (exclude self to avoid duplicate)
         const players = getPlayers();

@@ -157,6 +157,10 @@ export default class Minecraft {
         this.lastBlockPos = null;
         this.isMining = false;
 
+        // Loading screen timeout tracking
+        this.lastChunkCount = 0;
+        this.lastChunkArrivalTime = 0;
+
         // Initialize
         this.init();
     }
@@ -212,6 +216,10 @@ export default class Minecraft {
             this.loadingScreen = new GuiLoadingScreen();
             this.loadingScreen.setTitle("Building terrain...");
             this.displayScreen(this.loadingScreen);
+
+            // Reset chunk timeout tracking for the new world
+            this.lastChunkCount = 0;
+            this.lastChunkArrivalTime = 0;
 
             // Clear previous world
             if (this.world !== null) {
@@ -362,6 +370,25 @@ export default class Minecraft {
         this.screenRenderer.render(partialTicks);
     }
 
+    isElectron() {
+        // Renderer process
+        if (typeof window !== 'undefined' && typeof window.process === 'object' && window.process.type === 'renderer') {
+            return true;
+        }
+
+        // Main process
+        if (typeof process !== 'undefined' && typeof process.versions === 'object' && !!process.versions.electron) {
+            return true;
+        }
+
+        // Renderer process with nodeIntegration disabled
+        if (typeof navigator === 'object' && typeof navigator.userAgent === 'string' && navigator.userAgent.indexOf('Electron') >= 0) {
+            return true;
+        }
+
+        return false;
+    }
+
     displayScreen(screen) {
         if (screen === this.currentScreen) {
             return;
@@ -380,6 +407,10 @@ export default class Minecraft {
 
         if (Boolean(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '[::1]' )) {
             document.title = document.title + " (localhost)";
+        }
+
+        if (this.isElectron()) {
+            document.title = "Breakmine" + " (" + Version.VERSION + ", " + Version.TIMESTAMP + ")";
         }
 
         // Fallback screen
@@ -448,6 +479,12 @@ export default class Minecraft {
             let requiredChunks = Math.pow(renderDistance * 2 - 1, 2);
             let loadedChunks = this.world.getChunkProvider().getChunks().size;
 
+            // Track chunk arrival for timeout detection
+            if (loadedChunks !== this.lastChunkCount) {
+                this.lastChunkCount = loadedChunks;
+                this.lastChunkArrivalTime = Date.now();
+            }
+
             // Load chunks and count
             setTimeout(() => {
                 for (let x = -renderDistance + 1; x < renderDistance; x++) {
@@ -461,8 +498,13 @@ export default class Minecraft {
             let progress = 1 / requiredChunks * Math.max(0, loadedChunks - this.world.lightUpdateQueue.length / 1000);
             this.loadingScreen.setProgress(progress);
 
-            // Finish loading
-            if (progress >= 0.99) {
+            // Finish loading when enough chunks are loaded, or fall back after a timeout
+            // to prevent getting stuck on slow connections
+            let timeoutElapsed = this.lastChunkArrivalTime > 0
+                && Date.now() - this.lastChunkArrivalTime > 5000
+                && loadedChunks >= 9;
+
+            if (progress >= 0.99 || timeoutElapsed) {
                 this.world.loadSpawnChunks();
                 this.player.respawn();
                 this.musicManager.playMusic('game');
