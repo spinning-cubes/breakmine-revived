@@ -95,14 +95,6 @@ export default class World {
             this.entities[i].onUpdate();
         }
 
-        if (this.minecraft.player) {
-            this.cloudTexture.offset.x =  this.minecraft.player.x * 0.0001 + this.cloudOffset;
-            this.cloudTexture.offset.y = -this.minecraft.player.z * 0.0001;
-            
-            this.clouds.position.x = this.minecraft.player.x; // / 2 * 1.5;
-            this.clouds.position.z = this.minecraft.player.z; // / 2 * 1.5;
-        }
-
         // Process scheduled block ticks
         this.processBlockTicks();
 
