@@ -182,7 +182,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
                 if (player.username === "AlexMinecrafter") newname = '§d' + player.username + '§7';
                 if (player.username === "developer") newname = '§4' + player.username + '§7';
                 if (player.username === "kai") newname = '§b' + player.username + '§7';
-                if (player.username === "LowQualityCoding") newname = '§a </>§f ' + player.username + '§7';
+                if (player.username === "LowQualityCoding") newname = '§a</>§f ' + player.username + '§7';
                 sendChatMessage(`§7<§f${newname}§7> §f${msg}`);
             }
             break;
