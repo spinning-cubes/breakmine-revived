@@ -2,6 +2,7 @@ const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
+app.commandLine.appendSwitch('disable-pointer-lock-options');
 
 function createWindow() {
   const iconFileName = process.platform === 'linux' ? 'favicon.png' : 'favicon.png';
@@ -19,11 +20,19 @@ function createWindow() {
     },
   });
   
-  // Toggle DevTools when pressing F12
   win.webContents.on('before-input-event', (event, input) => {
-    if (input.type === 'keyDown' && input.key === 'F12') {
-      win.webContents.toggleDevTools();
-      event.preventDefault();
+    if (input.type === 'keyDown') {
+      // Toggle DevTools (F12)
+      if (input.key === 'F12') {
+        win.webContents.toggleDevTools();
+        event.preventDefault();
+      }
+
+      // Toggle Fullscreen (F11)
+      if (input.key === 'F11') {
+        win.setFullScreen(!win.isFullScreen());
+        event.preventDefault();
+      }
     }
   });
 
