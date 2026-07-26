@@ -120,6 +120,9 @@ export default class WorldGenerator extends Generator {
 
         // Emerald ore - very rare, generates near bottom (up to y=16)
         this.generateOreVein(primer, BlockRegistry.EMERALD_ORE.getId(), 6, 0, 16, 2);
+
+        // Sapphire ore - very rare, generates near bottom (up to y=32)
+        this.generateOreVein(primer, BlockRegistry.SAPPHIRE_ORE.getId(), 4, 0, 32, 2);
     }
 
     generateOreVein(primer, oreId, veinSize, minY, maxY, attempts) {
