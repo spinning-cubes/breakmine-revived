@@ -5,6 +5,7 @@ export default class GameSettings {
         this.keySprinting = 'ControlLeft';
         this.keyTogglePerspective = 'F5';
         this.keyOpenChat = 'KeyT';
+        this.keyOpenCommands = 'Slash';
         this.keyOpenInventory = 'KeyE';
         this.keyPlayerList = 'Tab';
 

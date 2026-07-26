@@ -642,6 +642,14 @@ export default class Minecraft {
             this.ingameOverlay.chatOverlay.setDirty();
         }
 
+        // Open chat commands
+        if (button === this.settings.keyOpenCommands) {
+            const chatScreen = new GuiChat(this);
+            chatScreen.inputField.setText("/");
+            this.displayScreen(chatScreen);
+            this.ingameOverlay.chatOverlay.setDirty();
+        }
+
         // Toggle debug overlay
         if (button === "F3") {
             this.settings.debugOverlay = !this.settings.debugOverlay;
