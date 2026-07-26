@@ -357,12 +357,12 @@ export default class Minecraft {
                 lightIterations++;
             }
 
-            if (this.minecraft.player) {
-                this.world.cloudTexture.offset.x =  this.minecraft.player.x * 0.0001 + this.world.cloudOffset;
-                this.world.cloudTexture.offset.y = -this.minecraft.player.z * 0.0001;
+            if (this.player) {
+                this.world.cloudTexture.offset.x =  this.player.x * 0.0001 + this.world.cloudOffset;
+                this.world.cloudTexture.offset.y = -this.player.z * 0.0001;
                 
-                this.world.clouds.position.x = this.minecraft.player.x; // / 2 * 1.5;
-                this.world.clouds.position.z = this.minecraft.player.z; // / 2 * 1.5;
+                this.world.clouds.position.x = this.player.x; // / 2 * 1.5;
+                this.world.clouds.position.z = this.player.z; // / 2 * 1.5;
             }
 
             // Render the game
