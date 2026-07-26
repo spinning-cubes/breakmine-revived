@@ -36,6 +36,11 @@ export default class PlayerRenderer extends EntityRenderer {
         this.nametagSprite = null;
         this.nametagTexture = null;
         this.worldRenderer.scene.add(this.nametagGroup);
+
+        // Shadow sprite rendered below the entity
+        this.shadowGroup = new THREE.Object3D();
+        this.shadowSprite = null;
+        this.worldRenderer.scene.add(this.shadowGroup);
     }
 
     static invalidateSkinCache(username) {
@@ -195,6 +200,9 @@ export default class PlayerRenderer extends EntityRenderer {
 
         super.render(entity, partialTicks);
 
+        // Render shadow below the entity
+        this.renderShadow(entity, partialTicks);
+
         // Render nametag for other players, or for local player in third person
         let isThirdPerson = this.worldRenderer.minecraft.settings.thirdPersonView !== 0;
         if ((entity !== this.worldRenderer.minecraft.player || isThirdPerson) && entity.username && !entity.isSneaking()) {
@@ -202,6 +210,48 @@ export default class PlayerRenderer extends EntityRenderer {
         } else {
             this.nametagGroup.visible = false;
         }
+    }
+
+    renderShadow(entity, partialTicks) {
+        // Only render shadow when entity is on the ground
+        if (!entity.onGround) {
+            this.shadowGroup.visible = false;
+            return;
+        }
+
+        // Create shadow mesh on first render
+        if (!this.shadowMesh) {
+            const texture = this.worldRenderer.minecraft.getThreeTexture('terrain/pack/minecraft/textures/misc/shadow.png');
+            if (!texture) {
+                this.shadowGroup.visible = false;
+                return;
+            }
+
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0.5,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            // Shadow dimensions matching source image proportions at original resolution
+            const geometry = new THREE.PlaneGeometry(1, 1);
+            this.shadowMesh = new THREE.Mesh(geometry, material);
+            // Lay flat on the ground (rotate from XY plane to XZ plane)
+            this.shadowMesh.rotation.x = -Math.PI / 2;
+            this.shadowGroup.add(this.shadowMesh);
+        }
+
+        // Interpolate entity position
+        let interpolatedX = entity.prevX + (entity.x - entity.prevX) * partialTicks;
+        let interpolatedY = entity.prevY + (entity.y - entity.prevY) * partialTicks;
+        let interpolatedZ = entity.prevZ + (entity.z - entity.prevZ) * partialTicks;
+
+        // Position shadow at entity's feet, slightly above ground to avoid z-fighting
+        this.shadowGroup.position.set(interpolatedX, interpolatedY + 0.05, interpolatedZ);
+
+        this.shadowGroup.visible = true;
     }
 
     updateFirstPerson(player) {

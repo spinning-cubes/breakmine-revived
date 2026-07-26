@@ -149,10 +149,9 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         const { getWorldTime } = require('./world');
         sendTimeUpdate(player, getWorldTime());
 
-        // Send player list to the new player (exclude self to avoid duplicate)
+        // Send player list to the new player (include self so Tab list shows own username)
         const players = getPlayers();
-        const otherPlayers = Array.from(players.values()).filter(p => p.eid !== player.eid);
-        player.ws.send(sendPlayerListEntry(otherPlayers, 0));
+        player.ws.send(sendPlayerListEntry(Array.from(players.values()), 0));
         player.ws.send(sendPlayerListData());
 
         for (const [eid, p] of players) {
