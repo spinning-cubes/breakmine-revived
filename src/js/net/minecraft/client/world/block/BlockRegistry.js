@@ -32,6 +32,7 @@ import BlockMossyCobblestone from "./type/BlockMossyCobblestone.js";
 import BlockSlab from "./type/BlockSlab.js";
 import BlockBeans from "./type/BlockBeans.js";
 import BlockMoldyBeans from "./type/BlockMoldyBeans.js";
+import BlockRedstoneDust from "./type/BlockRedstoneDust.js";
 
 export class BlockRegistry {
 
@@ -133,6 +134,7 @@ export class BlockRegistry {
 
         BlockRegistry.BEANS = new BlockBeans(78, 0);
         BlockRegistry.MOLDY_BEANS = new BlockMoldyBeans(79, 0);
+        BlockRegistry.REDSTONE_DUST = new BlockRedstoneDust(80, 0);
 
         BlockRegistry.init = true;
     }

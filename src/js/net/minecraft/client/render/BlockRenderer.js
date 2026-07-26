@@ -106,8 +106,9 @@ export default class BlockRenderer {
         let values = EnumBlockFace.values();
         for (let i = 0; i < values.length; i++) {
             let face = values[i];
+            let neighborBlock = world ? Block.getById(world.getBlockAtFace(x, y, z, face)) : null;
 
-            if (world === null || block.shouldRenderFace(world, x, y, z, face) || Block.getById(world.getBlockAtFace(x, y, z, face)).path == true || Block.getById(world.getBlockAtFace(x, y, z, face)).noFaceCull == true || Block.getById(world.getBlockAtFace(x, y, z, face)).multipart == true) {
+            if (world === null || block.shouldRenderFace(world, x, y, z, face) || (neighborBlock !== null && (neighborBlock.path === true || neighborBlock.noFaceCull === true || neighborBlock.multipart === true))) {
                 this.renderFace(world, block, boundingBox, face, block.getAmbientOcclusion() && ambientOcclusion, x, y, z);
             }
         }
@@ -119,8 +120,9 @@ export default class BlockRenderer {
         let values = EnumBlockFace.values();
         for (let i = 0; i < values.length; i++) {
             let face = values[i];
+            let neighborBlock = world ? Block.getById(world.getBlockAtFace(x, y, z, face)) : null;
 
-            if (world === null || block.shouldRenderFace(world, x, y, z, face) || Block.getById(world.getBlockAtFace(x, y, z, face)).path == true || Block.getById(world.getBlockAtFace(x, y, z, face)).noFaceCull == true || Block.getById(world.getBlockAtFace(x, y, z, face)).multipart == true) {
+            if (world === null || block.shouldRenderFace(world, x, y, z, face) || (neighborBlock !== null && (neighborBlock.path === true || neighborBlock.noFaceCull === true || neighborBlock.multipart === true))) {
                 this.renderFace(world, block, boundingBox, face, block.getAmbientOcclusion() && ambientOcclusion, x, y, z);
             }
         }

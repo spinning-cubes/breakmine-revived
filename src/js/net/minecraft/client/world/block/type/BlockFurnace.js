@@ -24,7 +24,7 @@ export default class BlockFurnace extends Block {
             case EnumBlockFace.TOP:
                 return 'furnace_top';
             case EnumBlockFace.BOTTOM:
-                return 'furnace_bottom';
+                return 'furnace_top';
             default:
                 return 'furnace_side';
         }

@@ -197,7 +197,14 @@ export default class TextureAtlas {
             "acacia_log.png",
             "acacia_log_top.png",
             "beans.png",
-            "moldy_beans.png"
+            "moldy_beans.png",
+            "redstone_dust_dot.png",
+            "redstone_dust_line.png",
+            "redstone_dust_line0.png",
+            "redstone_dust_line1.png",
+            "redstone_dust_cross.png",
+            "redstone_dust_overlay.png",
+            "none.png"
         ];
 
         // Map to the actual resource paths
