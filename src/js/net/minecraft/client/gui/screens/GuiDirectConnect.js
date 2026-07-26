@@ -39,6 +39,7 @@ export default class GuiDirectConnect extends GuiScreen {
                     name: this.fieldName.text,
                     details: this.fieldAddress.text,
                     address: this.fieldAddress.text,
+                    motd: ""
                 }
     
                 this.minecraft.fs.saveFile(JSON.stringify(baseData), `servers/${this.fieldName.text.replaceAll(' ', '_').replaceAll('/', '_')}.json`).then(() => {

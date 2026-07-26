@@ -74,13 +74,21 @@ export default class GuiMultiplayer extends GuiScreen {
             )
         );
 
-        const defaultServerFileName = "Public_Server.json";
+        const defaultServerFileName = "Publix_Creative.json";
+        const defaultServerFileName2 = "Publix_SMP.json";
 
         this.saveList = [
             {
-                name: "Public Server",
+                name: "Publix Creative",
                 date: "",
-                details: "publicserver.wildsurf.net:6008"
+                details: "publicserver.wildsurf.net:6008",
+                motd: "Create epic things at Publix Creative!"
+            },
+            {
+                name: "Publix SMP",
+                date: "",
+                details: "publicserver.wildsurf.net:6009",
+                motd: "Survive and fight in the new Publix SMP!"
             }
         ];
 
@@ -88,7 +96,7 @@ export default class GuiMultiplayer extends GuiScreen {
             if (fileList !== null) {
                 fileList.forEach(fileName => {
                     // Skip the default server since we already added it
-                    if (fileName === `servers/${defaultServerFileName}`) {
+                    if (fileName === `servers/${defaultServerFileName}` || fileName === `servers/${defaultServerFileName2}`) {
                         return;
                     }
                     this.minecraft.fs.loadFile(fileName).then(file => {
@@ -106,6 +114,7 @@ export default class GuiMultiplayer extends GuiScreen {
                                     name: worldJson.name ?? "New Server",
                                     date: worldJson.address ?? "127.0.0.1",
                                     details: worldJson.details || "",
+                                    motd: worldJson.motd || ""
                                 })
 
                                 // Update slotList after adding each server
@@ -138,10 +147,8 @@ export default class GuiMultiplayer extends GuiScreen {
             if (this.selectedWorld !== -1) {
                 const world = this.worldSlotContainer.slotList[this.selectedWorld];
                 const worldName = world.worldName.replaceAll(' ', '_').replaceAll('/', '_');
-                const worldNameNonSafe = world.worldName;
                 const worldDetails = world.worldDetails;
                 const worldDate = world.worldDate.replaceAll(' ', '_').replaceAll('/', '_');
-                console.log(`loading server '${worldName}'...`);
 
                 // Use the proxy field as the WebSocket address
                 let proxy = null;
@@ -173,7 +180,6 @@ export default class GuiMultiplayer extends GuiScreen {
             const selectedServer = this.worldSlotContainer.slotList[this.selectedWorld];
             const serverName = selectedServer.worldName.replaceAll(' ', '_').replaceAll('/', '_');
             this.minecraft.displayScreen(new GuiYesNo(this, "Are you sure you want to remove this server?", `'${selectedServer.worldName ?? "New Server"}' will be lost forever! (A long time!)`, "Yes", "No", () => {
-                console.log('deleting server from GameFS...');
                 this.minecraft.fs.deleteFile(`servers/${serverName}.json`).then(() => {
                     // Remove from saveList
                     this.saveList = this.saveList.filter(server => server.name !== selectedServer.worldName);
