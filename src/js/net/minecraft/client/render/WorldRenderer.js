@@ -230,6 +230,9 @@ export default class WorldRenderer {
             if (entity && entity.renderer && entity.renderer.nametagGroup) {
                 entity.renderer.nametagGroup.visible = false;
             }
+            if (entity && entity.renderer && entity.renderer.shadowGroup) {
+                entity.renderer.shadowGroup.visible = false;
+            }
         }
 
         // Render entities

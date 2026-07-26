@@ -3,6 +3,7 @@ let nextEntityId = 1;
 const Logger = require('./logger');
 const fs = require('fs');
 const path = require('path');
+const config = require('./config');
 
 let log = Logger;
 
@@ -53,10 +54,12 @@ function normalizeInventoryState(inventory) {
     };
 }
 
+const GAMEMODE_MAP = { survival: 0, creative: 1, spectator: 3 };
+
 function addPlayer(player) {
     player.eid = nextEntityId++;
     player.joinTime = Date.now();
-    player.gamemode = 1; // Default: Creative
+    player.gamemode = GAMEMODE_MAP[config.default_gamemode] ?? 1;
     player.inventory = normalizeInventoryState(player.inventory);
     players.set(player.eid, player);
 }

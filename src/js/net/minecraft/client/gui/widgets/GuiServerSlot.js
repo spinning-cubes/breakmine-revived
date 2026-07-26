@@ -6,6 +6,7 @@ export default class GuiServerSlot extends GuiButton {
     worldName = "";
     worldDate = "";
     worldDetails = "";
+    worldMotd = "";
     
     constructor(worldData, x, y, width, height, callback, minecraft) {
         super(minecraft, worldData.name, x, y, width, height, callback); 
@@ -13,6 +14,7 @@ export default class GuiServerSlot extends GuiButton {
         this.worldName = worldData.name ?? "Unknown Server";
         this.worldDate = worldData.date ?? "";
         this.worldDetails = worldData.details ?? "";
+        this.worldMotd = worldData.motd ?? "";
 
         this.drawButton = () => {}; 
         
@@ -60,8 +62,8 @@ export default class GuiServerSlot extends GuiButton {
         
         // Match GuiWorldSlot's drawString calls exactly
         this.drawString(stack, this.worldName, slotX + 2, slotY + 1, WHITE, true, false);
-        this.drawString(stack, this.worldDate, slotX + 2, slotY + 12, GRAY, true, false);
-        this.drawString(stack, this.worldDetails, slotX + 2, slotY + 22, GRAY, true, false);
+        this.drawString(stack, '§7' + this.worldMotd, slotX + 2, slotY + 12, GRAY, true, false);
+        this.drawString(stack, '§8' + this.worldDetails, slotX + 2, slotY + 22, GRAY, true, false);
 
         // Draw ping icon on the right side of the slot if texture available
         let pingIconBounds = null;
@@ -95,8 +97,7 @@ export default class GuiServerSlot extends GuiButton {
 
         const playersText = this.getPlayersText();
         if (playersText) {
-            const textY = slotY + 10;
-            this.drawRightString(stack, playersText, slotX + this.width - 1, textY, 0x808080, false);
+            this.drawRightString(stack, playersText, slotX + this.width - 14, slotY, 0x808080, true);
         }
     }
     

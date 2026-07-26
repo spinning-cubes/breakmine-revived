@@ -117,7 +117,26 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         sendLoginSuccess(player);
         sendJoinGame(player);
         sendSpawnPosition(player);
+
+        // Initialize chunk tracking BEFORE sending chunks so checkAndSendChunks
+        // can track which chunks have already been sent
+        const sentChunks = new Set();
+        // Pre-populate with the 5x5 spawn chunks that sendChunks will send
+        for (let cx = -2; cx <= 2; cx++) {
+            for (let cz = -2; cz <= 2; cz++) {
+                sentChunks.add(`${cx},${cz}`);
+            }
+        }
+        playerChunks.set(player.eid, sentChunks);
+
+        // Send initial 5x5 spawn chunks + PlayerPositionLook
         sendChunks(player);
+
+        // Immediately send the rest of the render distance worth of chunks
+        // without waiting for the client's position response round-trip.
+        // This prevents the loading screen from getting stuck at low progress
+        // on slow connections.
+        checkAndSendChunks(player);
 
         if (player.ws.readyState === 1) {
             player.ws.send(JSON.stringify({
@@ -130,20 +149,9 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         const { getWorldTime } = require('./world');
         sendTimeUpdate(player, getWorldTime());
 
-        // Initialize chunk tracking for this player AFTER sending chunks
-        // Track the spawn chunks that were just sent
-        const sentChunks = new Set();
-        for (let cx = -2; cx <= 2; cx++) {
-            for (let cz = -2; cz <= 2; cz++) {
-                sentChunks.add(`${cx},${cz}`);
-            }
-        }
-        playerChunks.set(player.eid, sentChunks);
-
-        // Send player list to the new player (exclude self to avoid duplicate)
+        // Send player list to the new player (include self so Tab list shows own username)
         const players = getPlayers();
-        const otherPlayers = Array.from(players.values()).filter(p => p.eid !== player.eid);
-        player.ws.send(sendPlayerListEntry(otherPlayers, 0));
+        player.ws.send(sendPlayerListEntry(Array.from(players.values()), 0));
         player.ws.send(sendPlayerListData());
 
         for (const [eid, p] of players) {
@@ -183,6 +191,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
                 if (player.username === "developer") newname = '§4' + player.username + '§7';
                 if (player.username === "kai") newname = '§b' + player.username + '§7';
                 if (player.username === "LowQualityCoding") newname = '§a</>§f ' + player.username + '§7';
+                if (player.username === "Marw-Programmer") newname = '§a' + player.username + '§7';
                 sendChatMessage(`§7<§f${newname}§7> §f${msg}`);
             }
             break;

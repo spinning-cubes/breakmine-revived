@@ -77,7 +77,7 @@ export default class PlayerListOverlay extends Gui {
         // Calculate background with of columns
         let backgroundWidth = columnWidth * columns + (columns - 1) * 5;
 
-        // Calculate header
+        /*// Calculate header
         let headerLines = null;
         if (this.header !== null) {
             headerLines = this.minecraft.fontRenderer.listFormattedStringToWidth(this.header, width - 50);
@@ -117,7 +117,7 @@ export default class PlayerListOverlay extends Gui {
                 y += FontRenderer.FONT_HEIGHT;
             }
             y++;
-        }
+        }*/
 
         // Render player list background
         this.drawRect(
@@ -197,7 +197,7 @@ export default class PlayerListOverlay extends Gui {
             i++;
         }
 
-        if (footerLines !== null) {
+        /*if (footerLines !== null) {
             y = y + rows * 9 + 1;
 
             this.drawRect(
@@ -219,7 +219,7 @@ export default class PlayerListOverlay extends Gui {
                 y += FontRenderer.FONT_HEIGHT;
             }
             y++;
-        }
+        }*/
     }
 
     setDirty() {

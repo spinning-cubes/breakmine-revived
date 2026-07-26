@@ -6,9 +6,10 @@ const { addPlayer, removePlayer, getPlayerCount, getPlayers, savePlayerData, nor
 const Logger = require('./logger');
 const { BlockRegistry } = require('./src/js/net/minecraft/client/world/block/BlockRegistry.js');
 const ServerWorld = require('./server/World.js');
+const config = require('./config');
 
 let log = Logger;
-const PORT = 6008;
+const PORT = config.port;
 
 // Load the last used world, or default to 'main'
 const currentWorld = loadCurrentWorld();
@@ -36,9 +37,9 @@ setInterval(() => {
     //log.debug('World', 'Autosaved world time and state');
 }, 60 * 1000);
 
-const wss = new WebSocket.Server({ port: PORT, host: '0.0.0.0' });
+const wss = new WebSocket.Server({ port: PORT, host: config.host });
 log.info('Server', `Minecraft server running!!! (v47)`);
-log.info('Server', `Listening on ws://0.0.0.0:${PORT}`);
+log.info('Server', `Listening on ws://${config.host}:${PORT}`);
 
 wss.on('connection', (ws) => {
     const player = {
