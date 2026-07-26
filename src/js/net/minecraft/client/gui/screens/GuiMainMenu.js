@@ -31,10 +31,10 @@ export default class GuiMainMenu extends GuiScreen {
         }));
         let btntemp = new GuiButton(this.minecraft, "Multiplayer", this.width / 2 - 100, y + 24, 200, 20, () => {
             this.minecraft.displayScreen(new GuiMultiplayer(this));
-        }).setEnabled(true /*this.minecraft.settings.loggedIn*/);
+        }).setEnabled(this.minecraft.settings.loggedIn);
         if (!this.minecraft.settings.loggedIn) {
-            btntemp.setTooltip("§4Development build, no login needed.");
-            //btntemp.setTooltip("You must be logged in\n§7Don't worry, it's free!");
+            //btntemp.setTooltip("§4Development build, no login needed.");
+            btntemp.setTooltip("You must be logged in\n§7Don't worry, it's free!");
         }
         this.buttonList.push(btntemp);
 

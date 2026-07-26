@@ -15,6 +15,7 @@ export default class BlockChest extends Block {
 
     getTextureForFace(face, data) {
         let facing = data & 7;
+        if (facing === 0) facing = 2;
         switch (face) {
             case EnumBlockFace.NORTH:
                 return facing === 2 ? 'chest_front' : 'chest_side';

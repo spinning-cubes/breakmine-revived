@@ -11,6 +11,7 @@ export default class BlockFurnace extends Block {
 
     getTextureForFace(face, data) {
         let facing = data & 7;
+        if (facing === 0) facing = 2;
         switch (face) {
             case EnumBlockFace.NORTH:
                 return facing === 2 ? 'furnace_front_off' : 'furnace_side';

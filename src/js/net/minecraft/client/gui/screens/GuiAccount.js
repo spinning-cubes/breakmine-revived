@@ -19,7 +19,7 @@ export default class GuiAccount extends GuiScreen {
 
         // Updated Layout:
         // [ Login/Register OR Logout ]  [ Upload Skin ]
-        // [                Cancel                      ]
+        // [                Cancel                     ]
         
         let y = this.height / 2 - 50;
 
