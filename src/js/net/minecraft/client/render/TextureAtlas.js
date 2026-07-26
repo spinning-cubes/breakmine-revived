@@ -195,7 +195,8 @@ export default class TextureAtlas {
             "jungle_log.png",
             "jungle_log_top.png",
             "acacia_log.png",
-            "acacia_log_top.png"
+            "acacia_log_top.png",
+            "beans.png"
         ];
 
         // Map to the actual resource paths

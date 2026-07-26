@@ -30,6 +30,7 @@ import BlockLava from "./type/BlockLava.js";
 import BlockLogic from "./type/BlockLogic.js";
 import BlockMossyCobblestone from "./type/BlockMossyCobblestone.js";
 import BlockSlab from "./type/BlockSlab.js";
+import BlockBeans from "./type/BlockBeans.js";
 
 export class BlockRegistry {
 
@@ -128,6 +129,8 @@ export class BlockRegistry {
         BlockRegistry.ACACIA_SLAB = new BlockSlab(75, 0, "acacia_planks", "Acacia Slab", Block.sounds.wood);
         BlockRegistry.MOSSY_COBBLESTONE_SLAB = new BlockSlab(76, 0, "mossy_cobblestone", "Mossy Cobblestone Slab", Block.sounds.stone);
         BlockRegistry.BRICK_SLAB = new BlockSlab(77, 0, "brick", "Brick Slab", Block.sounds.stone);
+
+        BlockRegistry.BEANS = new BlockBeans(78, 0);
 
         BlockRegistry.init = true;
     }
