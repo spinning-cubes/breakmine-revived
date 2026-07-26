@@ -76,6 +76,10 @@ export default class BlockTorch extends Block {
     }
 
     getCollisionBoundingBox(world, x, y, z) {
+        return null;
+    }
+
+    getBoundingBox(world, x, y, z) {
         this._updateBoundingBox(world, x, y, z);
         return this.boundingBox;
     }

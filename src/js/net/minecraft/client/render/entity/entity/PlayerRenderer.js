@@ -35,7 +35,7 @@ export default class PlayerRenderer extends EntityRenderer {
         this.nametagGroup = new THREE.Object3D();
         this.nametagSprite = null;
         this.nametagTexture = null;
-        this.worldRenderer.scene.add(this.nametagGroup);
+        this.worldRenderer.overlay.add(this.nametagGroup);
 
         // Shadow sprite rendered below the entity
         this.shadowGroup = new THREE.Object3D();
@@ -249,7 +249,7 @@ export default class PlayerRenderer extends EntityRenderer {
         let interpolatedZ = entity.prevZ + (entity.z - entity.prevZ) * partialTicks;
 
         // Position shadow at entity's feet, slightly above ground to avoid z-fighting
-        this.shadowGroup.position.set(interpolatedX, interpolatedY + 0.05, interpolatedZ);
+        this.shadowGroup.position.set(interpolatedX, interpolatedY + 0.01, interpolatedZ);
 
         this.shadowGroup.visible = true;
     }

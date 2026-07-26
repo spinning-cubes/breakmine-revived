@@ -2,6 +2,7 @@ import BlockRenderer from "./BlockRenderer.js";
 import EntityRenderManager from "./entity/EntityRenderManager.js";
 import MathHelper from "../../util/MathHelper.js";
 import Block from "../world/block/Block.js";
+import BoundingBox from "../../util/BoundingBox.js";
 import Tessellator from "./Tessellator.js";
 import ChunkSection from "../world/ChunkSection.js";
 import Random from "../../util/Random.js";
@@ -9,6 +10,7 @@ import Vector3 from "../../util/Vector3.js";
 import TextureAtlas from "./TextureAtlas.js";
 import ItemStack from "../item/ItemStack.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
+import TranslucentMeshBatcher from "./TranslucentMeshBatcher.js";
 
 export default class WorldRenderer {
 
@@ -166,6 +168,18 @@ export default class WorldRenderer {
         this.blockBreakMesh.renderOrder = 10000;
         this.overlay.add(this.blockBreakMesh);
 
+        this.translucentMaterial = new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            depthTest: true,
+            depthWrite: false,
+            alphaTest: 0.1,
+            side: THREE.FrontSide
+        });
+
+        // Initialize the batcher, passing the scene and the material
+        this.translucentBatcher = new TranslucentMeshBatcher(this.scene, this.translucentMaterial);
+
         // Initialize texture atlas asynchronously
         this.initialize().catch(error => {
             console.error("Failed to initialize WorldRenderer:", error);
@@ -181,6 +195,12 @@ export default class WorldRenderer {
             this.blockRenderer.tessellator.bindTexture(this.textureAtlas.getTexture());
         }
         
+        // Set texture on translucent batcher material
+        if (this.translucentBatcher && this.textureAtlas.isLoaded()) {
+            this.translucentBatcher.mesh.material.map = this.textureAtlas.getTexture();
+            this.translucentBatcher.mesh.material.needsUpdate = true;
+        }
+
         // Use a cloned atlas texture for block damage overlay so the material can use offset/repeat
         if (this.blockBreakMaterial && this.textureAtlas.isLoaded()) {
             this.blockBreakMaterial.map = this.textureAtlas.getTexture().clone();
@@ -265,7 +285,41 @@ export default class WorldRenderer {
         // Render background scene
         this.webRenderer.render(this.background, this.camera);
 
-        // Render actual scene
+        let cameraPos = {
+            x: player.x,
+            y: player.y + player.getEyeHeight(),
+            z: player.z
+        };
+
+        // 1. Clear the batcher
+        this.translucentBatcher.clear();
+
+        // 2. Steal geometry from all visible chunks and hide per-section translucent meshes
+        for (let [index, chunk] of this.minecraft.world.getChunkProvider().getChunks()) {
+            if (!chunk.group.visible) continue;
+            
+            for (let y in chunk.sections) {
+                let section = chunk.sections[y];
+                if (!section.group.visible || section.isEmpty()) continue;
+                
+                for (let child of section.group.children) {
+                    if (child.isMesh && child.userData.isTranslucent) {
+                        this.translucentBatcher.addMesh(child);
+                        child.visible = false; // Hide per-section mesh, batcher replaces it
+                    }
+                }
+            }
+        }
+
+        // 3. Sort the entire world's translucent faces perfectly and upload to GPU
+        this.translucentBatcher.finalize(cameraPos);
+
+        // Move batcher mesh to end of scene children so it renders LAST
+        // (sortObjects=false means Three.js uses scene traversal order, not renderOrder)
+        this.scene.remove(this.translucentBatcher.mesh);
+        this.scene.add(this.translucentBatcher.mesh);
+
+        // Render actual scene (batcher mesh draws last, on top of entities/chunks)
         this.webRenderer.render(this.scene, this.camera);
 
         // Render overlay with the same FOV as the world
@@ -795,54 +849,6 @@ export default class WorldRenderer {
                 }
             }
         }
-
-        // Sort ALL translucent meshes in full 3D space (back-to-front)
-        let cameraX = player.x;
-        let cameraY = player.y + player.getEyeHeight();
-        let cameraZ = player.z;
-
-        let translucentMeshes = [];
-
-        for (let [index, chunk] of world.getChunkProvider().getChunks()) {
-            if (!chunk.group.visible) continue;
-            
-            for (let y in chunk.sections) {
-                let section = chunk.sections[y];
-                if (!section.group.visible || section.isEmpty()) continue;
-                
-                for (let child of section.group.children) {
-                    if (child.isMesh && child.userData.isTranslucent) {
-                        // Calculate true 3D center of this section
-                        let worldX = section.x * ChunkSection.SIZE + 8;
-                        let worldY = section.y * ChunkSection.SIZE + 8;
-                        let worldZ = section.z * ChunkSection.SIZE + 8;
-                        
-                        let dx = worldX - cameraX;
-                        let dy = worldY - cameraY;
-                        let dz = worldZ - cameraZ;
-                        
-                        translucentMeshes.push({
-                            mesh: child,
-                            distSq: dx * dx + dy * dy + dz * dz // True X, Y, Z distance
-                        });
-                    }
-                }
-            }
-        }
-
-        // Sort furthest to nearest (back-to-front)
-        translucentMeshes.sort((a, b) => b.distSq - a.distSq);
-
-        // Assign the render order Three.js will actually use
-        for (let i = 0; i < translucentMeshes.length; i++) {
-            translucentMeshes[i].mesh.renderOrder = i;
-        }
-
-        // Sort individual faces within each translucent mesh back-to-front
-        let cameraPos = { x: cameraX, y: cameraY, z: cameraZ };
-        for (let i = 0; i < translucentMeshes.length; i++) {
-            this.sortTranslucentGeometry(translucentMeshes[i].mesh, cameraPos);
-        }
     }
 
     sortTranslucentMeshes() {
@@ -1075,8 +1081,19 @@ export default class WorldRenderer {
             let typeId = world.getBlockAt(x, y, z);
 
             if (typeId !== 0) {
-                // Get actual collision boxes for this block
-                let collisionBoxes = world.getBlockCollisionBoxesAt(x, y, z);
+                let block = Block.getById(typeId);
+
+                // Get bounding boxes for the selection highlight
+                let boxes = world.getBlockCollisionBoxesAt(x, y, z);
+                if (boxes.length === 0 && block) {
+                    let bbox = block.getBoundingBox(world, x, y, z);
+                    if (bbox) {
+                        boxes = [new BoundingBox(
+                            x + bbox.minX, y + bbox.minY, z + bbox.minZ,
+                            x + bbox.maxX, y + bbox.maxY, z + bbox.maxZ
+                        )];
+                    }
+                }
 
                 // Clear existing hit box lines
                 while (this.blockHitBox.children.length > 0) {
@@ -1084,7 +1101,7 @@ export default class WorldRenderer {
                 }
 
                 // Create line segments for each bounding box
-                for (let bbox of collisionBoxes) {
+                for (let bbox of boxes) {
                     let width = bbox.maxX - bbox.minX + 0.01;
                     let height = bbox.maxY - bbox.minY + 0.01;
                     let depth = bbox.maxZ - bbox.minZ + 0.01;

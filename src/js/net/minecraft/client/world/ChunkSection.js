@@ -35,6 +35,9 @@ export default class ChunkSection {
         this.blockLight = [];
         this.skyLight = [];
         this.empty = true;
+        
+        // Store reference to translucent mesh for cross-chunk sorting
+        this.translucentMesh = null;
     }
 
     render() {
@@ -44,6 +47,7 @@ export default class ChunkSection {
     rebuild(renderer) {
         this.isModified = false;
         this.group.clear();
+        this.translucentMesh = null; // Reset on rebuild
 
         let ambientOcclusion = this.world.minecraft.settings.ambientOcclusion;
         let tessellator = renderer.blockRenderer.tessellator;
@@ -133,10 +137,38 @@ export default class ChunkSection {
                 
                 if (isTranslucentRenderPhase) {
                     mesh.userData.isTranslucent = true;
-                    mesh.renderOrder = 0; // Gets overwritten every frame
+                    
+                    // CRITICAL: Hide it! The global batcher will draw it instead.
+                    mesh.visible = false; 
                 }
             }
         }
+    }
+    
+    /**
+     * Updates the renderOrder of this section's translucent mesh based on camera position.
+     * This must be called every frame before rendering for proper cross-chunk sorting.
+     * @param {Object} cameraPos - Camera position {x, y, z}
+     */
+    updateTranslucentRenderOrder(cameraPos) {
+        if (!this.translucentMesh || !cameraPos) {
+            return;
+        }
+        
+        // Calculate center of this section in world coordinates
+        let centerX = this.x * ChunkSection.SIZE + ChunkSection.SIZE * 0.5;
+        let centerY = this.y * ChunkSection.SIZE + ChunkSection.SIZE * 0.5;
+        let centerZ = this.z * ChunkSection.SIZE + ChunkSection.SIZE * 0.5;
+        
+        // Calculate squared distance to camera
+        let dx = centerX - cameraPos.x;
+        let dy = centerY - cameraPos.y;
+        let dz = centerZ - cameraPos.z;
+        let distSq = dx * dx + dy * dy + dz * dz;
+        
+        // Negative distance ensures farther chunks have LOWER renderOrder (render first)
+        // This achieves back-to-front rendering across chunks
+        this.translucentMesh.renderOrder = -distSq;
     }
 
     getBlockAt(x, y, z) {
