@@ -9,6 +9,8 @@ import Tessellator from "./Tessellator.js";
 import MathHelper from "../../util/MathHelper.js";
 import Block from "../world/block/Block.js";
 import BoundingBox from "../../util/BoundingBox.js";
+import { BlockRegistry } from "../world/block/BlockRegistry.js";
+import BlockWire from "../world/block/type/BlockWire.js";
 
 export default class BlockRenderer {
 
@@ -30,7 +32,11 @@ export default class BlockRenderer {
         } else if (block.multipart === true) {
             this.renderMultipart(world, block, x, y, z);
             return;
+        } else if (block && block.getId() === BlockRegistry.WIRE.getId()) {
+            this.renderWire(world, block, x, y, z);
+            return;
         }
+
         switch (block.getRenderType()) {
             case BlockRenderType.BLOCK:
                 this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
@@ -124,6 +130,97 @@ export default class BlockRenderer {
 
             if (world === null || block.shouldRenderFace(world, x, y, z, face) || (neighborBlock !== null && (neighborBlock.path === true || neighborBlock.noFaceCull === true || neighborBlock.multipart === true))) {
                 this.renderFace(world, block, boundingBox, face, block.getAmbientOcclusion() && ambientOcclusion, x, y, z);
+            }
+        }
+    }
+
+    renderWire(world, block, x, y, z) {
+        if (world === null) {
+            // Render a simple flat square for the inventory/hand view
+            let wireThickness = 4 / 16;
+            let centerBox = {
+                minX: 0.5 - wireThickness, minY: 0, minZ: 0.5 - wireThickness, 
+                maxX: 0.5 + wireThickness, maxY: 0.001, maxZ: 0.5 + wireThickness
+            };
+            this.renderFace(world, block, centerBox, EnumBlockFace.TOP, false, x, y, z); 
+            return;
+        }
+
+        let power = 0;
+        if (world !== null) {
+            // Read the power level from the block state (0-15)
+            //power = world.getBlockstateAt(x, y, z); 
+        }
+        
+        let wireThickness = 2 / 16; // 2/16ths of a block for width
+        let wireHeight = 1 / 16;   // Place wire low on the block
+
+        let center_minX = x + 0.5 - wireThickness;
+        let center_maxX = x + 0.5 + wireThickness;
+        let center_minY = y + wireHeight;
+        let center_maxY = y + wireHeight + 0.001; // Tiny height
+        let center_minZ = z + 0.5 - wireThickness;
+        let center_maxZ = z + 0.5 + wireThickness;
+        
+        // Render the top face of the central block
+        // Bounding box must be relative to the block (x=0, y=0, z=0)
+        let centerBox = {
+            minX: center_minX - x, minY: center_minY - y, minZ: center_minZ - z, 
+            maxX: center_maxX - x, maxY: center_maxY - y, maxZ: center_maxZ - z
+        };
+        
+        // Renders a small square in the middle
+        this.renderFace(world, block, centerBox, EnumBlockFace.TOP, false, x, y, z); 
+
+        const connectionMap = [
+            { dx: 0, dz: -1, face: EnumBlockFace.NORTH },
+            { dx: 0, dz: 1, face: EnumBlockFace.SOUTH },
+            { dx: -1, dz: 0, face: EnumBlockFace.WEST },
+            { dx: 1, dz: 0, face: EnumBlockFace.EAST },
+        ];
+
+        for (const { dx, dz, face } of connectionMap) {
+            let neighborId = world.getBlockAt(x + dx, y, z + dz);
+            
+            // Check if connection is valid using the helper in BlockWire
+            if (BlockWire.canWireConnectTo(neighborId)) {
+                
+                let line_minX, line_minZ, line_maxX, line_maxZ;
+                let armStart = wireThickness;
+
+                if (dx !== 0) { // West/East (X-axis)
+                    // Z-bounds are determined by the thickness of the center dot
+                    line_minZ = z + 0.5 - wireThickness;
+                    line_maxZ = z + 0.5 + wireThickness; 
+                    
+                    if (dx < 0) { // WEST (from x to x + armStart)
+                        line_minX = x;
+                        line_maxX = x + 0.5 - wireThickness;
+                    } else { // EAST (from x + 1 - armStart to x + 1)
+                        line_minX = x + 0.5 + wireThickness;
+                        line_maxX = x + 1.0;
+                    }
+
+                } else if (dz !== 0) { // North/South (Z-axis)
+                    // X-bounds are determined by the thickness of the center dot
+                    line_minX = x + 0.5 - wireThickness;
+                    line_maxX = x + 0.5 + wireThickness;
+                    
+                    if (dz < 0) { // NORTH (from z to z + armStart)
+                        line_minZ = z;
+                        line_maxZ = z + 0.5 - wireThickness;
+                    } else { // SOUTH (from z + 1 - armStart to z + 1)
+                        line_minZ = z + 0.5 + wireThickness;
+                        line_maxZ = z + 1.0;
+                    }
+                }
+                
+                // Render the top face of the connection line
+                let lineBox = {
+                    minX: line_minX - x, minY: center_minY - y, minZ: line_minZ - z, 
+                    maxX: line_maxX - x, maxY: center_maxY - y, maxZ: line_maxZ - z
+                };
+                this.renderFace(world, block, lineBox, EnumBlockFace.TOP, false, x, y, z);
             }
         }
     }
@@ -486,7 +583,10 @@ export default class BlockRenderer {
         this.tessellator.setColor(1, 1, 1);
 
         // Render block by type
-        if (!block.path && block.multipart !== true) {
+        if (block.getId() === BlockRegistry.WIRE.getId()) {
+            this.renderWire(null, block, 0, 0, 0);
+            return;
+        } else if (!block.path && block.multipart !== true) {
             switch (block.getRenderType()) {
                 case BlockRenderType.BLOCK:
                     let boundingBox = block.getBoundingBox(null, 0, 0, 0);

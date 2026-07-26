@@ -159,10 +159,6 @@ export default class World {
             }
         }
 
-        if (this.isHalfBlockAt(x, y, z)) {
-            return [new BoundingBox(x, y, z, x + 1, y + 0.5, z + 1)];
-        }
-
         if (block.isSolid()) {
             return [new BoundingBox(x, y, z, x + 1, y + 1, z + 1)];
         }
@@ -183,6 +179,12 @@ export default class World {
                 y + collisionBb.maxY,
                 z + collisionBb.maxZ
             )];
+        }
+
+        // Legacy half-block check for blocks that override isHalf()
+        // Only reached if getCollisionBoundingBox returned null
+        if (this.isHalfBlockAt(x, y, z)) {
+            return [new BoundingBox(x, y, z, x + 1, y + 0.5, z + 1)];
         }
 
         return [];

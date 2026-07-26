@@ -75,7 +75,17 @@ export default class BlockTorch extends Block {
         world.getChunkSectionAt(x >> 4, y >> 4, z >> 4).setBlockDataAt(x & 15, y & 15, z & 15, data);
     }
 
+    getCollisionBoundingBox(world, x, y, z) {
+        this._updateBoundingBox(world, x, y, z);
+        return this.boundingBox;
+    }
+
     collisionRayTrace(world, x, y, z, start, end) {
+        this._updateBoundingBox(world, x, y, z);
+        return super.collisionRayTrace(world, x, y, z, start, end);
+    }
+
+    _updateBoundingBox(world, x, y, z) {
         let data = world.getBlockDataAt(x, y, z) & 7;
 
         switch (data) {
@@ -95,8 +105,6 @@ export default class BlockTorch extends Block {
                 this.boundingBox = new BoundingBox(0.4, 0.0, 0.4, 0.6, 0.6, 0.6);
                 break;
         }
-
-        return super.collisionRayTrace(world, x, y, z, start, end);
     }
 
     onBlockTick(world, x, y, z) {

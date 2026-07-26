@@ -56,7 +56,7 @@ export default class BlockFence extends Block {
                 const nz = z + dz;
                 let blockAt = world.getBlockAt(nx, ny, nz);
                 let blockTypeAt = Block.getById(blockAt);
-                if (blockTypeAt !== null && (blockTypeAt.boundingBox == new BoundingBox(0,0,0,1,1,1) || blockTypeAt instanceof BlockFence)) {
+                if (blockTypeAt !== null && (blockTypeAt.isSolid() || blockTypeAt instanceof BlockFence)) {
                     // X
                     if (dx === -1) {
                         base.push(["block", this.woodId, new BoundingBox(

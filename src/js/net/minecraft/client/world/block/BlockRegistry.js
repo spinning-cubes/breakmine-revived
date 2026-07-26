@@ -32,7 +32,7 @@ import BlockMossyCobblestone from "./type/BlockMossyCobblestone.js";
 import BlockSlab from "./type/BlockSlab.js";
 import BlockBeans from "./type/BlockBeans.js";
 import BlockMoldyBeans from "./type/BlockMoldyBeans.js";
-import BlockRedstoneDust from "./type/BlockRedstoneDust.js";
+import BlockWire from "./type/BlockWire.js";
 
 export class BlockRegistry {
 
@@ -134,7 +134,7 @@ export class BlockRegistry {
 
         BlockRegistry.BEANS = new BlockBeans(78, 0);
         BlockRegistry.MOLDY_BEANS = new BlockMoldyBeans(79, 0);
-        BlockRegistry.REDSTONE_DUST = new BlockRedstoneDust(80, 0);
+        BlockRegistry.WIRE = new BlockWire(80, 0);
 
         BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
         BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");

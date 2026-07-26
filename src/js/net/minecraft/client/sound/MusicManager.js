@@ -15,7 +15,7 @@ export default class MusicManager {
         this.netherTracks = [];
         this.endTracks = [];
 
-        this.volume = 1.0;
+        this.volume = 0.0;
         this.fadeTime = 2000;
         this.gapTime = 5000;
 
