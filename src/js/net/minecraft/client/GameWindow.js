@@ -393,6 +393,12 @@ export default class GameWindow {
         itemRenderer.camera.aspect = this.width / this.height;
         itemRenderer.camera.updateProjectionMatrix();
         itemRenderer.webRenderer.setSize(wrapperWidth, wrapperHeight);
+        if (itemRenderer.ctx2d) {
+            let guiScale = Math.min(this.scaleFactor, 4);
+            itemRenderer.canvas2d.width = this.width * guiScale;
+            itemRenderer.canvas2d.height = this.height * guiScale;
+            itemRenderer.ctx2d.imageSmoothingEnabled = false;
+        }
 
         // Update canvas 2d size
         this.canvas.style.width = wrapperWidth + "px";

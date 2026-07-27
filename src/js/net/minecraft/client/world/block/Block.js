@@ -48,6 +48,10 @@ export default class Block {
         return this.hardness;
     }
 
+    getDescription() {
+        return this.description;
+    }
+
     getDrop(world, x, y, z) {
         return [this.id, 1];
     }
@@ -69,7 +73,7 @@ export default class Block {
     }
 
     getTextureForFace(face, data, x, y, z, world) {
-        return 'stone';
+        return 'missing';
     }
 
     getTransparency() {
@@ -82,6 +86,14 @@ export default class Block {
 
     canCastAmbientOcclusion() {
         return true;
+    }
+
+    isItem() {
+        return false;
+    }
+    
+    onUse(world, x, y, z, itemstack) {
+        //
     }
 
     shouldRenderFace(world, x, y, z, face) {

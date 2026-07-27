@@ -1,4 +1,5 @@
 import Block from "../Block.js";
+import { BlockRegistry } from "../BlockRegistry.js";
 
 export default class BlockLeave extends Block {
 
@@ -27,9 +28,17 @@ export default class BlockLeave extends Block {
     canCastAmbientOcclusion() {
         return true;
     }
-
+    
     getDrop(world, x, y, z) {
-        return [0, 1];
+        if (Math.random() < 0.1) {
+            const rnd = Math.random();
+            if (rnd < 0.5) {
+                return [BlockRegistry.ITEM_APPLE.getId(), 1];
+            } else {
+                return [BlockRegistry.ITEM_STICK.getId(), 1];
+            }
+        }
+        return [0, 0];
     }
 
     getColor(world, x, y, z, face) {

@@ -56,8 +56,13 @@ export default class ScreenRenderer {
         let actualScale = this.window.scaleFactor;
         this.stack2d.scale(1 / actualScale, 1 / actualScale, 1 / actualScale);
 
-        // Render items
+        // Render 3D block items
         this.stack2d.drawImage(this.window.canvasItems, 0, 0);
+        // Render 2D item sprites (torches, etc.)
+        let itemCanvas2d = this.minecraft.itemRenderer?.canvas2d;
+        if (itemCanvas2d) {
+            this.stack2d.drawImage(itemCanvas2d, 0, 0);
+        }
 
         // Scale GUI again for post-screen rendering
         this.stack2d.scale(actualScale, actualScale, actualScale);

@@ -41,6 +41,9 @@ export default class BlockRenderer {
             case BlockRenderType.BLOCK:
                 this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
                 break;
+            case BlockRenderType.ITEM:
+                this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
+                break;
             case BlockRenderType.TORCH:
                 this.renderTorch(world, block, x, y, z);
                 break;
@@ -576,6 +579,9 @@ export default class BlockRenderer {
         mesh.scale.x = 16;
         mesh.scale.y = 16;
         mesh.scale.z = 16;
+        if (block.getRenderType() === BlockRenderType.ITEM) {
+            mesh.position.y += 4;
+        }
     }
 
     renderGuiBlock(group, block, x, y, size, brightness) {

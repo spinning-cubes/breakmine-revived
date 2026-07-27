@@ -79,13 +79,13 @@ export default class GuiMultiplayer extends GuiScreen {
 
         this.saveList = [
             {
-                name: "Publix Creative",
+                name: "\u00ca Publix Creative",
                 date: "",
                 details: "publicserver.wildsurf.net:6008",
                 motd: "Create epic things at Publix Creative!"
             },
             {
-                name: "Publix SMP",
+                name: "\u00ca Publix SMP",
                 date: "",
                 details: "publicserver.wildsurf.net:6009",
                 motd: "Survive and fight in the new Publix SMP!"

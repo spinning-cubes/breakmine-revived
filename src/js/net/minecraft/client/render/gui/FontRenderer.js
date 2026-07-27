@@ -125,9 +125,16 @@ export default class FontRenderer {
             let character = string[i];
 
             if (character === FontRenderer.COLOR_PREFIX && i < string.length - 1) {
+                let colorCodeChar = string[i + 1];
+
+                if (colorCodeChar === FontRenderer.COLOR_PREFIX) {
+                    wordBuffer += FontRenderer.COLOR_PREFIX;
+                    i += 1;
+                    continue;
+                }
+
                 drawSegment();
 
-                let colorCodeChar = string[i + 1];
                 let newColor = this.getColorOfCharacter(colorCodeChar);
 
                 if (noColor === false) {
@@ -165,8 +172,14 @@ export default class FontRenderer {
         let length = 0;
 
         for (let i = 0; i < string.length; i++) {
-            if (string[i] === FontRenderer.COLOR_PREFIX) {
-                i++;
+            if (string[i] === FontRenderer.COLOR_PREFIX && i < string.length - 1) {
+                if (string[i + 1] === FontRenderer.COLOR_PREFIX) {
+                    let code = string[i].charCodeAt(0);
+                    length += this.charWidths[code];
+                    i++;
+                } else {
+                    i++;
+                }
             } else {
                 let code = string[i].charCodeAt(0);
                 length += this.charWidths[code];
@@ -234,7 +247,13 @@ export default class FontRenderer {
             let char = text[i];
             
             if (char === FontRenderer.COLOR_PREFIX && i + 1 < length) {
-                i++; 
+                if (text[i + 1] === FontRenderer.COLOR_PREFIX) {
+                    let code = char.charCodeAt(0);
+                    currentWidth += this.charWidths[code] || 0;
+                    i++;
+                } else {
+                    i++;
+                }
             } else {
                 let code = char.charCodeAt(0);
                 currentWidth += this.charWidths[code] || 0;

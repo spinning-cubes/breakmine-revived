@@ -860,8 +860,23 @@ export default class Minecraft {
                 }
             }
 
-            // Place block
+            // Use item / eat
             if (button === 2) {
+                let heldItem = this.player.inventory.getItemInSelectedSlot();
+
+                if (heldItem && !heldItem.isEmpty() && Block.getById(heldItem.getType())?.isItem()) {
+                    let x = undefined;
+                    let y = undefined;
+                    let z = undefined;
+                    if (hitResult != null) {
+                        x = hitResult.x + hitResult.face.x;
+                        y = hitResult.y + hitResult.face.y;
+                        z = hitResult.z + hitResult.face.z;
+                    }
+                    Block.getById(heldItem.getType()).onUse(this.world, x, y, z, heldItem);
+                    return;
+                }
+
                 if (hitResult != null) {
                     let x = hitResult.x + hitResult.face.x;
                     let y = hitResult.y + hitResult.face.y;

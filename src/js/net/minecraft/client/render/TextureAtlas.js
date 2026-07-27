@@ -38,7 +38,8 @@ export default class TextureAtlas {
             'leaves_oak_opaque': 11,
             'glass': 12,
             'water_still': 13,
-            'torch_on': 14
+            'torch_on': 14,
+            'apple': 15
         };
 
         for (const [name, slotId] of Object.entries(mapping)) {
@@ -105,8 +106,7 @@ export default class TextureAtlas {
     }
 
     async getTextureFiles() {
-        // Only include textures that actually exist and are used by our blocks
-        const knownTextures = [
+        const blockTextures = [
             "stone.png",
             "dirt.png",
             "grass_top.png",
@@ -210,8 +210,16 @@ export default class TextureAtlas {
             "wire.png"
         ];
 
-        // Map to the actual resource paths
-        return knownTextures.map(name => 'terrain/pack/minecraft/textures/blocks/' + name);
+        const itemTextures = [
+            "apple.png",
+            "bread.png",
+            "stick.png"
+        ];
+
+        return [
+            ...blockTextures.map(name => 'terrain/pack/minecraft/textures/blocks/' + name),
+            ...itemTextures.map(name => 'terrain/pack/minecraft/textures/items/' + name)
+        ];
     }
 
     loadImage(path) {

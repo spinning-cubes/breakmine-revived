@@ -21,6 +21,9 @@ import BlockChest from "./type/BlockChest.js";
 import BlockMissing from "./type/BlockMissing.js";
 import BlockBrick from "./type/BlockBrick.js";
 import BlockFurnace from "./type/BlockFurnace.js";
+import ItemApple from "./type/ItemApple.js";
+import ItemBread from "./type/ItemBread.js";
+import ItemStick from "./type/ItemStick.js";
 import BlockBush from "./type/BlockBush.js";
 import BlockFence from "./type/BlockFence.js";
 import BlockWoodPanel from "./type/BlockWoodPanel.js";
@@ -138,6 +141,10 @@ export class BlockRegistry {
 
         BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
         BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");
+
+        BlockRegistry.ITEM_APPLE = new ItemApple(83, 14);
+        BlockRegistry.ITEM_BREAD = new ItemBread(84, 15);
+        BlockRegistry.ITEM_STICK = new ItemStick(85, 16);
 
         BlockRegistry.init = true;
     }
