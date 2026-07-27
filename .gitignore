@@ -1,6 +1,7 @@
 *.iml
 .idea
 world.bin
+world_data.bin
 worlds/*
 minecraft/*
 jars/*

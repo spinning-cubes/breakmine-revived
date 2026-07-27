@@ -5,7 +5,7 @@ const Logger = require('./logger');
 const log = Logger;
 
 const WORLDS_DIR = path.join(__dirname, 'worlds');
-const DEFAULT_WORLD_FILE = path.join(__dirname, 'world.bin');
+const DEFAULT_WORLD_FILE = path.join(__dirname, 'world_data.bin');
 const CURRENT_WORLD_FILE = path.join(__dirname, 'current_world.txt');
 
 // Ensure worlds directory exists
@@ -23,46 +23,37 @@ function getWorldFile(worldName) {
         return DEFAULT_WORLD_FILE;
     }
     const sanitized = worldName.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    return path.join(WORLDS_DIR, `${sanitized}.bin`);
+    return path.join(WORLDS_DIR, `${sanitized}_data.bin`);
 }
 
-function getBlockInventoryFile(worldName) {
+function migrateOldWorld(worldName) {
     const worldFile = getWorldFile(worldName);
-    return worldFile.replace(/\.bin$/i, '.chests.json');
-}
+    if (fs.existsSync(worldFile)) return false;
 
-function loadBlockInventories(worldName = currentWorldName) {
-    const inventoryFile = getBlockInventoryFile(worldName);
-    if (!fs.existsSync(inventoryFile)) {
-        return;
-    }
+    const oldBin = worldName === 'main'
+        ? path.join(__dirname, 'world.bin')
+        : path.join(WORLDS_DIR, `${worldName}.bin`);
 
-    try {
-        const raw = fs.readFileSync(inventoryFile, 'utf8');
-        const entries = JSON.parse(raw);
-        if (!Array.isArray(entries)) {
-            return;
-        }
+    if (fs.existsSync(oldBin)) {
+        log.info('World', `Migrating ${oldBin} to ${worldFile}`);
+        fs.renameSync(oldBin, worldFile);
 
-        blockInventories.clear();
-        for (const entry of entries) {
-            if (!entry || typeof entry !== 'object' || !entry.key) {
-                continue;
+        const oldChests = worldFile.replace('_data.bin', '.chests.json');
+        if (fs.existsSync(oldChests)) {
+            const chestsData = JSON.parse(fs.readFileSync(oldChests, 'utf8'));
+            if (Array.isArray(chestsData)) {
+                blockInventories.clear();
+                for (const entry of chestsData) {
+                    if (entry && entry.key) {
+                        blockInventories.set(entry.key, entry.state || entry.inventory || null);
+                    }
+                }
             }
-            blockInventories.set(entry.key, entry.state || entry.inventory || null);
+            fs.unlinkSync(oldChests);
         }
-    } catch (e) {
-        log.warn('World', `Failed to load block inventories (${worldName}): ${e.message}`);
+        return true;
     }
-}
-
-function saveBlockInventories() {
-    const inventoryFile = getBlockInventoryFile(currentWorldName);
-    const entries = Array.from(blockInventories.entries()).map(([key, state]) => ({
-        key,
-        state
-    }));
-    fs.writeFileSync(inventoryFile, JSON.stringify(entries, null, 2));
+    return false;
 }
 
 function initWorld(worldName = 'main') {
@@ -75,6 +66,8 @@ function initWorld(worldName = 'main') {
     fs.writeFileSync(CURRENT_WORLD_FILE, worldName);
 
     const worldFile = getWorldFile(worldName);
+
+    migrateOldWorld(worldName);
 
     if (fs.existsSync(worldFile)) {
         log.info('World', `Loading world (${worldName})...`);
@@ -126,7 +119,37 @@ function initWorld(worldName = 'main') {
                 offset += 11;
             }
         }
-        loadBlockInventories(worldName);
+
+        // Read block inventories from binary file (if present)
+        if (offset + 4 <= data.length) {
+            const numInventories = data.readUInt32BE(offset);
+            offset += 4;
+
+            for (let i = 0; i < numInventories; i++) {
+                if (offset + 2 > data.length) break;
+                const keyLength = data.readUInt16BE(offset);
+                offset += 2;
+
+                if (offset + keyLength + 4 > data.length) break;
+                const key = data.toString('utf8', offset, offset + keyLength);
+                offset += keyLength;
+
+                const stateLength = data.readUInt32BE(offset);
+                offset += 4;
+
+                if (offset + stateLength > data.length) break;
+                const stateStr = data.toString('utf8', offset, offset + stateLength);
+                offset += stateLength;
+
+                try {
+                    const state = JSON.parse(stateStr);
+                    blockInventories.set(key, state);
+                } catch (e) {
+                    log.warn('World', `Failed to parse inventory state for ${key}: ${e.message}`);
+                }
+            }
+        }
+
         log.info('World', `Finished loading world (${worldName})`);
     } else {
         log.info('World', `Creating new world (${worldName})...`);
@@ -150,8 +173,22 @@ function loadCurrentWorld() {
 
 function saveWorld() {
     const worldFile = getWorldFile(currentWorldName);
-    // Format: worldTime(8) + numChanges(4) + changes*(11)
-    const buffer = Buffer.alloc(8 + 4 + (worldChanges.size * 11));
+
+    // Serialize block inventories
+    const inventoryEntries = [];
+    for (const [key, state] of blockInventories.entries()) {
+        const stateBuffer = Buffer.from(JSON.stringify(state), 'utf8');
+        const keyBuffer = Buffer.from(key, 'utf8');
+        inventoryEntries.push({ keyBuffer, stateBuffer });
+    }
+
+    // Calculate total buffer size
+    let totalSize = 8 + 4 + (worldChanges.size * 11) + 4; // header + changes + numInventories
+    for (const entry of inventoryEntries) {
+        totalSize += 2 + entry.keyBuffer.length + 4 + entry.stateBuffer.length;
+    }
+
+    const buffer = Buffer.alloc(totalSize);
     let offset = 0;
 
     // Write world time
@@ -171,8 +208,23 @@ function saveWorld() {
         buffer.writeUInt16BE(blockState, offset + 9);
         offset += 11;
     }
+
+    // Write block inventories
+    buffer.writeUInt32BE(inventoryEntries.length, offset);
+    offset += 4;
+
+    for (const entry of inventoryEntries) {
+        buffer.writeUInt16BE(entry.keyBuffer.length, offset);
+        offset += 2;
+        entry.keyBuffer.copy(buffer, offset);
+        offset += entry.keyBuffer.length;
+        buffer.writeUInt32BE(entry.stateBuffer.length, offset);
+        offset += 4;
+        entry.stateBuffer.copy(buffer, offset);
+        offset += entry.stateBuffer.length;
+    }
+
     fs.writeFileSync(worldFile, buffer);
-    saveBlockInventories();
     //log.info('World', `World saved (${currentWorldName})`);
 }
 
@@ -219,8 +271,8 @@ function listWorlds() {
     if (fs.existsSync(WORLDS_DIR)) {
         const files = fs.readdirSync(WORLDS_DIR);
         files.forEach(file => {
-            if (file.endsWith('.bin')) {
-                const worldName = file.replace('.bin', '');
+            if (file.endsWith('_data.bin')) {
+                const worldName = file.replace('_data.bin', '');
                 worlds.push(worldName);
             }
         });
