@@ -1,7 +1,7 @@
 const Logger = require('./logger');
 const { sendChatMessage } = require('./packets');
 const { broadcast, writeString, makePacket } = require('./protocol');
-const { getPlayers, isSpectator } = require('./players');
+const { getPlayers, isSpectator, findPlayerByUsername } = require('./players');
 
 function canSee(viewer, target) {
     if (isSpectator(target)) {
@@ -30,6 +30,9 @@ function handleCommand(player, command) {
             break;
         case '/time':
             handleTime(player, args);
+            break;
+        case '/heal':
+            handleHeal(player, args);
             break;
         case '/world':
             handleWorld(player, args);
@@ -75,6 +78,37 @@ function handleTp(player, args) {
     sendChatMessageToPlayer(player, `§aTeleported to ${x}, ${y}, ${z}`);
 }
 
+function handleHeal(player, args) {
+    if (args.length < 2) {
+        sendChatMessageToPlayer(player, '§cUsage: /heal <player> <amount>');
+        return;
+    }
+
+    const targetName = args[0];
+    const amount = parseInt(args[1]);
+
+    if (isNaN(amount) || amount <= 0) {
+        sendChatMessageToPlayer(player, '§cInvalid amount');
+        return;
+    }
+
+    let target = null;
+    if (targetName === '@s' || targetName === player.username) {
+        target = player;
+    } else {
+        target = findPlayerByUsername(targetName);
+    }
+
+    if (!target) {
+        sendChatMessageToPlayer(player, `§cPlayer not found: ${targetName}`);
+        return;
+    }
+
+    target.health = Math.min(20, (target.health || 20) + amount);
+    target.ws.send(JSON.stringify({ type: 'health', health: target.health }));
+    sendChatMessageToPlayer(player, `§aHealed ${target.username} by ${amount} HP`);
+}
+
 function handleHelp(player) {
     sendChatMessageToPlayer(player, '§6Available commands:');
     sendChatMessageToPlayer(player, '§e/tp <x> <y> <z> §7- Teleport to coordinates');
@@ -82,6 +116,7 @@ function handleHelp(player) {
     sendChatMessageToPlayer(player, '§e/time §7- Show current in-game time');
     sendChatMessageToPlayer(player, '§e/time set <number> §7- Set time to specific tick value');
     sendChatMessageToPlayer(player, '§e/time set <day|night|midnight|noon> §7- Set time to preset');
+    sendChatMessageToPlayer(player, '§e/heal <player> <amount> §7- Heal a player');
     sendChatMessageToPlayer(player, '§e/world [name] §7- Show current world or switch worlds');
     sendChatMessageToPlayer(player, '§e/world list §7- List all available worlds');
     sendChatMessageToPlayer(player, '§e/help §7- Show this help message');

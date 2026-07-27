@@ -2,6 +2,7 @@ import EntityRenderer from "../EntityRenderer.js";
 import Tessellator from "../../Tessellator.js";
 import MathHelper from "../../../../util/MathHelper.js";
 import * as THREE from "../../../../../../../../libraries/three.module.js";
+import BlockRenderType from "../../../../util/BlockRenderType.js";
 
 export default class ItemRenderer extends EntityRenderer {
     constructor(worldRenderer) {
@@ -82,7 +83,11 @@ export default class ItemRenderer extends EntityRenderer {
         // Set mesh transformations
         if (this.mesh) {
             this.mesh.position.set(0, 0.2, 0);
-            this.mesh.scale.set(0.25, 0.25, 0.25);
+            if (entity.getBlock()?.getRenderType() === BlockRenderType.ITEM) {
+                this.mesh.scale.set(0.4, 0.4, 0.4);
+            } else {
+                this.mesh.scale.set(0.25, 0.25, 0.25);
+            }
             this.mesh.rotation.y = MathHelper.toRadians(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks);
             this.mesh.updateMatrix();
         }

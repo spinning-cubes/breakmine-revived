@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
-const { initWorld, saveWorld, getWorldChanges, generateFlatChunkColumn, loadCurrentWorld, getWorldTime, tickWorldTime, setBlockInventory, getAllBlockInventoriesState } = require('./world');
+const { initWorld, saveWorld, getWorldChanges, generateFlatChunkColumn, loadCurrentWorld, getWorldTime, tickWorldTime, setBlockInventory, getAllBlockInventoriesState, getBlockInventories } = require('./world');
+const { tickAllFurnaces, broadcastFurnaceChanges } = require('./server/Furnace');
 const { sendLoginSuccess, sendJoinGame, sendSpawnPosition, sendChunks, sendTimeUpdate } = require('./packets');
 const { handlePacket, cleanupPlayerChunks } = require('./handlers');
 const { addPlayer, removePlayer, getPlayerCount, getPlayers, savePlayerData, normalizeInventoryState } = require('./players');
@@ -22,6 +23,9 @@ setInterval(() => {
     serverWorld.onTick();
     tickWorldTime();
 
+    const furnaces = tickAllFurnaces(getBlockInventories());
+    broadcastFurnaceChanges(getPlayers(), furnaces);
+
     const worldTime = getWorldTime();
     const players = getPlayers();
     for (const player of players.values()) {
@@ -36,6 +40,16 @@ setInterval(() => {
     saveWorld();
     //log.debug('World', 'Autosaved world time and state');
 }, 60 * 1000);
+
+// Periodically save player positions (every 30 seconds) for crash resilience
+setInterval(() => {
+    const players = getPlayers();
+    for (const player of players.values()) {
+        if (player.username) {
+            savePlayerData(player);
+        }
+    }
+}, 30 * 1000);
 
 const wss = new WebSocket.Server({ port: PORT, host: config.host });
 log.info('Server', `Minecraft server running!!! (v47)`);

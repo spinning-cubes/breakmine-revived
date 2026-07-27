@@ -8,6 +8,7 @@ import Vector3 from "../../util/Vector3.js";
 import Vector4 from "../../util/Vector4.js";
 import MetadataChunkBlock from "../../util/MetadataChunkBlock.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
+import ContainerFurnace from "../inventory/container/ContainerFurnace.js";
 
 export default class World {
 
@@ -74,7 +75,10 @@ export default class World {
     }
 
     getSeed() {
-        return this.chunkProvider && this.chunkProvider.generator ? this.chunkProvider.generator.seed : 0;
+        if (!this.chunkProvider) return 0;
+        if (this.chunkProvider.generator) return this.chunkProvider.generator.seed;
+        if (this.chunkProvider.seed) return this.chunkProvider.seed;
+        return 0;
     }
 
     cleanup() {
@@ -97,6 +101,19 @@ export default class World {
 
         // Process scheduled block ticks
         this.processBlockTicks();
+
+        // Tick furnace tile entities
+        if (this.blockInventories) {
+            for (const [key, inv] of this.blockInventories) {
+                if (key.startsWith("furnace:")) {
+                    const parts = key.split(":");
+                    if (parts.length === 4) {
+                        const pos = { x: parseInt(parts[1]), y: parseInt(parts[2]), z: parseInt(parts[3]) };
+                        ContainerFurnace.tickFurnace(inv, pos, this);
+                    }
+                }
+            }
+        }
 
         // Update skylight subtracted (To make the night dark)
         let lightLevel = this.calculateSkylightSubtracted(1.0);

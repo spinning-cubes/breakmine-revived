@@ -35,6 +35,7 @@ import MathHelper from "../util/MathHelper.js";
 import BlockPosition from "../util/BlockPosition.js";
 import GuiContainerSurvival from "./gui/screens/container/GuiContainerSurvival.js";
 import CraftingRegistry from "./crafting/CraftingRegistry.js";
+import SmeltingRegistry from "./smelting/SmeltingRegistry.js";
 import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
 import ItemEntity from "./entity/ItemEntity.js";
 import PlayerEntity from "./entity/PlayerEntity.js";
@@ -115,6 +116,7 @@ export default class Minecraft {
         // Create all blocks
         BlockRegistry.create();
         CraftingRegistry.reset();
+        SmeltingRegistry.reset();
 
         // Tools are registered in BlockRegistry.create() alongside blocks and items
 

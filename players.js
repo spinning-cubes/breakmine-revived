@@ -60,6 +60,7 @@ function addPlayer(player) {
     player.eid = nextEntityId++;
     player.joinTime = Date.now();
     player.gamemode = GAMEMODE_MAP[config.default_gamemode] ?? 1;
+    player.health = 20;
     player.inventory = normalizeInventoryState(player.inventory);
     players.set(player.eid, player);
 }
@@ -139,6 +140,7 @@ function savePlayerData(player) {
         yaw: player.yaw,
         pitch: player.pitch,
         isFlying: player.isFlying || false,
+        health: player.health,
         inventory: normalizeInventoryState(player.inventory)
     };
     fs.writeFileSync(playerFile, JSON.stringify(data, null, 2));

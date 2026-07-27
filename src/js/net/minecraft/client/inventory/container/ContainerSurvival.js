@@ -67,8 +67,13 @@ export default class ContainerSurvival extends Container {
         if (slot.inventory === player.inventory && slot.index === 50) {
             const resultItem = player.inventory.getItemInSlot(50);
             if (!resultItem.isEmpty()) {
-                const accepted = player.inventory.addItem(resultItem.getType(), resultItem.getCount());
-                if (accepted) {
+                const cursor = player.inventory.itemInCursor;
+                if (cursor.isEmpty() || (cursor.isItemEqual(resultItem) && cursor.getCount() + resultItem.getCount() <= cursor.getMaxStackSize())) {
+                    if (cursor.isEmpty()) {
+                        player.inventory.itemInCursor = resultItem.copy();
+                    } else {
+                        cursor.grow(resultItem.getCount());
+                    }
                     // Consume exactly 1 item from each grid slot upon successful click
                     for (let i = 46; i <= 49; i++) {
                         const item = player.inventory.getItemInSlot(i);

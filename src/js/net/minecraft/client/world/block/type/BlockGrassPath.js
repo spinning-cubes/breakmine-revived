@@ -36,7 +36,7 @@ export default class BlockGrassPath extends Block {
     }
     
     getDrop(world, x, y, z) {
-        return [2, 1];
+        return [3, 1];
     }
 
 }

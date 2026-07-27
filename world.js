@@ -249,8 +249,21 @@ function getBlockMetadata(x, y, z) {
     return blockState !== undefined ? (blockState & 0xF) : 0;
 }
 
+function getBlockInventories() {
+    return blockInventories;
+}
+
 function setBlockInventory(key, state) {
-    blockInventories.set(key, state);
+    const existing = blockInventories.get(key);
+    if (existing && typeof existing === 'object' && existing.items !== undefined) {
+        existing.size = state.size || existing.size;
+        if (Array.isArray(state.items)) {
+            existing.items = state.items;
+        }
+        blockInventories.set(key, existing);
+    } else {
+        blockInventories.set(key, state);
+    }
 }
 
 function getBlockInventory(key) {
@@ -353,6 +366,7 @@ module.exports = {
     saveWorld,
     addWorldChange,
     getWorldChanges,
+    getBlockInventories,
     setBlockInventory,
     getBlockInventory,
     getAllBlockInventoriesState,

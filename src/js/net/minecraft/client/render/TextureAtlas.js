@@ -142,7 +142,7 @@ export default class TextureAtlas {
             "chest_front.png",
             "missing.png",
             "brick.png",
-            "furnace_front_off.png",
+            "furnace_front.png",
             "furnace_front_on.png",
             "furnace_side.png",
             "furnace_top.png",

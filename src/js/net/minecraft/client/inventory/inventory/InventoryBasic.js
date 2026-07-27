@@ -34,6 +34,12 @@ export default class InventoryBasic extends Inventory {
             const slot = items[index];
             return new ItemStack(slot?.typeId || 0, slot?.count || 0);
         });
+
+        for (const key of Object.keys(state)) {
+            if (key !== 'size' && key !== 'items') {
+                this[key] = state[key];
+            }
+        }
     }
 
     getItemInSlot(index) {

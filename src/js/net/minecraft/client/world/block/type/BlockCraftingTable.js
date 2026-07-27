@@ -1,5 +1,5 @@
 import Block from "../Block.js";
-import GuiContainerCraftingTable from "../../../gui/screens/container/GuiContainerCraftingTable.js"
+import GuiContainerCraftingTable from "../../../gui/screens/container/GuiContainerCraftingTable.js";
 import EnumBlockFace from "../../../../util/EnumBlockFace.js";
 
 export default class BlockCraftingTable extends Block {

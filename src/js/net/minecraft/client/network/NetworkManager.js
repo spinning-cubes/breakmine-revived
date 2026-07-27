@@ -176,9 +176,18 @@ export default class NetworkManager {
                 if (!world.blockInventories) {
                     world.blockInventories = new Map();
                 }
-                const inventory = new InventoryBasic(payload.inventory?.size || 27);
-                inventory.applyNetworkState(payload.inventory);
-                world.blockInventories.set(payload.key, inventory);
+                let inventory = world.blockInventories.get(payload.key);
+                if (inventory?.applyNetworkState) {
+                    inventory.applyNetworkState(payload.inventory);
+                } else {
+                    inventory = new InventoryBasic(payload.inventory?.size || 27);
+                    inventory.applyNetworkState(payload.inventory);
+                    world.blockInventories.set(payload.key, inventory);
+                }
+            } else if (payload.type === 'health') {
+                const player = this.minecraft.player;
+                if (!player) return;
+                player.health = payload.health;
             } else if (payload.type === 'gamemode') {
                 const player = this.minecraft.player;
                 if (!player) return;

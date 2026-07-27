@@ -107,6 +107,7 @@ function handleLoginPacket(player, packetId, buffer, offset) {
             player.yaw = playerData.yaw || 0;
             player.pitch = playerData.pitch || 0;
             player.isFlying = playerData.isFlying || false;
+            player.health = typeof playerData.health === 'number' ? playerData.health : 20;
             player.inventory = normalizeInventoryState(playerData.inventory);
         } else {
             // Initialize player position at spawn
