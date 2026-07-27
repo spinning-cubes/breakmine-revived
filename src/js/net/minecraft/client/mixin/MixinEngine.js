@@ -1,15 +1,17 @@
-class MixinEngine {
+export default class MixinEngine {
     constructor() {
         this.registry = new Map();
-        this.listeners = new Map();        // Standard modifying listeners
-        this.guaranteedListeners = new Map(); // Non-cancellable listeners
-        this.observers = new Map();        // Read-only observers
-        this.lockedFunctions = new WeakMap(); // Protected functions that cannot be patched
+        this.functions = new Map();            // Stores standalone global functions
+        this.listeners = new Map();
+        this.guaranteedListeners = new Map();
+        this.observers = new Map();
+        this.lockedFunctions = new WeakMap();
+        this.lockedGlobalFunctions = new Set(); // Track locked global functions
     }
 
     register(key, target) {
         if (!key.includes(':')) {
-            console.warn(`[Mixin] Key '${key}' should follow 'namespace:name' format.`);
+            console.warn(`Key '${key}' should follow 'namespace:name' format.`);
         }
         this.registry.set(key, target);
         return target;
@@ -20,38 +22,102 @@ class MixinEngine {
     }
 
     /**
-     * Prevents further mixins/hooks from wrapping a specific method on an object.
+     * Registers a standalone global function under a namespaced key.
+     * Example: Mixin.registerFunction('game:getSpawnPoint', (biome) => ({ x: 0, y: 64, z: 0 }));
      */
-    lockFunction(target, methodName) {
-        if (!target || typeof target[methodName] !== 'function') return;
+    registerFunction(key, fn) {
+        if (!key.includes(':')) {
+            console.warn(`Function key '${key}' should follow 'namespace:name' format.`);
+        }
+        if (typeof fn !== 'function') {
+            console.error(`registerFunction expected a function, got ${typeof fn}.`);
+            return;
+        }
 
+        this.functions.set(key, fn);
+        return (...args) => this.callFunction(key, ...args);
+    }
+
+    /**
+     * Invokes a registered standalone global function (executing all applied mixin hooks).
+     * Example: Mixin.callFunction('game:getSpawnPoint', 'desert');
+     */
+    callFunction(key, ...args) {
+        const fn = this.functions.get(key);
+        if (!fn) {
+            console.error(`Global function '${key}' is not registered.`);
+            return;
+        }
+        return fn(...args);
+    }
+
+    lockFunction(target, methodName) {
+        // If target is a string matching a registered global function
+        if (typeof target === 'string' && this.functions.has(target)) {
+            this.lockedGlobalFunctions.add(target);
+            return;
+        }
+
+        // Object instance method locking
+        if (!target || typeof target[methodName] !== 'function') return;
         if (!this.lockedFunctions.has(target)) {
             this.lockedFunctions.set(target, new Set());
         }
         this.lockedFunctions.get(target).add(methodName);
     }
 
+    /**
+     * Applies hooks to either a target dictionary or a registered global function.
+     * Works with: Mixin.apply('game:getSpawnPoint', { around(...) { ... } });
+     */
     apply(targetKey, mixinDef) {
+        // Case A: Patching a standalone global function registered via registerFunction
+        if (typeof targetKey === 'string' && this.functions.has(targetKey)) {
+            if (this.lockedGlobalFunctions.has(targetKey)) {
+                console.warn(`Cannot apply mixin to locked global function '${targetKey}'.`);
+                return null;
+            }
+
+            const originalFn = this.functions.get(targetKey);
+            const hooks = mixinDef.around || mixinDef.before || mixinDef.after ? mixinDef : (mixinDef.methods?.fn || mixinDef);
+
+            const wrappedFn = function (...args) {
+                if (hooks.before) hooks.before(args);
+
+                let result;
+                if (hooks.around) {
+                    result = hooks.around(originalFn, ...args);
+                } else {
+                    result = originalFn(...args);
+                }
+
+                if (hooks.after) hooks.after(result, args);
+
+                return result;
+            };
+
+            this.functions.set(targetKey, wrappedFn);
+            return wrappedFn;
+        }
+
+        // Case B: Patching a target object or dictionary
         const target = typeof targetKey === 'string' ? this.registry.get(targetKey) : targetKey;
 
         if (!target || typeof target !== 'object') {
-            console.error(`[Mixin] Target '${targetKey}' not found or invalid.`);
+            console.error(`Target '${targetKey}' not found or invalid.`);
             return null;
         }
 
-        // 1. Properties
         if (mixinDef.properties) {
             Object.assign(target, mixinDef.properties);
         }
 
-        // 2. Methods / Functions
         if (mixinDef.methods) {
             const lockedSet = this.lockedFunctions.get(target);
 
             for (const [key, hooks] of Object.entries(mixinDef.methods)) {
-                // Skip if method is marked non-cancellable / locked
                 if (lockedSet && lockedSet.has(key)) {
-                    console.warn(`[Mixin] Cannot apply mixin to locked method '${key}'.`);
+                    console.warn(`Cannot apply mixin to locked method '${key}'.`);
                     continue;
                 }
 
@@ -97,10 +163,6 @@ class MixinEngine {
         this._addListener(this.listeners, eventKey, handler, priority);
     }
 
-    /**
-     * Subscribes a non-cancellable listener.
-     * Guaranteed to run regardless of cancellation state or early returns.
-     */
     onGuaranteed(eventKey, handler, priority = 0) {
         this._addListener(this.guaranteedListeners, eventKey, handler, priority);
     }
@@ -109,14 +171,9 @@ class MixinEngine {
         this.emitCancellable(eventKey, payload);
     }
 
-    /**
-     * Emits an event through normal cancellable handlers,
-     * BUT ALWAYS executes guaranteed handlers afterwards.
-     */
     emitCancellable(eventKey, payload) {
         let isCancelled = false;
 
-        // 1. Run standard listeners (can be cancelled)
         const handlers = this.listeners.get(eventKey);
         if (handlers) {
             for (const { handler } of handlers) {
@@ -124,26 +181,23 @@ class MixinEngine {
                 if (result === false || payload?.cancelled) {
                     isCancelled = true;
                     if (payload) payload.cancelled = true;
-                    break; // Stop standard chain on cancel
+                    break;
                 }
             }
         }
 
-        // 2. Run non-cancellable / guaranteed listeners (NEVER SKIPPED)
         const guaranteed = this.guaranteedListeners.get(eventKey);
         if (guaranteed) {
             for (const { handler } of guaranteed) {
                 try {
                     handler(payload, isCancelled);
                 } catch (err) {
-                    console.error(`[Mixin] Error in guaranteed listener for '${eventKey}':`, err);
+                    console.error(`Error in guaranteed listener for '${eventKey}':`, err);
                 }
             }
         }
 
-        // 3. Notify read-only observers
         this._notifyObservers(eventKey, payload);
-
         return !isCancelled;
     }
 
@@ -175,7 +229,7 @@ class MixinEngine {
             try {
                 callback(readOnlyPayload);
             } catch (err) {
-                console.error(`[Mixin] Error in observer for '${eventKey}':`, err);
+                console.error(`Error in observer for '${eventKey}':`, err);
             }
         }
     }

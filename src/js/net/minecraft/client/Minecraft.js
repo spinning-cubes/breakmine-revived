@@ -42,8 +42,9 @@ import { Version } from "../../../../resources/version.js";
 
 export default class Minecraft {
 
-    static VERSION = Version.VERSION //SCRIPT_SPECIAL_TOKEN_REPLACE_GITVERSION
-    static TIMESTAMP = Version.TIMESTAMP //SCRIPT_SPECIAL_TOKEN_REPLACE_GITTIMESTAMP
+    static VERSION = Version.VERSION;
+    static TIMESTAMP = Version.TIMESTAMP;
+    static PATCHWORK_VERSION = Version.PATCHWORK_VERSION;
     static URL_GITHUB = "https://codeberg.org/BreakmineDevelopers/breakmine_revived";
     static PROTOCOL_VERSION = 47; //758;
 
@@ -163,6 +164,71 @@ export default class Minecraft {
 
         // Initialize
         this.init();
+
+        // Mixins
+        this.addMixinHandlers();
+    }
+
+    addMixinHandlers() {
+        // src/js/net/minecraft/client/Minecraft.js
+
+        // src/js/net/minecraft/client/world/World.js
+        Mixin.registerFunction('game:teleportEntityPos', (eid, x, y, z) => {
+            if (this.world && this.world.getEntityById(eid)) {
+                this.world.getEntityById(eid).x = x;
+                this.world.getEntityById(eid).y = y;
+                this.world.getEntityById(eid).z = z;
+                return true;
+            } else {
+                return undefined;
+            }
+        });
+
+        Mixin.registerFunction('game:getEntityPos', (eid) => {
+            if (this.world && this.world.getEntityById(eid)) {
+                return {
+                    x: this.world.getEntityById(eid).x,
+                    y: this.world.getEntityById(eid).y,
+                    z: this.world.getEntityById(eid).z
+                };
+            } else {
+                return undefined;
+            }
+        });
+
+        Mixin.registerFunction('game:setBlockAt', (x, y, z, id) => {
+            if (this.world) {
+                this.world.setBlockAt(x, y, z, id);
+                return true;
+            } else {
+                return undefined;
+            }
+        });
+
+        Mixin.registerFunction('game:getBlockAt', (x, y, z) => {
+            if (this.world) {
+                return this.world.getBlockAt(x, y, z);
+            } else {
+                return undefined;
+            }
+        });
+
+        Mixin.registerFunction('game:setBlockDataAt', (x, y, z, data) => {
+            if (this.world) {
+                this.world.setBlockDataAt(x, y, z, data);
+                return true;
+            } else {
+                return undefined;
+            }
+        });
+
+        Mixin.registerFunction('game:getBlockDataAt', (x, y, z) => {
+            if (this.world) {
+                return this.world.getBlockDataAt(x, y, z);
+            } else {
+                return undefined;
+            }
+        });
     }
 
     newSessionFromUsername(username) {
