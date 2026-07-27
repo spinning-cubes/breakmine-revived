@@ -665,12 +665,20 @@ export default class Minecraft {
 
         this.particleRenderer.spawnBlockBreakParticle(this.world, hitResult.x, hitResult.y, hitResult.z);
 
-        this.world.setBlockAt(hitResult.x, hitResult.y, hitResult.z, 0);
-        this.player.swingArm();
+        // Play drop sound
+        this.soundManager.playSound('random.pop', this.player.x, this.player.y, this.player.z, 1.0, 1.0);
 
-        if (!this.player.creative) {
-            this.player.inventory.addItem(droppedBlock[0], droppedBlock[1]);
+        this.world.setBlockAt(hitResult.x, hitResult.y, hitResult.z, 0);
+        for (let index = 0; index < droppedBlock[1]; index++) {
+            if (this.isSingleplayer()) {
+                // Singleplayer: create entity locally
+                this.world.addEntity(new ItemEntity(this, this.world, droppedBlock[0], hitResult.x, hitResult.y, hitResult.z));
+            } else {
+                // Multiplayer: tell server to spawn item for all players
+                this.playerController.getNetworkHandler().sendPacket(new ClientDropItemPacket(droppedBlock[0]));
+            }
         }
+        this.player.swingArm();
 
         if (!this.isSingleplayer()) {
             let blockPos = new BlockPosition(hitResult.x, hitResult.y, hitResult.z);
