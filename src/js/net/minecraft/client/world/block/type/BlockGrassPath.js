@@ -34,5 +34,9 @@ export default class BlockGrassPath extends Block {
                 return 'grass_path_side';
         }
     }
+    
+    getDrop(world, x, y, z) {
+        return [2, 1];
+    }
 
 }

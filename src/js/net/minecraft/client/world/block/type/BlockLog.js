@@ -12,6 +12,10 @@ export default class BlockLog extends Block {
         // Sound
         this.sound = Block.sounds.wood;
     }
+    
+    getPreferredToolType() {
+        return 'axe';
+    }
 
     getTextureForFace(face, data = 0) {
         if (face.isYAxis() && data === 0) {

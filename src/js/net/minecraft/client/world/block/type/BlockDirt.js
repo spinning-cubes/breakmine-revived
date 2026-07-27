@@ -12,6 +12,10 @@ export default class BlockDirt extends Block {
         this.sound = Block.sounds.gravel;
     }
     
+    getPreferredToolType() {
+        return 'shovel';
+    }
+    
     onBlockPlaced(world, x, y, z, face) {
         world.scheduleBlockTick(x, y, z, 120);
     }

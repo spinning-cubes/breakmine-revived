@@ -9,7 +9,7 @@ import IngameOverlay from "./gui/overlay/IngameOverlay.js";
 import SoundManager from "./sound/SoundManager.js";
 import MusicManager from "./sound/MusicManager.js";
 import Block from "./world/block/Block.js";
-import { ToolRegistry } from "./world/tool/ToolRegistry.js";
+import ItemTool from "./world/block/type/ItemTool.js";
 import BoundingBox from "../util/BoundingBox.js";
 import {BlockRegistry} from "./world/block/BlockRegistry.js";
 import FontRenderer from "./render/gui/FontRenderer.js";
@@ -116,11 +116,7 @@ export default class Minecraft {
         BlockRegistry.create();
         CraftingRegistry.reset();
 
-        // Create all tools
-        // (tools are needed for correct held-item rendering + inventory)
-        // Lazy import is avoided here; ToolRegistry is a static registry.
-        // ToolRegistry.create() currently registers default tool instances.
-        ToolRegistry.create();
+        // Tools are registered in BlockRegistry.create() alongside blocks and items
 
         this.blockList = BlockRegistry.getAllBlocks();
 
@@ -643,11 +639,32 @@ export default class Minecraft {
             let block = Block.getById(typeId);
             let soundName = block.getSound().getBreakSound();
 
-            this.soundManager.playSound(soundName, this.player.x + 0.5, this.player.y + 1.6, this.player.z + 0.5, 1.0, 0.3);
+            this.soundManager.playSoundMono(soundName, 0.5, 1.0);
         }
 
         let block = Block.getById(typeId);
         let requiredTicks = Math.ceil(block.getHardness() * 30);
+
+        let heldItem = this.player.inventory.getItemInSelectedSlot()
+        let heldTypeId = heldItem ? heldItem.getType() : null
+        let heldBlock = heldTypeId ? Block.getById(heldTypeId) : null
+        let tool = heldBlock instanceof ItemTool ? heldBlock : null
+
+        let minLevel = block.minimumToolLevel()
+        if (minLevel) {
+            let toolMaterial = tool ? tool.material : null
+            if (!toolMaterial || ItemTool.materials.indexOf(toolMaterial) < ItemTool.materials.indexOf(minLevel)) {
+                requiredTicks *= 5
+            }
+        }
+
+        let preferredType = block.getPreferredToolType()
+        if (tool && (!preferredType || tool.toolType === preferredType)) {
+            let eff = tool.efficiency() || 1
+            requiredTicks = Math.ceil(requiredTicks / eff)
+        } else {
+            requiredTicks = Math.ceil(requiredTicks * Block.handHardnessMultiplier)
+        }
 
         if (this.miningTimer >= requiredTicks) {
             this.breakTargetBlock(hitResult, typeId);
@@ -658,15 +675,31 @@ export default class Minecraft {
 
     breakTargetBlock(hitResult, typeId) {
         let block = Block.getById(typeId);
-        let droppedBlock = block.getDrop(this.world, hitResult.x, hitResult.y, hitResult.z);
+        let droppedBlock = [0, 0];
+
+        let heldItem = this.player.inventory.getItemInSelectedSlot()
+        let heldTypeId = heldItem ? heldItem.getType() : null
+        let heldBlock = heldTypeId ? Block.getById(heldTypeId) : null
+        let tool = heldBlock instanceof ItemTool ? heldBlock : null
+
+        let minLevel = block.minimumToolLevel()
+        if (!minLevel) {
+            droppedBlock = block.getDrop(this.world, hitResult.x, hitResult.y, hitResult.z);
+        } else if (tool) {
+            let toolMaterial = tool.material
+            if (ItemTool.materials.indexOf(toolMaterial) >= ItemTool.materials.indexOf(minLevel)) {
+                droppedBlock = block.getDrop(this.world, hitResult.x, hitResult.y, hitResult.z);
+            }
+        }
+
         let soundName = block.getSound().getBreakSound();
 
-        this.soundManager.playSound(soundName, this.player.x + 0.5, this.player.y + 1.6, this.player.z + 0.5, 1.0, 1.0);
+        this.soundManager.playSoundMono(soundName, 1.0, 1.0);
 
         this.particleRenderer.spawnBlockBreakParticle(this.world, hitResult.x, hitResult.y, hitResult.z);
 
         // Play drop sound
-        this.soundManager.playSound('random.pop', this.player.x, this.player.y, this.player.z, 1.0, 1.0);
+        this.soundManager.playSoundMono('random.pop', 1.0, 1.0);
 
         this.world.setBlockAt(hitResult.x, hitResult.y, hitResult.z, 0);
         for (let index = 0; index < droppedBlock[1]; index++) {

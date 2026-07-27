@@ -176,4 +176,30 @@ export default class SoundManager {
         this.clickAudio.play();
     }
 
+    playSoundMono(name, volume = 1.0, pitch = 1.0) {
+        let path = name.replace(".", "/");
+        
+        // Try random numbered variant (1-5)
+        let randomVariant = Math.floor(Math.random() * 5) + 1;
+        try {
+            let audio = new Audio('src/resources/sound/' + path + randomVariant + '.ogg');
+            audio.volume = volume;
+            audio.playbackRate = pitch;
+            audio.play();
+            return;
+        } catch (e) {
+            // Fallback to unnumbered file
+        }
+        
+        // Fallback to unnumbered file
+        try {
+            let audio = new Audio('src/resources/sound/' + path + '.ogg');
+            audio.volume = volume;
+            audio.playbackRate = pitch;
+            audio.play();
+        } catch (e) {
+            console.warn('Failed to play mono sound:', name, e);
+        }
+    }
+
 }

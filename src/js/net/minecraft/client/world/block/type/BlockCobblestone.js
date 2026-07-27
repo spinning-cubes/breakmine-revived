@@ -8,6 +8,8 @@ export default class BlockCobblestone extends Block {
         this.hardness = 2.0;
     }
 
+    getPreferredToolType() { return 'pickaxe'; }
+
     getTextureForFace(face) {
         return 'cobblestone';
     }

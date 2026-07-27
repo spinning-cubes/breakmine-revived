@@ -210,10 +210,25 @@ export default class TextureAtlas {
             "wire.png"
         ];
 
+        const toolTextureNames = [];
+        const toolMaterials = ['wood', 'stone', 'iron', 'diamond', 'gold'];
+        const toolTypes = ['pickaxe', 'sword', 'shovel', 'axe', 'hoe'];
+        for (const mat of toolMaterials) {
+            for (const type of toolTypes) {
+                toolTextureNames.push(`${mat}_${type}.png`);
+            }
+        }
+
         const itemTextures = [
             "apple.png",
             "bread.png",
-            "stick.png"
+            "stick.png",
+            "iron_ingot.png",
+            "coal.png",
+            "diamond.png",
+            "emerald.png",
+            "gold_ingot.png",
+            ...toolTextureNames
         ];
 
         return [

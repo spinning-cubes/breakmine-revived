@@ -13,6 +13,10 @@ export default class BlockGrass extends Block {
         this.sound = Block.sounds.grass;
     }
     
+    getPreferredToolType() {
+        return 'shovel';
+    }
+    
     onBlockPlaced(world, x, y, z, face) {
         world.scheduleBlockTick(x, y, z, 120);
     }

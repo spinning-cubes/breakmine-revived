@@ -7,6 +7,8 @@ export default class BlockBrick extends Block {
         this.description = "Brick";
     }
 
+    getPreferredToolType() { return 'pickaxe'; }
+
     getTextureForFace(face) {
         return 'brick';
     }

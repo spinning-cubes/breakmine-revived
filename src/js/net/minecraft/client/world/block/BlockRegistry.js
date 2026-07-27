@@ -24,6 +24,12 @@ import BlockFurnace from "./type/BlockFurnace.js";
 import ItemApple from "./type/ItemApple.js";
 import ItemBread from "./type/ItemBread.js";
 import ItemStick from "./type/ItemStick.js";
+import ItemGeneric from "./type/ItemGeneric.js";
+import ItemPickaxe from "./type/ItemPickaxe.js";
+import ItemSword from "./type/ItemSword.js";
+import ItemShovel from "./type/ItemShovel.js";
+import ItemAxe from "./type/ItemAxe.js";
+import ItemHoe from "./type/ItemHoe.js";
 import BlockBush from "./type/BlockBush.js";
 import BlockFence from "./type/BlockFence.js";
 import BlockWoodPanel from "./type/BlockWoodPanel.js";
@@ -68,16 +74,18 @@ export class BlockRegistry {
         BlockRegistry.SAND = new BlockSand(12, 8);
         BlockRegistry.TORCH = new BlockTorch(50, 9);
         BlockRegistry.GRASS_PATH = new BlockGrassPath(19, 15);
-        BlockRegistry.GOLD_ORE = new BlockStoneLike(21, 0, "gold_ore", "Gold Ore");
-        BlockRegistry.DIAMOND_ORE = new BlockStoneLike(22, 0, "diamond_ore", "Diamond Ore");
-        BlockRegistry.COAL_ORE = new BlockStoneLike(23, 0, "coal_ore", "Coal Ore");
-        BlockRegistry.IRON_ORE = new BlockStoneLike(24, 0, "iron_ore", "Iron Ore");
-        BlockRegistry.IRON_BLOCK = new BlockStoneLike(25, 0, "iron_block", "Iron Block");
-        BlockRegistry.GOLD_BLOCK = new BlockStoneLike(26, 0, "gold_block", "Gold Block");
-        BlockRegistry.DIAMOND_BLOCK = new BlockStoneLike(27, 0, "diamond_block", "Diamond Block");
-        BlockRegistry.EMERALD_BLOCK = new BlockStoneLike(28, 0, "emerald_block", "Emerald Block");
-        BlockRegistry.COAL_BLOCK = new BlockStoneLike(29, 0, "coal_block", "Coal Block");
-        BlockRegistry.EMERALD_ORE = new BlockStoneLike(30, 0, "emerald_ore", "Emerald Ore");
+
+        BlockRegistry.GOLD_ORE = new BlockStoneLike(21, 0, "gold_ore", "Gold Ore", 3.0, [90, 1], 'iron');
+        BlockRegistry.DIAMOND_ORE = new BlockStoneLike(22, 0, "diamond_ore", "Diamond Ore", 3.0, [88, 1], 'iron');
+        BlockRegistry.COAL_ORE = new BlockStoneLike(23, 0, "coal_ore", "Coal Ore", 3.0, [87, 2], 'wood');
+        BlockRegistry.IRON_ORE = new BlockStoneLike(24, 0, "iron_ore", "Iron Ore", 3.0, [86, 2], 'stone');
+        BlockRegistry.IRON_BLOCK = new BlockStoneLike(25, 0, "iron_block", "Iron Block", 3.0, [0, 0], 'stone');
+        BlockRegistry.GOLD_BLOCK = new BlockStoneLike(26, 0, "gold_block", "Gold Block", 3.0, [0, 0], 'iron');
+        BlockRegistry.DIAMOND_BLOCK = new BlockStoneLike(27, 0, "diamond_block", "Diamond Block", 3.0, [0, 0], 'iron');
+        BlockRegistry.EMERALD_BLOCK = new BlockStoneLike(28, 0, "emerald_block", "Emerald Block", 3.0, [0, 0], 'iron');
+        BlockRegistry.COAL_BLOCK = new BlockStoneLike(29, 0, "coal_block", "Coal Block", 3.0, [0, 0], 'wood');
+        BlockRegistry.EMERALD_ORE = new BlockStoneLike(30, 0, "emerald_ore", "Emerald Ore", 3.0, [89, 1], 'iron');
+
         BlockRegistry.CRAFTING_TABLE = new BlockCraftingTable(31, 0);
         BlockRegistry.CHEST = new BlockChest(32, 0);
         BlockRegistry.BRICK = new BlockBrick(33, 0);
@@ -127,7 +135,7 @@ export class BlockRegistry {
 
         // Slabs
         BlockRegistry.COBBLESTONE_SLAB = new BlockSlab(70, 0, "cobblestone", "Cobblestone Slab", Block.sounds.stone);
-        BlockRegistry.OAK_SLAB = new BlockSlab(71, 0, "oak_planks", "Oak Slab", Block.sounds.wood);
+        BlockRegistry.WOOD_SLAB = new BlockSlab(71, 0, "oak_planks", "Oak Slab", Block.sounds.wood);
         BlockRegistry.SPRUCE_SLAB = new BlockSlab(72, 0, "spruce_planks", "Spruce Slab", Block.sounds.wood);
         BlockRegistry.BIRCH_SLAB = new BlockSlab(73, 0, "birch_planks", "Birch Slab", Block.sounds.wood);
         BlockRegistry.JUNGLE_SLAB = new BlockSlab(74, 0, "jungle_planks", "Jungle Slab", Block.sounds.wood);
@@ -142,9 +150,40 @@ export class BlockRegistry {
         BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
         BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");
 
+        // Items
         BlockRegistry.ITEM_APPLE = new ItemApple(83, 14);
         BlockRegistry.ITEM_BREAD = new ItemBread(84, 15);
         BlockRegistry.ITEM_STICK = new ItemStick(85, 16);
+
+        BlockRegistry.ITEM_IRON = new ItemGeneric(86, 'iron_ingot', 'Iron');
+        BlockRegistry.ITEM_COAL = new ItemGeneric(87, 'coal', 'Coal');
+        BlockRegistry.ITEM_DIAMOND = new ItemGeneric(88, 'diamond', 'Diamond');
+        BlockRegistry.ITEM_EMERALD = new ItemGeneric(89, 'emerald', 'Emerald');
+        BlockRegistry.ITEM_GOLD = new ItemGeneric(90, 'gold_ingot', 'Gold');
+
+        // Tools (IDs 91-115)
+        const toolMaterials = ['wood', 'stone', 'iron', 'diamond', 'gold'];
+        let toolId = 91;
+        for (const mat of toolMaterials) {
+            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
+            BlockRegistry[`${mat.toUpperCase()}_PICKAXE`] = new ItemPickaxe(toolId++, `${mat}_pickaxe`, `${matName} Pickaxe`, mat);
+        }
+        for (const mat of toolMaterials) {
+            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
+            BlockRegistry[`${mat.toUpperCase()}_SWORD`] = new ItemSword(toolId++, `${mat}_sword`, `${matName} Sword`, mat);
+        }
+        for (const mat of toolMaterials) {
+            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
+            BlockRegistry[`${mat.toUpperCase()}_SHOVEL`] = new ItemShovel(toolId++, `${mat}_shovel`, `${matName} Shovel`, mat);
+        }
+        for (const mat of toolMaterials) {
+            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
+            BlockRegistry[`${mat.toUpperCase()}_AXE`] = new ItemAxe(toolId++, `${mat}_axe`, `${matName} Axe`, mat);
+        }
+        for (const mat of toolMaterials) {
+            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
+            BlockRegistry[`${mat.toUpperCase()}_HOE`] = new ItemHoe(toolId++, `${mat}_hoe`, `${matName} Hoe`, mat);
+        }
 
         BlockRegistry.init = true;
     }

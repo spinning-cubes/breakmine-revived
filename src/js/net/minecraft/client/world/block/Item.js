@@ -8,6 +8,7 @@ export default class Item extends Block {
     constructor(id, textureSlotId) {
         super(id, textureSlotId);
         this.boundingBox = new BoundingBox(0.0, 0.0, 0.0, 0.0, 1.0, 1.0);
+        this.isTool = false;
     }
     
     getTextureForFace(face) {

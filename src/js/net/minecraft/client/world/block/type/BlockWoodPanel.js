@@ -11,6 +11,10 @@ export default class BlockWoodPanel extends Block {
         this.multipart = true;
         this.noFaceCull = true;
     }
+    
+    getPreferredToolType() {
+        return 'axe';
+    }
 
     canCastAmbientOcclusion() {
         return false;

@@ -12,6 +12,10 @@ export default class BlockChest extends Block {
         this.boundingBox = new BoundingBox(0.0625, 0.0, 0.0625, 0.9375, 0.875, 0.9375);
         this.noFaceCull = true;
     }
+    
+    getPreferredToolType() {
+        return 'axe';
+    }
 
     getTextureForFace(face, data) {
         let facing = data & 7;

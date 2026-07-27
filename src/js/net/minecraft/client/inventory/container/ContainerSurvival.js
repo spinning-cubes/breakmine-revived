@@ -126,12 +126,6 @@ export default class ContainerSurvival extends Container {
             this.itemList.push(block.getId());
         });
 
-        // Add default tools as ItemStacks so InventoryBasic.setItem doesn't crash.
-        // Tools are keyed by ToolRegistry type ids.
-        this.itemList.push(new ItemStack(this.minecraft?.world?.tools ? this.minecraft.world.tools.IRON_PICKAXE : 'iron_pickaxe', 1));
-        this.itemList.push(new ItemStack('iron_sword', 1));
-        this.itemList.push(new ItemStack('iron_shovel', 1));
-        this.itemList.push(new ItemStack('iron_axe', 1));
-        this.itemList.push(new ItemStack('iron_hoe', 1));
+
     }
 }

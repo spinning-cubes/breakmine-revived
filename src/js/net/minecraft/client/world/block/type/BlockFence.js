@@ -14,6 +14,10 @@ export default class BlockFence extends Block {
         this.multipart = true;
         this.noFaceCull = true;
     }
+    
+    getPreferredToolType() {
+        return 'axe';
+    }
 
     getAmbientOcclusion() {
         return false;

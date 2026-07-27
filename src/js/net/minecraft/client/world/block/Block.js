@@ -9,6 +9,8 @@ export default class Block {
 
     static sounds = {};
 
+    static handHardnessMultiplier = 1.0;
+
     constructor(id, textureSlotId = id) {
         this.id = id;
         this.textureSlotId = textureSlotId;
@@ -37,6 +39,14 @@ export default class Block {
 
     isReplaceable(world, x, y, z) {
         return false;
+    }
+
+    handHardnessMultiplier() {
+        return 1.0;
+    }
+
+    getPreferredToolType() {
+        return null;
     }
 
     setHardness(hardness) {
@@ -86,6 +96,10 @@ export default class Block {
 
     canCastAmbientOcclusion() {
         return true;
+    }
+
+    minimumToolLevel() {
+        return null;
     }
 
     isItem() {

@@ -8,6 +8,10 @@ export default class BlockFurnace extends Block {
         this.description = "Furnace";
         this.hardness = 3.5;
     }
+    
+    getPreferredToolType() {
+        return 'pickaxe';
+    }
 
     getTextureForFace(face, data) {
         let facing = data & 7;

@@ -12,4 +12,8 @@ export default class BlockWood extends Block {
     getTextureForFace(face) {
         return this.woodType + '_planks';
     }
+    
+    getPreferredToolType() {
+        return 'axe';
+    }
 }

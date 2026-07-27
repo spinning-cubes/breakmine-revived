@@ -7,9 +7,17 @@ export default class BlockStone extends Block {
         this.description = "Stone";
         this.hardness = 1.5;
     }
+
+    handHardnessMultiplier() {
+        return 1.5;
+    }
+
+    getPreferredToolType() {
+        return 'pickaxe';
+    }
     
     getDrop(world, x, y, z) {
-        return [0, 1];
+        return [4, 1];
     }
 
     getTextureForFace(face) {

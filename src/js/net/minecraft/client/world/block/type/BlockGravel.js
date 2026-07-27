@@ -10,6 +10,10 @@ export default class BlockGravel extends Block {
         // Sound
         this.sound = Block.sounds.gravel;
     }
+    
+    getPreferredToolType() {
+        return 'shovel';
+    }
 
     getTextureForFace(face) {
         return 'gravel';

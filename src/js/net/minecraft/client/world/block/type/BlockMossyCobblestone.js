@@ -11,4 +11,8 @@ export default class BlockMossyCobblestone extends Block {
     getTextureForFace(face) {
         return 'mossy_cobblestone';
     }
+
+    getPreferredToolType() {
+        return 'pickaxe';
+    }
 }

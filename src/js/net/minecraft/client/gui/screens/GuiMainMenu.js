@@ -189,6 +189,8 @@ export default class GuiMainMenu extends GuiScreen {
         let style = this.minecraft.window.canvas.style;
         style.backdropFilter = "";
         style.webkitBackdropFilter = "";
-        this.minecraft.window.wrapper.removeChild(this.minecraft.window.canvasWorld);
+        if (this.minecraft.window.wrapper.contains(this.minecraft.window.canvasWorld)) {
+            this.minecraft.window.wrapper.removeChild(this.minecraft.window.canvasWorld);
+        }
     }
 }

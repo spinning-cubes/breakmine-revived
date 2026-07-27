@@ -327,7 +327,7 @@ export default class PlayerEntity extends EntityLiving {
             this.motionZ *= slipperiness;
 
             // Fall damage tracking
-            if (!this.creative && !this.spectator) {
+            if (!this.creative && !this.spectator && !this.isDead) {
                 if (!this.onGround) {
                     // Accumulate fall distance while in air
                     if (this.motionY < 0) {
@@ -336,29 +336,31 @@ export default class PlayerEntity extends EntityLiving {
                 } else if (this.wasOnGround !== this.onGround && !this.wasOnGround) {
                     // Just landed
                     if (this.fallDistance > 3) {
-                        let damage = Math.floor(this.fallDistance - 3);
-                        this.health -= damage;
+                        let damage = this.fallDistance - 3;
+                        this.damageEntitySimple(damage);
 
                         // Play hurt sound
-                        this.minecraft.soundManager.playSound('random.hit', this.x, this.y, this.z, 1.0, 1.0);
+                        this.minecraft.soundManager.playSoundMono('random.hit', 1.0, 1.0);
 
                         // Play fall sound based on distance
                         if (this.fallDistance > 5) {
-                            this.minecraft.soundManager.playSound('random.fallbig', this.x, this.y, this.z, 1.0, 1.0);
+                            this.minecraft.soundManager.playSoundMono('random.fallbig', 1.0, 1.0);
                         } else {
-                            this.minecraft.soundManager.playSound('random.fallsmall', this.x, this.y, this.z, 1.0, 1.0);
+                            this.minecraft.soundManager.playSoundMono('random.fallsmall', 1.0, 1.0);
                         }
 
-                        // Check for death
-                        if (this.health <= 0) {
-                            this.health = 0;
-                            this.typeOfDeath = 'hit the ground too hard';
-                            this.die();
-                        }
+                        this.typeOfDeath = 'hit the ground too hard';
                     }
                     this.fallDistance = 0;
                 }
                 this.wasOnGround = this.onGround;
+            }
+
+            // Lava damage
+            if (!this.creative && !this.spectator && this.isInLava() && this.hurtTime === 0 && !this.isDead) {
+                this.damageEntitySimple(2);
+                this.minecraft.soundManager.playSoundMono('random.fire_hurt', 1.0, 1.0);
+                this.typeOfDeath = 'tried to swim in lava';
             }
 
             // General health check - die if health reaches 0

@@ -2,6 +2,7 @@ import BlockRenderer from "./BlockRenderer.js";
 import EntityRenderManager from "./entity/EntityRenderManager.js";
 import MathHelper from "../../util/MathHelper.js";
 import Block from "../world/block/Block.js";
+import ItemTool from "../world/block/type/ItemTool.js";
 import BoundingBox from "../../util/BoundingBox.js";
 import Tessellator from "./Tessellator.js";
 import ChunkSection from "../world/ChunkSection.js";
@@ -1199,6 +1200,28 @@ export default class WorldRenderer {
 
         let block = Block.getById(typeId);
         let requiredTicks = Math.max(1, Math.ceil(block.getHardness() * 30));
+
+        let heldItem = this.minecraft.player.inventory.getItemInSelectedSlot()
+        let heldTypeId = heldItem ? heldItem.getType() : null
+        let heldBlock = heldTypeId ? Block.getById(heldTypeId) : null
+        let tool = heldBlock instanceof ItemTool ? heldBlock : null
+
+        let minLevel = block.minimumToolLevel()
+        if (minLevel) {
+            let toolMaterial = tool ? tool.material : null
+            if (!toolMaterial || ItemTool.materials.indexOf(toolMaterial) < ItemTool.materials.indexOf(minLevel)) {
+                requiredTicks *= 5
+            }
+        }
+
+        let preferredType = block.getPreferredToolType()
+        if (tool && (!preferredType || tool.toolType === preferredType)) {
+            let eff = tool.efficiency() || 1
+            requiredTicks = Math.ceil(requiredTicks / eff)
+        } else {
+            requiredTicks = Math.ceil(requiredTicks * Block.handHardnessMultiplier)
+        }
+
         let stage = Math.min(9, Math.floor(miningTimer * 10 / requiredTicks));
         let textureName = `destroy_stage_${stage}`;
         let uvs = this.textureAtlas.getUVs(textureName);

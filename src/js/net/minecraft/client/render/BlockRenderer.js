@@ -580,7 +580,10 @@ export default class BlockRenderer {
         mesh.scale.y = 16;
         mesh.scale.z = 16;
         if (block.getRenderType() === BlockRenderType.ITEM) {
-            mesh.position.y += 4;
+            mesh.position.y += 8;
+            if (block.isTool === true) {
+                mesh.rotation.x -= Math.PI / 2.5;
+            }
         }
     }
 

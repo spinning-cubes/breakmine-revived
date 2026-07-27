@@ -10,6 +10,10 @@ export default class BlockSand extends Block {
         // Sound
         this.sound = Block.sounds.sand;
     }
+    
+    getPreferredToolType() {
+        return 'shovel';
+    }
 
     getTextureForFace(face) {
         return 'sand';

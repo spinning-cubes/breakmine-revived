@@ -257,9 +257,33 @@ export default class EntityLiving extends Entity {
         // this.rotationYawHead = yaw;
     }
 
-    damageEntity(amount, attackerName) {
+    damageEntitySimple(amount) {
+        if (this.isDead) {
+            return;
+        }
         this.health -= amount;
         this.hurtTime = 10;
+        if (this.renderer) {
+            this.renderer.hurtTimestamp = performance.now();
+        }
+        if (this.health <= 0) {
+            this.health = 0;
+            this.isDead = true;
+            if (typeof this.die === 'function') {
+                this.die();
+            }
+        }
+    }
+
+    damageEntity(amount, attackerName) {
+        if (this.isDead) {
+            return;
+        }
+        this.health -= amount;
+        this.hurtTime = 10;
+        if (this.renderer) {
+            this.renderer.hurtTimestamp = performance.now();
+        }
         if (this.health <= 0) {
             this.health = 0;
             this.isDead = true;
