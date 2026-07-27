@@ -31,12 +31,16 @@ export default class EntityLiving extends Entity {
         this.health = 20.0;
 
         this.hurtTime = 0;
+        this.attackCooldown = 0;
     }
 
     onUpdate() {
         super.onUpdate();
         if (this.hurtTime > 0) {
             this.hurtTime--;
+        }
+        if (this.attackCooldown > 0) {
+            this.attackCooldown--;
         }
         this.onLivingUpdate();
         this.updateBodyRotation();

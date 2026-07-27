@@ -830,13 +830,18 @@ export default class Minecraft {
             if (button === 0) {
                 let entity = this.rayTraceEntity(5, this.timer.partialTicks);
                 if (entity && entity !== this.player && entity instanceof PlayerEntity && !entity.creative && !entity.spectator) {
+                    if (this.player.attackCooldown > 0) {
+                        return;
+                    }
                     if (entity.renderer) {
                         entity.renderer.hurtTimestamp = performance.now();
                     }
-                    entity.damageEntity(2, this.player.username);
+                    let damage = this.getAttackDamage();
+                    entity.damageEntity(damage, this.player.username);
+                    this.player.attackCooldown = 30;
                     if (!this.isSingleplayer()) {
                         const nm = this.playerController.getNetworkHandler().getNetworkManager();
-                        if (nm) nm.sendJson({ type: 'attack', target: entity.id, damage: 2, attacker: this.player.username });
+                        if (nm) nm.sendJson({ type: 'attack', target: entity.id, damage: damage, attacker: this.player.username });
                     }
                     this.player.swingArm();
                     return;
@@ -1165,5 +1170,23 @@ export default class Minecraft {
         if (face.x === -1) return 4; // West
         if (face.x === 1) return 5;  // East
         return 0; // Default
+    }
+
+    getAttackDamage() {
+        let heldItem = this.player.inventory.getItemInSelectedSlot();
+        if (heldItem.isEmpty()) {
+            return 1;
+        }
+        let item = Block.getById(heldItem.getType());
+        if (item && item.isTool && item.toolType) {
+            let materialLevel = ItemTool.materials.indexOf(item.material);
+            if (item.toolType === 'sword') {
+                return 1 + materialLevel;
+            }
+            if (item.toolType === 'axe') {
+                return 0.5 + materialLevel;
+            }
+        }
+        return 1;
     }
 }

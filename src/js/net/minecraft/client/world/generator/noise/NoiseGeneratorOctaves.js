@@ -7,7 +7,7 @@ export default class NoiseGeneratorOctaves extends NoiseGenerator {
         super();
 
         this.octaves = octaves;
-        this.generatorCollection = [];
+        this.generatorCollection = new Array(octaves);
 
         for (let i = 0; i < octaves; i++) {
             this.generatorCollection[i] = new NoiseGeneratorPerlin(random);
@@ -17,8 +17,9 @@ export default class NoiseGeneratorOctaves extends NoiseGenerator {
     perlin(x, z) {
         let total = 0.0;
         let frequency = 1.0;
+        const gens = this.generatorCollection;
         for (let i = 0; i < this.octaves; i++) {
-            total += this.generatorCollection[i].perlin(x / frequency, z / frequency) * frequency;
+            total += gens[i].perlin(x / frequency, z / frequency) * frequency;
             frequency *= 2.0;
         }
         return total;
@@ -26,14 +27,15 @@ export default class NoiseGeneratorOctaves extends NoiseGenerator {
 
     generateNoiseOctaves(x1, y1, z1, x2, y2, z2, strengthX, strengthY, strengthZ) {
         let length = x2 * y2 * z2;
-        let noise = [];
-        for (let i = 0; i < length; i++) {
-            noise[i] = 0;
-        }
+        // Float64Array eliminates zero-loop allocation overhead and GC pressure
+        let noise = new Float64Array(length);
 
         let frequency = 1.0;
-        for (let i = 0; i < this.octaves; i++) {
-            this.generatorCollection[i].combined(
+        const octaves = this.octaves;
+        const gens = this.generatorCollection;
+
+        for (let i = 0; i < octaves; i++) {
+            gens[i].combined(
                 noise,
                 x1, y1, z1,
                 x2, y2, z2,
@@ -42,10 +44,9 @@ export default class NoiseGeneratorOctaves extends NoiseGenerator {
                 strengthZ * frequency,
                 frequency
             );
-            frequency /= 2;
+            frequency *= 0.5;
         }
 
         return noise;
     }
-
 }

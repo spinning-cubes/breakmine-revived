@@ -5,6 +5,7 @@ export default class ItemStick extends Item {
     constructor(id, textureSlotId) {
         super(id, textureSlotId);
         this.description = "Stick";
+        this.isTool = true;
     }
 
     getTextureForFace(face) {
