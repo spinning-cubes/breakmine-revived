@@ -1,7 +1,14 @@
 const Logger = require('./logger');
 const { sendChatMessage } = require('./packets');
 const { broadcast, writeString, makePacket } = require('./protocol');
-const { getPlayers } = require('./players');
+const { getPlayers, isSpectator } = require('./players');
+
+function canSee(viewer, target) {
+    if (isSpectator(target)) {
+        return isSpectator(viewer);
+    }
+    return true;
+}
 const { initWorld, saveWorld, getCurrentWorldName, listWorlds } = require('./world');
 
 const log = Logger;
@@ -55,12 +62,12 @@ function handleTp(player, args) {
     const { sendPlayerPositionLook } = require('./packets');
     sendPlayerPositionLook(player);
 
-    // Broadcast movement to other players
+    // Broadcast movement to other players who can see this player
     const { createEntityTeleportPacket } = require('./packets');
     const packet = createEntityTeleportPacket(player);
     const players = getPlayers();
     for (const [eid, p] of players) {
-        if (eid !== player.eid) {
+        if (eid !== player.eid && canSee(p, player)) {
             p.ws.send(packet);
         }
     }
@@ -100,19 +107,32 @@ function handleGamemode(player, args) {
         return;
     }
 
-    // Store gamemode on player
+    // Track old gamemode before changing
+    const oldGamemode = player.gamemode;
     player.gamemode = gamemode;
 
     // Send gamemode change to the client via JSON message
     player.ws.send(JSON.stringify({ type: 'gamemode', gamemode: gamemode }));
 
-    // Broadcast player list entry update to all players (including self)
-    const { sendPlayerListEntry } = require('./packets');
-    const updatePacket = sendPlayerListEntry([player], 0);
+    // Update visibility for all other players
+    const { sendPlayerListEntry, createSpawnPlayerPacket, createDestroyEntityPacket } = require('./packets');
     const players = getPlayers();
-    for (const p of players.values()) {
-        if (p.ws.readyState === 1) {
-            p.ws.send(updatePacket);
+    for (const [eid, p] of players) {
+        if (p.ws.readyState !== 1) continue;
+
+        const oldVisible = oldGamemode !== 3 || isSpectator(p);
+        const newVisible = gamemode !== 3 || isSpectator(p);
+
+        if (p.eid === player.eid) {
+            p.ws.send(sendPlayerListEntry([player], 1));
+        } else if (newVisible && !oldVisible) {
+            p.ws.send(sendPlayerListEntry([player], 0));
+            p.ws.send(createSpawnPlayerPacket(player));
+        } else if (!newVisible && oldVisible) {
+            p.ws.send(createDestroyEntityPacket(player.eid));
+            p.ws.send(sendPlayerListEntry([player], 4));
+        } else if (newVisible) {
+            p.ws.send(sendPlayerListEntry([player], 1));
         }
     }
 

@@ -271,7 +271,6 @@ function createSpawnObjectPacket(entity) {
 }
 
 function sendPlayerListEntry(players, action = 0) {
-    // Action 0: ADD_PLAYER
     const data = Buffer.alloc(1024);
     let offset = 0;
 
@@ -285,20 +284,27 @@ function sendPlayerListEntry(players, action = 0) {
         uuid.copy(data, offset);
         offset += 16;
 
-        // Username (string)
-        offset += writeString(data, player.username, offset);
-
-        // Properties count (0)
-        offset += writeVarInt(data, 0, offset);
-
-        // Game mode
-        offset += writeVarInt(data, player.gamemode ?? 1, offset);
-
-        // Ping (0)
-        offset += writeVarInt(data, 0, offset);
-
-        // Has display name (false)
-        data.writeUInt8(0, offset); offset += 1;
+        switch (action) {
+            case 0: // ADD_PLAYER
+                offset += writeString(data, player.username, offset);
+                offset += writeVarInt(data, 0, offset);  // Properties count
+                offset += writeVarInt(data, player.gamemode ?? 1, offset);  // Game mode
+                offset += writeVarInt(data, 0, offset);  // Ping
+                data.writeUInt8(0, offset); offset += 1;  // Has display name
+                break;
+            case 1: // UPDATE_GAMEMODE
+                offset += writeVarInt(data, player.gamemode ?? 1, offset);
+                break;
+            case 2: // UPDATE_LATENCY
+                offset += writeVarInt(data, 0, offset);  // Ping
+                break;
+            case 3: // UPDATE_DISPLAY_NAME
+                data.writeUInt8(0, offset); offset += 1;  // Has display name
+                break;
+            case 4: // REMOVE_PLAYER
+                // Just UUID, no additional data
+                break;
+        }
     }
 
     return makePacket(0x38, data.subarray(0, offset));

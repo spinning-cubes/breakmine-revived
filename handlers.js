@@ -19,9 +19,17 @@ const {
     sendPlayerListData,
     createDisconnectPacket
 } = require('./packets');
+const { isSpectator } = require('./players');
 const Logger = require('./logger');
 
 let log = Logger;
+
+function canSee(viewer, target) {
+    if (isSpectator(target)) {
+        return isSpectator(viewer);
+    }
+    return true;
+}
 
 // Track which chunks each player has received
 const playerChunks = new Map();
@@ -151,15 +159,24 @@ function handleLoginPacket(player, packetId, buffer, offset) {
 
         // Send player list to the new player (include self so Tab list shows own username)
         const players = getPlayers();
-        player.ws.send(sendPlayerListEntry(Array.from(players.values()), 0));
+        const visiblePlayers = Array.from(players.values()).filter(p => p.eid === player.eid || canSee(player, p));
+        player.ws.send(sendPlayerListEntry(visiblePlayers, 0));
         player.ws.send(sendPlayerListData());
 
         for (const [eid, p] of players) {
             if (eid === player.eid) continue;
-            player.ws.send(createSpawnPlayerPacket(p));
-            p.ws.send(createSpawnPlayerPacket(player));
-            // Send player list entry update to other players
-            p.ws.send(sendPlayerListEntry([player], 0));
+            // Only send spawn for players visible to the new player
+            if (canSee(player, p)) {
+                player.ws.send(createSpawnPlayerPacket(p));
+            }
+            // Only send new player spawn to players who can see him
+            if (canSee(p, player)) {
+                p.ws.send(createSpawnPlayerPacket(player));
+            }
+            // Only send player list entry to players who can see the new player
+            if (canSee(p, player)) {
+                p.ws.send(sendPlayerListEntry([player], 0));
+            }
         }
 
         // Send existing item entities to the new player
@@ -393,6 +410,7 @@ function broadcastMovement(player) {
     const players = getPlayers();
     for (const [eid, p] of players) {
         if (eid === player.eid) continue;
+        if (!canSee(p, player)) continue;
         p.ws.send(packet);
     }
 }
@@ -403,6 +421,7 @@ function broadcastEntityMetadata(player) {
     const players = getPlayers();
     for (const [eid, p] of players) {
         if (eid === player.eid) continue;
+        if (!canSee(p, player)) continue;
         p.ws.send(packet);
     }
 }
@@ -413,6 +432,7 @@ function broadcastAnimation(player) {
     const players = getPlayers();
     for (const [eid, p] of players) {
         if (eid === player.eid) continue;
+        if (!canSee(p, player)) continue;
         p.ws.send(packet);
     }
 }

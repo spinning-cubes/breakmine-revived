@@ -5,6 +5,7 @@ import GameModeCommand from "./command/GameModeCommand.js";
 import UtilCommand from "./command/UtilCommand.js";
 import SetBlockCommand from "./command/SetBlockCommand.js"
 import PlaceCommand from "./command/PlaceCommand.js"
+import HealCommand from "./command/HealCommand.js"
 
 export default class CommandHandler {
 
@@ -19,6 +20,7 @@ export default class CommandHandler {
         this.commands.push(new UtilCommand());
         this.commands.push(new SetBlockCommand());
         this.commands.push(new PlaceCommand());
+        this.commands.push(new HealCommand());
     }
 
     handleMessage(message) {

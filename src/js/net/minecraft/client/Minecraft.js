@@ -786,7 +786,7 @@ export default class Minecraft {
         // Drop held item
         if (button === "KeyQ") {
             if (this.player.spectator) return;
-            if (this.player.inventory.getItemInSelectedSlot() !== 0 && this.player.inventory.getItemInSelectedSlot() !== null) {
+            if (this.player.inventory.getItemInSelectedSlot() !== 0 && this.player.inventory.getItemInSelectedSlot() !== null && this.player.inventory.getItemInSelectedSlot()?.isEmpty() === false) {
                 let itemStack = this.player.inventory.getItemInSelectedSlot();
 
                 if (this.isSingleplayer()) {

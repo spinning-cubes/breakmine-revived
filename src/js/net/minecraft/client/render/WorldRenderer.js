@@ -264,6 +264,11 @@ export default class WorldRenderer {
                 continue;
             }
 
+            // Don't render spectator entities to non-spectator local player
+            if (entity.spectator && !player.spectator) {
+                continue;
+            }
+
             // Check if entity's chunk is loaded
             let entityChunkX = Math.floor(entity.x / 16);
             let entityChunkZ = Math.floor(entity.z / 16);

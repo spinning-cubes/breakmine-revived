@@ -337,7 +337,7 @@ export default class PlayerEntity extends EntityLiving {
                     // Just landed
                     if (this.fallDistance > 3) {
                         let damage = this.fallDistance - 3;
-                        this.damageEntitySimple(damage);
+                        this.damageEntitySimple(-Math.abs(damage));
 
                         // Play hurt sound
                         this.minecraft.soundManager.playSoundMono('random.hit', 1.0, 1.0);

@@ -112,6 +112,10 @@ function getPlayers() {
     return players;
 }
 
+function isSpectator(player) {
+    return player.gamemode === 3;
+}
+
 function getPlayerCount() {
     return players.size;
 }
@@ -160,6 +164,7 @@ module.exports = {
     removePlayer,
     getPlayers,
     getPlayerCount,
+    isSpectator,
     updatePosition,
     savePlayerData,
     loadPlayerData,

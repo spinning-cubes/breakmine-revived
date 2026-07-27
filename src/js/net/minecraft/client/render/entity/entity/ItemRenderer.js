@@ -51,6 +51,8 @@ export default class ItemRenderer extends EntityRenderer {
             if (this.mesh) {
                 this.geometry = this.mesh.geometry;
                 this.mesh.position.set(0, 0.2, 0);
+                this.mesh.renderOrder = 10000;
+                this.mesh.material.depthWrite = false;
             }
         } else {
             this.group.visible = false;
