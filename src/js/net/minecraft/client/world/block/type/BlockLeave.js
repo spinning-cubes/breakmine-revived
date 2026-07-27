@@ -36,7 +36,6 @@ export default class BlockLeave extends Block {
         } else {
             return [BlockRegistry.ITEM_STICK.getId(), 1];
         }
-        return [0, 0];
     }
 
     getColor(world, x, y, z, face) {

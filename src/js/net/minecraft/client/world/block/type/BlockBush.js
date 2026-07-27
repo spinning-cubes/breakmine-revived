@@ -24,7 +24,6 @@ export default class BlockBush extends Block {
         } else {
             return [BlockRegistry.ITEM_STICK.getId(), 1];
         }
-        return [0, 0];
     }
 
     shouldRenderFace(world, x, y, z, face) {
