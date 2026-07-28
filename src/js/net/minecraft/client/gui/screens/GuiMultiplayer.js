@@ -158,10 +158,6 @@ export default class GuiMultiplayer extends GuiScreen {
                     if (proxyUrl.startsWith('Proxy: ')) {
                         proxyUrl = proxyUrl.replace('Proxy: ', '').trim();
                     }
-                    // Default to port 25565 if none specified
-                    if (!proxyUrl.includes(':')) {
-                        proxyUrl += ':25565';
-                    }
                     proxy = { url: `ws://${proxyUrl}` };
                 } else {
                     // Auto-detect: use proxy if not localhost or 10.0.0.213
