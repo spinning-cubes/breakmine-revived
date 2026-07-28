@@ -81,15 +81,15 @@ export default class GuiMultiplayer extends GuiScreen {
             {
                 name: "\u00ca Publix Creative",
                 date: "",
-                details: "publicserver.wildsurf.net:6008",
+                details: "play.breakmine.com",
                 motd: "Create epic things at Publix Creative!"
             },
-            {
-                name: "\u00ca Publix SMP",
-                date: "",
-                details: "publicserver.wildsurf.net:6009",
-                motd: "Survive and fight in the new Publix SMP!"
-            }
+            //{
+            //    name: "\u00ca Publix SMP",
+            //    date: "",
+            //    details: "play.breakmine.com/smp",
+            //    motd: "Survive and fight in the new Publix SMP!"
+            //}
         ];
 
         this.minecraft.fs.listDir(`servers/`).then(fileList => {
@@ -158,6 +158,10 @@ export default class GuiMultiplayer extends GuiScreen {
                     if (proxyUrl.startsWith('Proxy: ')) {
                         proxyUrl = proxyUrl.replace('Proxy: ', '').trim();
                     }
+                    // Default to port 25565 if none specified
+                    if (!proxyUrl.includes(':')) {
+                        proxyUrl += ':25565';
+                    }
                     proxy = { url: `ws://${proxyUrl}` };
                 } else {
                     // Auto-detect: use proxy if not localhost or 10.0.0.213
@@ -170,7 +174,7 @@ export default class GuiMultiplayer extends GuiScreen {
                     }
                 }
 
-                this.minecraft.displayScreen(new GuiConnecting(this, worldDate, undefined, proxy));
+                this.minecraft.displayScreen(new GuiConnecting(this, worldDetails, undefined, proxy));
             }
         });
         this.buttonRename = new GuiButton(this.minecraft, "Direct", this.width / 2 - 74, this.height - 28, 70, 20, () => {
