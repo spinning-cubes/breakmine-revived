@@ -72,6 +72,10 @@ export default class CraftingRegistry {
         this.registerShapelessRecipe(BlockRegistry.JUNGLE_PLANKS.id, 4, [BlockRegistry.JUNGLE_LOG.id]);
         this.registerShapelessRecipe(BlockRegistry.ACACIA_PLANKS.id, 4, [BlockRegistry.ACACIA_LOG.id]);
         this.registerShapedRecipe(BlockRegistry.TORCH.id, 4, 1, 2, [BlockRegistry.ITEM_COAL.id, BlockRegistry.ITEM_STICK.id]);
+        this.registerShapedRecipe(BlockRegistry.COBBLE_STONE.id, 1, 3, 2, [
+            BlockRegistry.ITEM_IRON.id, 0, BlockRegistry.ITEM_IRON.id,
+            0, BlockRegistry.ITEM_IRON.id, 0
+        ]);
         this.registerShapedRecipe(BlockRegistry.FURNACE.id, 1, 3, 3, [
             BlockRegistry.COBBLE_STONE.id, BlockRegistry.COBBLE_STONE.id, BlockRegistry.COBBLE_STONE.id,
             BlockRegistry.COBBLE_STONE.id, 0,                            BlockRegistry.COBBLE_STONE.id,

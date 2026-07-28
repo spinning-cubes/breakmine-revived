@@ -185,6 +185,9 @@ export class BlockRegistry {
             BlockRegistry[`${mat.toUpperCase()}_HOE`] = new ItemHoe(toolId++, `${mat}_hoe`, `${matName} Hoe`, mat);
         }
 
+        BlockRegistry.ITEM_BUCKET_EMPTY = new ItemGeneric(116, 'bucket_empty', 'Empty Bucket');
+        BlockRegistry.ITEM_BUCKET_WATER = new ItemGeneric(117, 'bucket_water', 'Water Bucket');
+
         BlockRegistry.init = true;
     }
 
