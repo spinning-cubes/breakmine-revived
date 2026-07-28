@@ -38,7 +38,7 @@ import Vector3 from "../util/Vector3.js";
 import MathHelper from "../util/MathHelper.js";
 import InventoryBasic from "./inventory/inventory/InventoryBasic.js";
 import BlockPosition from "../util/BlockPosition.js";
-import GuiContainerSurvival from "./gui/screens/container/GuiContainerSurvival.js";
+import GuiPlayerInventory from "./gui/screens/container/GuiPlayerInventory.js";
 import CraftingRegistry from "./crafting/CraftingRegistry.js";
 import SmeltingRegistry from "./smelting/SmeltingRegistry.js";
 import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
@@ -1179,7 +1179,7 @@ export default class Minecraft {
                 this.onMouseClicked(2);
             }
             if (button === 'ColorYellow') {
-                this.displayScreen(this.player.creative ? new GuiContainerCreative(this.player) : new GuiContainerSurvival(this.player));
+                this.displayScreen(this.player.creative ? new GuiContainerCreative(this.player) : new GuiPlayerInventory(this.player));
             }
             if (button === 'ColorBlue') {
                 this.player.inventory.shiftSelectedSlot(1);
@@ -1263,7 +1263,7 @@ export default class Minecraft {
         // Open inventory
         if (button === this.settings.keyOpenInventory) {
             if (this.player.spectator) return;
-            this.displayScreen(this.player.creative ? new GuiContainerCreative(this.player) : new GuiContainerSurvival(this.player));
+            this.displayScreen(this.player.creative ? new GuiContainerCreative(this.player) : new GuiPlayerInventory(this.player));
         }
     }
 
