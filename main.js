@@ -50,7 +50,7 @@ function createWindow() {
 
   if (isDev) {
     // Load Vite dev server URL
-    win.loadURL('http://localhost:3000');
+    win.loadURL('http://localhost:8000');
     // win.webContents.openDevTools(); // Uncomment if you want DevTools on launch
   } else {
     // Load built static assets in production

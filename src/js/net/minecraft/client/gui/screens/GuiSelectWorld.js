@@ -102,6 +102,7 @@ export default class GuiSelectWorld extends GuiScreen {
     drawScreen(stack, mouseX, mouseY, partialTicks) {
         this.worldSlotContainer.drawScreen(stack, mouseX, mouseY, partialTicks);
         this.drawCenteredString(stack, "Select World", this.width / 2, 20);
+        this.drawCenteredString(stack, "World saving is still in development, don't rely on it!", this.width / 2, 5, 0xFF6363);
         super.drawScreen(stack, mouseX, mouseY, partialTicks);
     }
 
