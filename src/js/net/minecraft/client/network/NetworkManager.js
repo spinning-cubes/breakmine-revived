@@ -37,17 +37,56 @@ export default class NetworkManager {
 
     connect(address, port, proxy) {
         let wsUrl = proxy ? proxy.url : `ws://${address}:${port}`;
-        this.socket = new WebSocket(wsUrl);
-        this.socket.binaryType = "arraybuffer";
-
-        this.socket.onopen = e => this._onOpen(e);
-        this.socket.onclose = e => this._onClose(e);
-        this.socket.onmessage = e => this._onMessage(e);
-        this.socket.onerror = e => this._onError(e);
 
         this.address = address;
         this.port = port;
         this.useProxy = !!proxy;
+        this._protocolFallbacks = [];
+
+        if (wsUrl.startsWith('ws://')) {
+            this._protocolFallbacks.push(wsUrl.replace('ws://', 'wss://'));
+            this._protocolFallbacks.push(wsUrl);
+        } else {
+            this._protocolFallbacks.push(wsUrl);
+        }
+
+        this._connectNext();
+    }
+
+    _connectNext() {
+        const url = this._protocolFallbacks.shift();
+        if (!url) {
+            if (!this.connected) {
+                this._onClose({ wasClean: false, code: 1006, reason: 'All connection attempts failed' });
+            }
+            return;
+        }
+
+        const socket = new WebSocket(url);
+        socket.binaryType = "arraybuffer";
+        this.socket = socket;
+
+        socket.onopen = e => {
+            if (socket !== this.socket) return;
+            this._protocolFallbacks = [];
+            this._onOpen(e);
+        };
+
+        socket.onclose = e => {
+            if (socket !== this.socket) return;
+            if (!this.connected && this._protocolFallbacks.length > 0) {
+                this._connectNext();
+            } else {
+                this._onClose(e);
+            }
+        };
+
+        socket.onmessage = e => {
+            if (socket !== this.socket) return;
+            this._onMessage(e);
+        };
+
+        socket.onerror = () => {};
     }
 
     _onOpen() {
