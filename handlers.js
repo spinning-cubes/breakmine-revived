@@ -130,9 +130,9 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         // Initialize chunk tracking BEFORE sending chunks so checkAndSendChunks
         // can track which chunks have already been sent
         const sentChunks = new Set();
-        // Pre-populate with the 5x5 spawn chunks that sendChunks will send
-        for (let cx = -2; cx <= 2; cx++) {
-            for (let cz = -2; cz <= 2; cz++) {
+        // Pre-populate with the 9x9 spawn chunks that sendChunks will send
+        for (let cx = -4; cx <= 4; cx++) {
+            for (let cz = -4; cz <= 4; cz++) {
                 sentChunks.add(`${cx},${cz}`);
             }
         }
@@ -485,7 +485,7 @@ function handlePickupItem(player, buffer, offset) {
 }
 
 function checkAndSendChunks(player) {
-    const renderDistance = 5;
+    const renderDistance = 12;
     const playerChunkX = Math.floor(player.x / 16);
     const playerChunkZ = Math.floor(player.z / 16);
 

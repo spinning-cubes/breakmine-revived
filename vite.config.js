@@ -21,7 +21,7 @@ export default defineConfig({
     server: {
         port: 8002,
         https: true,
-        allowedHosts: ["breakmine.minetest.land", "breakmine.logicerror.dev"],
+        allowedHosts: true
     },
     build: {
         outDir: "dist",

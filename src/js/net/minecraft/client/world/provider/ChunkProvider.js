@@ -35,6 +35,13 @@ export default class ChunkProvider {
 
     loadChunk(x, z) {
         let index = x + (z << 16);
+
+        // Remove existing chunk at these coordinates before creating a new one
+        let existing = this.chunks.get(index);
+        if (typeof existing !== 'undefined') {
+            this.unloadChunk(x, z);
+        }
+
         let chunk = this.generateChunk(x, z)
 
         // Register and mark as loaded
@@ -51,6 +58,26 @@ export default class ChunkProvider {
 
     unloadChunk(x, z) {
         let index = x + (z << 16);
+        let chunk = this.chunks.get(index);
+        if (typeof chunk !== 'undefined') {
+            this.world.group.remove(chunk.group);
+            for (const section of chunk.sections) {
+                if (section.group) {
+                    while (section.group.children.length > 0) {
+                        const child = section.group.children[0];
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(mat => mat.dispose());
+                            } else {
+                                child.material.dispose();
+                            }
+                        }
+                        section.group.remove(child);
+                    }
+                }
+            }
+        }
         this.chunks.delete(index);
     }
 

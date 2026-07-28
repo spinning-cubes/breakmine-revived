@@ -950,9 +950,11 @@ export default class World {
 
     loadSpawnChunks() {
         let viewDistance = this.minecraft.settings.viewDistance;
+        let spawnChunkX = this.spawn.x >> 4;
+        let spawnChunkZ = this.spawn.z >> 4;
         for (let x = -viewDistance; x <= viewDistance; x++) {
             for (let z = -viewDistance; z <= viewDistance; z++) {
-                this.getChunkAt(x + this.spawn.x >> 4, z + this.spawn.z >> 4);
+                this.getChunkAt(spawnChunkX + x, spawnChunkZ + z);
             }
         }
         this.spawn.y = this.getHeightAt(this.spawn.x, this.spawn.z) + 8;
