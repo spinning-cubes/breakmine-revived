@@ -51,9 +51,33 @@ setInterval(() => {
     }
 }, 30 * 1000);
 
-const wss = new WebSocket.Server({ port: PORT, host: config.host });
+const fs = require('fs');
+const https = require('https');
+const WebSocket = require('ws');
+
+// Load SSL certificate and key if available
+let server = null;
+let options = {};
+
+try {
+    if (fs.existsSync('cert.pem') && fs.existsSync('key.pem')) {
+        options = {
+            cert: fs.readFileSync('cert.pem'),
+            key: fs.readFileSync('key.pem')
+        };
+        server = https.createServer(options);
+        log.info('Server', 'WSS enabled using cert.pem and key.pem');
+    }
+} catch (e) {
+    log.error('Server', 'Failed to load SSL certificates: ' + e.message);
+}
+
+const wss = new WebSocket.Server({ server: server, port: !server ? PORT : undefined, host: config.host });
+if (server) {
+    server.listen(PORT, config.host);
+}
 log.info('Server', `Minecraft server running!!! (v47)`);
-log.info('Server', `Listening on ws://${config.host}:${PORT}`);
+log.info('Server', `Listening on ${server ? 'wss' : 'ws'}://${config.host}:${PORT}`);
 
 wss.on('connection', (ws) => {
     const player = {
