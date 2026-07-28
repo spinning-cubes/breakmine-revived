@@ -49,7 +49,7 @@ export default class GuiSelectWorld extends GuiScreen {
             );
         });
 
-        this.buttonSelect = new GuiButton(this.minecraft, "Join World", this.width / 2 - 154, this.height - 52, 150, 20, () => {
+        this.buttonSelect = new GuiButton(this.minecraft, "Play Selected World", this.width / 2 - 154, this.height - 52, 150, 20, () => {
             if (this.selectedWorld !== -1) {
                 const world = this.saveList[this.selectedWorld];
                 this.minecraft.loadSavedWorld(world.key);

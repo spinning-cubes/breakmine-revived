@@ -28,9 +28,10 @@ export default class GuiWorldSlot extends GuiButton {
         const WHITE = 16777215;
         const GRAY = 8421504;
         
-        this.drawString(stack, this.worldName, slotX + 2, slotY + 1, WHITE, true, false);
-        this.drawString(stack, this.worldDate, slotX + 2, slotY + 12, GRAY, true, false);
-        this.drawString(stack, this.worldDetails.charAt(0).toUpperCase() + this.worldDetails.slice(1), slotX + 2, slotY + 22, GRAY, true, false);
+        this.drawString(stack, this.worldName || '', slotX + 2, slotY + 1, WHITE, true, false);
+        this.drawString(stack, this.worldDate || '', slotX + 2, slotY + 12, GRAY, true, false);
+        const details = this.worldDetails || '';
+        this.drawString(stack, details.charAt(0).toUpperCase() + details.slice(1), slotX + 2, slotY + 22, GRAY, true, false);
     }
     
     mouseClicked(mouseX, mouseY, mouseButton) {

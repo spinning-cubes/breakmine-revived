@@ -10,7 +10,11 @@ export default class GuiWorldSlotContainer extends GuiScreen {
         
         this.slotList = listContent.map((data, index) => 
             new GuiWorldSlot(
-                data, 
+                {
+                    name: data.name || 'Unknown World',
+                    date: data.lastPlayed ? new Date(data.lastPlayed).toLocaleDateString() : '',
+                    details: (data.worldType || 'normal') + ' - ' + (data.gameMode || 'survival'),
+                }, 
                 parentGui.width / 2 - 110, 
                 0, 
                 220, 

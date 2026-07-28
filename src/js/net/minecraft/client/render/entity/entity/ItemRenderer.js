@@ -3,6 +3,7 @@ import Tessellator from "../../Tessellator.js";
 import MathHelper from "../../../../util/MathHelper.js";
 import * as THREE from "../../../../../../../../libraries/three.module.js";
 import BlockRenderType from "../../../../util/BlockRenderType.js";
+import BlockTorch from "../../../world/block/type/BlockTorch.js";
 
 export default class ItemRenderer extends EntityRenderer {
     constructor(worldRenderer) {
@@ -84,6 +85,8 @@ export default class ItemRenderer extends EntityRenderer {
         if (this.mesh) {
             this.mesh.position.set(0, 0.2, 0);
             if (entity.getBlock()?.getRenderType() === BlockRenderType.ITEM) {
+                this.mesh.scale.set(0.4, 0.4, 0.4);
+            } else if (entity.getBlock() instanceof BlockTorch) {
                 this.mesh.scale.set(0.4, 0.4, 0.4);
             } else {
                 this.mesh.scale.set(0.25, 0.25, 0.25);
