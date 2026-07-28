@@ -191,6 +191,7 @@ export default class NetworkPlayHandler extends PacketHandler {
         if (playerInfo) {
             entity.creative = (playerInfo.gameType === 1);
             entity.spectator = (playerInfo.gameType === 3);
+            if (entity.spectator) entity.flying = true;
         }
 
         world.addEntity(entity);

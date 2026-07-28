@@ -12,6 +12,7 @@ import TextureAtlas from "./TextureAtlas.js";
 import ItemStack from "../item/ItemStack.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
 import TranslucentMeshBatcher from "./TranslucentMeshBatcher.js";
+import GuiFunctions from "../gui/screens/GuiFunctions.js";
 
 export default class WorldRenderer {
 
@@ -983,10 +984,12 @@ export default class WorldRenderer {
     }
 
     renderHand(partialTicks) {
-        // Hide hand before rendering
         let player = this.minecraft.player;
         let stack = player.renderer.firstPersonGroup;
         stack.visible = false;
+
+        // Hide hand when F1 is active
+        if (GuiFunctions.isGuiHidden()) return;
 
         // Hide hand in spectator mode
         if (player.spectator) return;

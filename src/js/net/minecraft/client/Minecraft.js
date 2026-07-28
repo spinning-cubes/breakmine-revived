@@ -42,6 +42,7 @@ import GuiPlayerInventory from "./gui/screens/container/GuiPlayerInventory.js";
 import CraftingRegistry from "./crafting/CraftingRegistry.js";
 import SmeltingRegistry from "./smelting/SmeltingRegistry.js";
 import GuiPrelaunch from "./gui/screens/GuiPrelaunch.js";
+import GuiFunctions from "./gui/screens/GuiFunctions.js";
 import ItemEntity from "./entity/ItemEntity.js";
 import PlayerEntity from "./entity/PlayerEntity.js";
 import { Version } from "../../../../resources/version.js";
@@ -679,6 +680,7 @@ export default class Minecraft {
             for (const key in saveData.chunks) {
                 const chunkData = saveData.chunks[key];
                 const chunk = Chunk.deserialize(world, chunkData);
+                chunk.setModifiedAllSections();
                 provider.getChunks().set(parseInt(key), chunk);
                 world.group.add(chunk.group);
             }
@@ -740,6 +742,7 @@ export default class Minecraft {
             if (this.player) {
                 this.player.creative = (entry.gameMode === 'creative');
                 this.player.spectator = (entry.gameMode === 'spectator');
+                if (this.player.spectator) this.player.flying = true;
             }
         }
 
@@ -759,7 +762,7 @@ export default class Minecraft {
         if (saveData.playerGameMode && this.player) {
             this.player.creative = saveData.playerGameMode.creative;
             this.player.spectator = saveData.playerGameMode.spectator;
-            this.player.flying = saveData.playerGameMode.flying;
+            this.player.flying = this.player.spectator || saveData.playerGameMode.flying;
         }
 
         if (saveData.itemEntities && this.world && this.world.entities) {
@@ -1229,6 +1232,21 @@ export default class Minecraft {
         if (button === "KeyB" && Keyboard.isKeyDown("F3")) {
             this.settings.showEntityBoundingBoxes = !this.settings.showEntityBoundingBoxes;
             this.settings.save();
+        }
+
+        // Toggle GUI visibility (F1) - only in-game, not in menus
+        if (button === "F1") {
+            if (this.currentScreen === null && this.isInGame()) {
+                GuiFunctions.toggleGui();
+                if (GuiFunctions.isGuiHidden() && this.itemRenderer) {
+                    this.itemRenderer.destroy("hotbar");
+                }
+            }
+        }
+
+        // Take screenshot (F2)
+        if (button === "F2") {
+            GuiFunctions.takeScreenshot(this.window.canvas);
         }
 
         // Drop held item

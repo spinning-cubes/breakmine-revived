@@ -135,7 +135,7 @@ export default class PlayerEntity extends EntityLiving {
             } else {
                 // Only allow flying in creative or spectator mode
                 if (this.creative || this.spectator) {
-                    this.flying = !this.flying;
+                    this.flying = this.spectator || !this.flying;
                     this.flyToggleTimer = 0;
                     this.updateFOVModifier();
                 }

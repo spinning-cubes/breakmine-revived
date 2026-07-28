@@ -1,6 +1,5 @@
 import GuiContainer from "../GuiContainer.js";
 import ContainerCraftingTable from "../../../inventory/container/ContainerCraftingTable.js";
-import InventoryBasic from "../../../inventory/inventory/InventoryBasic.js";
 import GuiRecipeBook from "../GuiRecipeBook.js";
 
 export default class GuiContainerCraftingTable extends GuiContainer {
@@ -79,6 +78,11 @@ export default class GuiContainerCraftingTable extends GuiContainer {
         }
 
         return super.keyTyped(key, character);
+    }
+
+    onClose() {
+        this.recipeBook.setOpen(false);
+        super.onClose();
     }
 
 }

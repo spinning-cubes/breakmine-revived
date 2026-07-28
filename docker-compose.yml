@@ -1,0 +1,9 @@
+services:
+  web:
+    image: python:3.11-alpine
+    ports:
+      - "8080:8000"
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python3 -m http.server 8000

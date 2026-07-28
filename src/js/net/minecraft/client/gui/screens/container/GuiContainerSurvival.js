@@ -80,4 +80,9 @@ export default class GuiContainerSurvival extends GuiContainer {
         return super.keyTyped(key, character);
     }
 
+    onClose() {
+        this.recipeBook.setOpen(false);
+        super.onClose();
+    }
+
 }

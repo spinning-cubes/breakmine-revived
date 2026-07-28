@@ -8,6 +8,7 @@ import FontRenderer from "../../render/gui/FontRenderer.js";
 import EnumSkyBlock from "../../../util/EnumSkyBlock.js";
 import PlayerListOverlay from "./PlayerListOverlay.js";
 import Keyboard from "../../../util/Keyboard.js";
+import GuiFunctions from "../screens/GuiFunctions.js";
 
 export default class IngameOverlay extends Gui {
 
@@ -29,6 +30,19 @@ export default class IngameOverlay extends Gui {
     }
 
     render(stack, mouseX, mouseY, partialTicks) {
+        // Hide all GUI elements when F1 toggle is active
+        if (GuiFunctions.isGuiHidden()) {
+            if (this.minecraft.settings.debugOverlay) {
+                stack.drawImage(this.window.canvasDebug, 0, 0);
+            }
+            return;
+        }
+
+        // Destroy hotbar items in spectator so they don't linger in the 3D scene
+        if (this.minecraft.player.spectator) {
+            this.minecraft.itemRenderer.destroy("hotbar");
+        }
+
         // Render crosshair
         if (this.minecraft.hasInGameFocus()) {
             this.renderCrosshair(stack, this.window.width / 2, this.window.height / 2)
@@ -160,6 +174,7 @@ export default class IngameOverlay extends Gui {
 
     renderPostItem(stack, mouseX, mouseY, partialTicks) {
         if (this.minecraft.player.spectator) return;
+        if (GuiFunctions.isGuiHidden()) return;
 
         const x = this.window.width / 2 - 91;
         const y = this.window.height - 22;
