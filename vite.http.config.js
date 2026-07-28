@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import fs from "fs";
 import path from "path";
-import mkcert from 'vite-plugin-mkcert'
 
 function copyResourcesPlugin() {
     return {
@@ -17,10 +16,9 @@ function copyResourcesPlugin() {
 }
 
 export default defineConfig({
-    plugins: [copyResourcesPlugin(), mkcert()],
+    plugins: [copyResourcesPlugin()],
     server: {
-        port: 8002,
-        https: true,
+        port: 8000,
         allowedHosts: ["breakmine.minetest.land", "breakmine.logicerror.dev"],
     },
     build: {
