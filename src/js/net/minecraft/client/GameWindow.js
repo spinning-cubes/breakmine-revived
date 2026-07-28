@@ -317,6 +317,15 @@ export default class GameWindow {
                     border-radius: 50%;
                 }
 
+                #mobile-fullscreen {
+                    position: fixed;
+                    top: 15px;
+                    left: 15px;
+                    width: 38px;
+                    height: 38px;
+                    z-index: 10000;
+                }
+
                 #mobile-gui-close {
                     position: fixed;
                     top: 15px;
@@ -336,6 +345,10 @@ export default class GameWindow {
             overlay = document.createElement('div');
             overlay.id = 'mobile-controls-overlay';
             overlay.innerHTML = `
+                <button class="mobile-btn" id="mobile-fullscreen">
+                    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                </button>
+
                 <div id="joystick-move-zone" class="joystick-zone">
                     <div id="joystick-move-knob" class="joystick-knob"></div>
                 </div>
@@ -351,15 +364,12 @@ export default class GameWindow {
                 </button>
 
                 <div id="mobile-actions">
-                    <!-- Crouch / Shift Icon (Down Arrow) -->
                     <button class="mobile-btn action-btn" id="mbtn-shift">
                         <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
                     </button>
-                    <!-- Jump / Fly Icon (Up Arrow) -->
                     <button class="mobile-btn action-btn" id="mbtn-space">
                         <svg viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
                     </button>
-                    <!-- Inventory Icon (Backpack) -->
                     <button class="mobile-btn action-btn" id="mbtn-e">
                         <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
                     </button>
@@ -379,6 +389,20 @@ export default class GameWindow {
 
         this.mobileOverlay = overlay;
         this.guiCloseBtn = guiCloseBtn;
+
+        // Fullscreen Button Handler
+        const fsBtn = document.getElementById('mobile-fullscreen');
+        if (fsBtn) {
+            fsBtn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                } else {
+                    document.exitFullscreen().catch(() => {});
+                }
+                this.updateWindowSize();
+            }, { passive: false });
+        }
 
         // Close GUI Button Handler
         guiCloseBtn.addEventListener('touchstart', e => {
@@ -498,7 +522,7 @@ export default class GameWindow {
             if (this.minecraft.currentScreen !== null) {
                 for (let i = 0; i < event.changedTouches.length; i++) {
                     let touch = event.changedTouches[i];
-                    if (touch.target.closest('#mobile-gui-close')) continue;
+                    if (touch.target.closest('#mobile-gui-close, #mobile-fullscreen')) continue;
 
                     this.minecraft.currentScreen.mouseClicked(
                         touch.clientX / this.scaleFactor,
@@ -511,7 +535,7 @@ export default class GameWindow {
 
             for (let i = 0; i < event.changedTouches.length; i++) {
                 let touch = event.changedTouches[i];
-                if (touch.target.closest('#mobile-controls-overlay, #mobile-gui-close')) continue;
+                if (touch.target.closest('#mobile-controls-overlay, #mobile-gui-close, #mobile-fullscreen')) continue;
 
                 if (peTouchId === null) {
                     peTouchId = touch.identifier;
@@ -615,7 +639,6 @@ export default class GameWindow {
                 e.preventDefault();
                 const now = Date.now();
 
-                // Double-tap space within 300ms toggles flight
                 if (now - lastSpaceTap < 300) {
                     if (this.minecraft.currentScreen === null) {
                         this.minecraft.onKeyPressed("KeyF");
