@@ -207,11 +207,13 @@ export default class TextureAtlas {
             "none.png",
             "sapphire_ore.png",
             "sapphire_block.png",
-            "wire.png"
+            "wire.png",
+            "stonebrick.png",
+            "dark_stonebrick.png"
         ];
 
         const toolTextureNames = [];
-        const toolMaterials = ['wood', 'stone', 'iron', 'diamond', 'gold'];
+        const toolMaterials = ['wooden', 'stone', 'iron', 'diamond', 'golden'];
         const toolTypes = ['pickaxe', 'sword', 'shovel', 'axe', 'hoe'];
         for (const mat of toolMaterials) {
             for (const type of toolTypes) {

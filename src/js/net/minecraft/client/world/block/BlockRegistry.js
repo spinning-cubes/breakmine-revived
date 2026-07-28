@@ -155,34 +155,27 @@ export class BlockRegistry {
         BlockRegistry.ITEM_BREAD = new ItemBread(84, 15);
         BlockRegistry.ITEM_STICK = new ItemStick(85, 16);
 
-        BlockRegistry.ITEM_IRON = new ItemGeneric(86, 'iron_ingot', 'Iron');
+        BlockRegistry.ITEM_IRON = new ItemGeneric(86, 'iron_ingot', 'Iron Ingot');
         BlockRegistry.ITEM_COAL = new ItemGeneric(87, 'coal', 'Coal');
         BlockRegistry.ITEM_DIAMOND = new ItemGeneric(88, 'diamond', 'Diamond');
         BlockRegistry.ITEM_EMERALD = new ItemGeneric(89, 'emerald', 'Emerald');
-        BlockRegistry.ITEM_GOLD = new ItemGeneric(90, 'gold_ingot', 'Gold');
+        BlockRegistry.ITEM_GOLD = new ItemGeneric(90, 'gold_ingot', 'Gold Ingot');
+
+        BlockRegistry.STONEBRICK = new BlockStoneLike(116, 0, "stonebrick", "Stone Bricks");
+        BlockRegistry.DARK_STONEBRICK = new BlockStoneLike(117, 0, "dark_stonebrick", "Dark Stone Bricks");
 
         // Tools (IDs 91-115)
         const toolMaterials = ['wood', 'stone', 'iron', 'diamond', 'gold'];
         let toolId = 91;
         for (const mat of toolMaterials) {
-            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
-            BlockRegistry[`${mat.toUpperCase()}_PICKAXE`] = new ItemPickaxe(toolId++, `${mat}_pickaxe`, `${matName} Pickaxe`, mat);
-        }
-        for (const mat of toolMaterials) {
-            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
-            BlockRegistry[`${mat.toUpperCase()}_SWORD`] = new ItemSword(toolId++, `${mat}_sword`, `${matName} Sword`, mat);
-        }
-        for (const mat of toolMaterials) {
-            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
-            BlockRegistry[`${mat.toUpperCase()}_SHOVEL`] = new ItemShovel(toolId++, `${mat}_shovel`, `${matName} Shovel`, mat);
-        }
-        for (const mat of toolMaterials) {
-            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
-            BlockRegistry[`${mat.toUpperCase()}_AXE`] = new ItemAxe(toolId++, `${mat}_axe`, `${matName} Axe`, mat);
-        }
-        for (const mat of toolMaterials) {
-            const matName = mat.charAt(0).toUpperCase() + mat.slice(1);
-            BlockRegistry[`${mat.toUpperCase()}_HOE`] = new ItemHoe(toolId++, `${mat}_hoe`, `${matName} Hoe`, mat);
+            const matName = mat === 'wood' ? 'Wooden' : mat.charAt(0).toUpperCase() + mat.slice(1);
+            const itemName = mat === 'gold' ? 'Golden' : mat;
+            const texName = mat === 'wood' ? 'wooden' : mat;
+            BlockRegistry[`${mat.toUpperCase()}_PICKAXE`] = new ItemPickaxe(toolId++, `${texName}_pickaxe`, `${matName} Pickaxe`, mat);
+            BlockRegistry[`${mat.toUpperCase()}_SWORD`] = new ItemSword(toolId++, `${texName}_sword`, `${matName} Sword`, mat);
+            BlockRegistry[`${mat.toUpperCase()}_SHOVEL`] = new ItemShovel(toolId++, `${texName}_shovel`, `${matName} Shovel`, mat);
+            BlockRegistry[`${mat.toUpperCase()}_AXE`] = new ItemAxe(toolId++, `${texName}_axe`, `${matName} Axe`, mat);
+            BlockRegistry[`${mat.toUpperCase()}_HOE`] = new ItemHoe(toolId++, `${texName}_hoe`, `${matName} Hoe`, mat);
         }
 
         BlockRegistry.init = true;
