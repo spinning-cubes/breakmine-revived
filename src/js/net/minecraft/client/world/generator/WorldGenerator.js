@@ -44,6 +44,8 @@ export default class WorldGenerator extends Generator {
         this.terrainGenerator2 = new NoiseGeneratorOctaves(this.random, 16);
 
         this.populationNoiseGenerator = new NoiseGeneratorOctaves(this.random, 8);
+
+        this.seaLevel = 120;
     }
 
     newChunk(world, chunkX, chunkZ, ChunkClass) {
