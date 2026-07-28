@@ -16,13 +16,13 @@ export default class ContainerSurvival extends Container {
 
         // Add crafting slots (lazy)
         let offset = 46;
-        this.addSlot(new Slot(playerInventory, offset + 0, 100 - 12, 26)); // top left, 46
-        this.addSlot(new Slot(playerInventory, offset + 1, 100 + 6, 26));  // top right, 47
-        this.addSlot(new Slot(playerInventory, offset + 2, 100 - 12, 44)); // bottom left, 48
-        this.addSlot(new Slot(playerInventory, offset + 3, 100 + 6, 44));  // bottom right, 49
+        this.addSlot(new Slot(playerInventory, offset + 0, 100 - 12 + 10, 26 - 8)); // top left, 46
+        this.addSlot(new Slot(playerInventory, offset + 1, 100 + 6 + 10, 26 - 8));  // top right, 47
+        this.addSlot(new Slot(playerInventory, offset + 2, 100 - 12 + 10, 44 - 8)); // bottom left, 48
+        this.addSlot(new Slot(playerInventory, offset + 3, 100 + 6 + 10, 44 - 8));  // bottom right, 49
 
         // Add crafting result slot
-        this.addSlot(new Slot(playerInventory, offset + 4, 144, 36)); // 50
+        this.addSlot(new Slot(playerInventory, offset + 4, 144 + 10, 36 - 8)); // 50
 
         // Add inventory slots
         for (let y = 0; y < 3; ++y) {

@@ -35,7 +35,7 @@ export function isLocalNetwork() {
     );
 }
 
-const API_BASE_URL = 'https://api.breakmine.com/';
+const API_BASE_URL = 'https://api.breakmine.com';
 
 
 export class AuthLibInfo {
