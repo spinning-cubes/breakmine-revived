@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import fs from "fs";
 import path from "path";
-import mkcert from 'vite-plugin-mkcert'
+import basicSsl from '@vitejs/plugin-basic-ssl';
 
 function copyResourcesPlugin() {
     return {
@@ -17,7 +17,7 @@ function copyResourcesPlugin() {
 }
 
 export default defineConfig({
-    plugins: [copyResourcesPlugin(), mkcert()],
+    plugins: [copyResourcesPlugin(), basicSsl()],
     server: {
         port: 8002,
         https: true,
