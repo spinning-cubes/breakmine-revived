@@ -31,6 +31,11 @@ export default class GuiPresets extends GuiScreen {
                 name: "Flatness",
                 details: "A very bare spawn area with no trees and flat hills.",
                 seed: "-5855597882444181042"
+            },
+            {
+                name: "Tree Mountain",
+                details: "Mountain with trees right near spawn.",
+                seed: "-6548455560752389939"
             }
         ];
 

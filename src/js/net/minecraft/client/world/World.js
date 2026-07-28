@@ -908,9 +908,23 @@ export default class World {
                 this.group.remove(entity.renderer.group);
             }
             if (entity.renderer && entity.renderer.nametagGroup) {
-                this.minecraft.worldRenderer.scene.remove(entity.renderer.nametagGroup);
+                const overlay = this.minecraft.worldRenderer.overlay;
+                if (entity.renderer.nametagGroup.parent === overlay) {
+                    overlay.remove(entity.renderer.nametagGroup);
+                }
                 if (entity.renderer.nametagTexture) {
                     entity.renderer.nametagTexture.dispose();
+                }
+            }
+            if (entity.renderer && entity.renderer.shadowGroup) {
+                this.minecraft.worldRenderer.scene.remove(entity.renderer.shadowGroup);
+                if (entity.renderer.shadowMesh) {
+                    if (entity.renderer.shadowMesh.geometry) {
+                        entity.renderer.shadowMesh.geometry.dispose();
+                    }
+                    if (entity.renderer.shadowMesh.material) {
+                        entity.renderer.shadowMesh.material.dispose();
+                    }
                 }
             }
         }
