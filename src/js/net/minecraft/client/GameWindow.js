@@ -248,11 +248,15 @@ export default class GameWindow {
                     border: none;
                     padding: 0;
                     border-radius: 50%;
-                    font-weight: bold;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     touch-action: none;
+                }
+                .mobile-btn svg {
+                    width: 20px;
+                    height: 20px;
+                    fill: currentColor;
                 }
                 .mobile-btn:active {
                     background: rgba(255, 255, 255, 0.3);
@@ -297,7 +301,6 @@ export default class GameWindow {
                 .arrow-btn {
                     width: 42px;
                     height: 42px;
-                    font-size: 18px;
                 }
 
                 #mobile-actions {
@@ -311,7 +314,6 @@ export default class GameWindow {
                 .action-btn {
                     width: 42px;
                     height: 42px;
-                    font-size: 10px;
                     border-radius: 50%;
                 }
 
@@ -321,7 +323,6 @@ export default class GameWindow {
                     right: 15px;
                     width: 38px;
                     height: 38px;
-                    font-size: 18px;
                     z-index: 10000;
                     display: none;
                 }
@@ -329,7 +330,7 @@ export default class GameWindow {
             document.head.appendChild(style);
         }
 
-        // 2. Inject Overlay & GUI Close Elements
+        // 2. Inject Overlay & GUI Close Elements with SVG Icons
         let overlay = document.getElementById('mobile-controls-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
@@ -338,17 +339,30 @@ export default class GameWindow {
                 <div id="joystick-move-zone" class="joystick-zone">
                     <div id="joystick-move-knob" class="joystick-knob"></div>
                 </div>
-                <button class="mobile-btn arrow-btn" id="mbtn-prev">&lt;</button>
+                <button class="mobile-btn arrow-btn" id="mbtn-prev">
+                    <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
 
                 <div id="joystick-look-zone" class="joystick-zone">
                     <div id="joystick-look-knob" class="joystick-knob"></div>
                 </div>
-                <button class="mobile-btn arrow-btn" id="mbtn-next">&gt;</button>
+                <button class="mobile-btn arrow-btn" id="mbtn-next">
+                    <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                </button>
 
                 <div id="mobile-actions">
-                    <button class="mobile-btn action-btn" id="mbtn-shift">SHIFT</button>
-                    <button class="mobile-btn action-btn" id="mbtn-space">JUMP</button>
-                    <button class="mobile-btn action-btn" id="mbtn-e">INV</button>
+                    <!-- Crouch / Shift Icon (Down Arrow) -->
+                    <button class="mobile-btn action-btn" id="mbtn-shift">
+                        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+                    </button>
+                    <!-- Jump / Fly Icon (Up Arrow) -->
+                    <button class="mobile-btn action-btn" id="mbtn-space">
+                        <svg viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
+                    </button>
+                    <!-- Inventory Icon (Backpack) -->
+                    <button class="mobile-btn action-btn" id="mbtn-e">
+                        <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+                    </button>
                 </div>
             `;
             document.body.appendChild(overlay);
@@ -359,7 +373,7 @@ export default class GameWindow {
             guiCloseBtn = document.createElement('button');
             guiCloseBtn.id = 'mobile-gui-close';
             guiCloseBtn.className = 'mobile-btn';
-            guiCloseBtn.innerHTML = '✕';
+            guiCloseBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`;
             document.body.appendChild(guiCloseBtn);
         }
 
@@ -571,7 +585,7 @@ export default class GameWindow {
             }
         }, false);
 
-        // 5. Action Buttons & Arrow Hotbar Handlers
+        // 5. Action Buttons & Arrow Hotbar Handlers + Double-Tap Fly
         const bindKeyButton = (elementId, keyCode) => {
             const btn = document.getElementById(elementId);
             if (!btn) return;
@@ -590,9 +604,36 @@ export default class GameWindow {
             }, { passive: false });
         };
 
-        bindKeyButton('mbtn-space', 'Space');
         bindKeyButton('mbtn-shift', 'ShiftLeft');
         bindKeyButton('mbtn-e', 'KeyE');
+
+        // Jump button with double-tap detector for flight (KeyF)
+        let lastSpaceTap = 0;
+        const spaceBtn = document.getElementById('mbtn-space');
+        if (spaceBtn) {
+            spaceBtn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                const now = Date.now();
+
+                // Double-tap space within 300ms toggles flight
+                if (now - lastSpaceTap < 300) {
+                    if (this.minecraft.currentScreen === null) {
+                        this.minecraft.onKeyPressed("KeyF");
+                    }
+                }
+                lastSpaceTap = now;
+
+                Keyboard.setState("Space", true);
+                if (this.minecraft.currentScreen === null) {
+                    this.minecraft.onKeyPressed("Space");
+                }
+            }, { passive: false });
+
+            spaceBtn.addEventListener('touchend', e => {
+                e.preventDefault();
+                Keyboard.setState("Space", false);
+            }, { passive: false });
+        }
 
         document.getElementById('mbtn-prev').addEventListener('touchstart', e => {
             e.preventDefault();
