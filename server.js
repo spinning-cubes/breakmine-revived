@@ -53,7 +53,6 @@ setInterval(() => {
 
 const fs = require('fs');
 const https = require('https');
-const WebSocket = require('ws');
 
 // Load SSL certificate and key if available
 let server = null;
