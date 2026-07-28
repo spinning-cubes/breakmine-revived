@@ -433,4 +433,95 @@ export default class Chunk {
             this.sections[y].isModified = true;
         }
     }
+
+    hasDirtySections() {
+        for (let y = 0; y < Chunk.SECTION_AMOUNT; y++) {
+            if (this.sections[y].isDirty) return true;
+        }
+        return false;
+    }
+
+    serialize() {
+        const sections = [];
+        for (let y = 0; y < Chunk.SECTION_AMOUNT; y++) {
+            const section = this.sections[y];
+            if (section.empty) {
+                sections[y] = null;
+                continue;
+            }
+
+            const blocks = {};
+            const blocksData = {};
+            const blockLight = {};
+            const skyLight = {};
+
+            for (let i = 0; i < 4096; i++) {
+                if (i in section.blocks && section.blocks[i] !== 0) {
+                    blocks[i] = section.blocks[i];
+                }
+                if (i in section.blocksData && section.blocksData[i] !== 0) {
+                    blocksData[i] = section.blocksData[i];
+                }
+                if (i in section.blockLight) {
+                    blockLight[i] = section.blockLight[i];
+                }
+                if (i in section.skyLight) {
+                    skyLight[i] = section.skyLight[i];
+                }
+            }
+
+            sections[y] = {
+                blocks: Object.keys(blocks).length > 0 ? blocks : null,
+                blocksData: Object.keys(blocksData).length > 0 ? blocksData : null,
+                blockLight: Object.keys(blockLight).length > 0 ? blockLight : null,
+                skyLight: Object.keys(skyLight).length > 0 ? skyLight : null,
+            };
+        }
+
+        return {
+            x: this.x,
+            z: this.z,
+            sections: sections,
+            heightMap: Array.from(this.heightMap)
+        };
+    }
+
+    static deserialize(world, data) {
+        const chunk = new Chunk(world, data.x, data.z);
+
+        for (let y = 0; y < Chunk.SECTION_AMOUNT; y++) {
+            const sectionData = data.sections[y];
+            if (!sectionData) continue;
+
+            const section = chunk.getSection(y);
+            section.empty = false;
+
+            if (sectionData.blocks) {
+                for (const idxStr in sectionData.blocks) {
+                    section.blocks[parseInt(idxStr)] = sectionData.blocks[idxStr];
+                }
+            }
+            if (sectionData.blocksData) {
+                for (const idxStr in sectionData.blocksData) {
+                    section.blocksData[parseInt(idxStr)] = sectionData.blocksData[idxStr];
+                }
+            }
+            if (sectionData.blockLight) {
+                for (const idxStr in sectionData.blockLight) {
+                    section.blockLight[parseInt(idxStr)] = sectionData.blockLight[idxStr];
+                }
+            }
+            if (sectionData.skyLight) {
+                for (const idxStr in sectionData.skyLight) {
+                    section.skyLight[parseInt(idxStr)] = sectionData.skyLight[idxStr];
+                }
+            }
+        }
+
+        chunk.heightMap = data.heightMap.slice();
+        chunk.loaded = true;
+        chunk.isTerrainPopulated = true;
+
+        return chunk;
+    }
 }

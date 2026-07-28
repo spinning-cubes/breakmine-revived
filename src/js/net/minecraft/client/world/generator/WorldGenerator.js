@@ -123,11 +123,11 @@ export default class WorldGenerator extends Generator {
     generateOres(chunkX, chunkZ, primer) {
         this.setChunkSeed(chunkX, chunkZ);
 
-        this.generateOreVein(primer, this.COAL_ORE_ID, 20, 0, 256, 40);
-        this.generateOreVein(primer, this.IRON_ORE_ID, 10, 0, 64, 30);
+        this.generateOreVein(primer, this.COAL_ORE_ID, 20, 0, 256, 64);
+        this.generateOreVein(primer, this.IRON_ORE_ID, 20, 0, 153, 24);
         this.generateOreVein(primer, this.GOLD_ORE_ID, 10, 0, 32, 8);
         this.generateOreVein(primer, this.DIAMOND_ORE_ID, 8, 0, 16, 3);
-        this.generateOreVein(primer, this.EMERALD_ORE_ID, 6, 0, 16, 2);
+        this.generateOreVein(primer, this.EMERALD_ORE_ID, 6, 156, 256, 2);
         this.generateOreVein(primer, this.SAPPHIRE_ORE_ID, 4, 0, 32, 2);
     }
 

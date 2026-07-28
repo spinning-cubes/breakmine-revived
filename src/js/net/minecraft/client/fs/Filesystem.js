@@ -1,6 +1,11 @@
 import { deflate, inflate } from "../../lib/pako.js";
 function toBase64(u8) {
-    return btoa(String.fromCharCode.apply(null, u8));
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < u8.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, u8.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
 }
 
 function fromBase64(b64) {

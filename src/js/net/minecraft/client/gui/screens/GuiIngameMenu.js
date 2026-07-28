@@ -21,8 +21,8 @@ export default class GuiIngameMenu extends GuiScreen {
             this.minecraft.displayScreen(new GuiOptions(this));
         }));
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Save and Quit to Title", this.width / 2 - 100, y + 70, 200, 20, () => {
-            this.minecraft.loadWorld(null);
+        this.buttonList.push(new GuiButton(this.minecraft, "Save and Quit to Title", this.width / 2 - 100, y + 70, 200, 20, async () => {
+            await this.minecraft.loadWorld(null);
         }));
     }
 

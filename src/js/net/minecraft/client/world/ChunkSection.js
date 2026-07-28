@@ -29,6 +29,7 @@ export default class ChunkSection {
         this.group.updateMatrix();
         this.group.matrixAutoUpdate = false;
         this.isModified = true;
+        this.isDirty = false;
 
         this.blocks = [];
         this.blocksData = [];
@@ -188,6 +189,7 @@ export default class ChunkSection {
             this.blocksData[index] = data;
         }
         this.isModified = true;
+        this.isDirty = true;
 
         if (this.empty && typeId !== 0) {
             this.empty = false;
@@ -198,6 +200,7 @@ export default class ChunkSection {
         let index = y << 8 | z << 4 | x;
         this.blocksData[index] = data;
         this.isModified = true;
+        this.isDirty = true;
     }
 
     setLightAt(sourceType, x, y, z, lightLevel) {
@@ -211,6 +214,7 @@ export default class ChunkSection {
         }
 
         this.isModified = true;
+        this.isDirty = true;
     }
 
     getTotalLightAt(x, y, z) {

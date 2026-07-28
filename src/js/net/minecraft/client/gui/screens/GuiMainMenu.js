@@ -6,6 +6,7 @@ import {BackSide} from "../../../../../../../libraries/three.module.js";
 import MathHelper from "../../../util/MathHelper.js";
 import Minecraft from "../../Minecraft.js";
 import GuiCreateWorld from "./GuiCreateWorld.js";
+import GuiSelectWorld from "./GuiSelectWorld.js";
 import GuiMultiplayer from "./GuiMultiplayer.js";
 import GuiAccount from "./GuiAccount.js";
 import { SplashTexts } from "../../../../../../resources/splashes.js";
@@ -26,8 +27,13 @@ export default class GuiMainMenu extends GuiScreen {
 
         let y = this.height / 4 + 48;
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Singleplayer", this.width / 2 - 100, y, 200, 20, () => {
-            this.minecraft.displayScreen(new GuiCreateWorld(this));
+        this.buttonList.push(new GuiButton(this.minecraft, "Singleplayer", this.width / 2 - 100, y, 200, 20, async () => {
+            const hasSave = await this.minecraft.hasSaveData();
+            if (hasSave) {
+                this.minecraft.displayScreen(new GuiSelectWorld(this));
+            } else {
+                this.minecraft.displayScreen(new GuiCreateWorld(this));
+            }
         }));
         let btntemp = new GuiButton(this.minecraft, "Multiplayer", this.width / 2 - 100, y + 24, 200, 20, () => {
             this.minecraft.displayScreen(new GuiMultiplayer(this));

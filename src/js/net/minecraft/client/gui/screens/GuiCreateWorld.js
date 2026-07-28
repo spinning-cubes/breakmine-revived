@@ -190,20 +190,18 @@ export default class GuiCreateWorld extends GuiScreen {
             seedLong = Long.fromString(seed);
         }
 
-        let world = new World(this.minecraft);
-        let provider = new ChunkProviderGenerateWorker(world, seedLong, this.worldType);
-        world.setChunkProvider(provider);
+        const worldName = this.textboxWorldName.getText().trim() || "New World";
+        this.minecraft.createNewWorld(worldName, seedLong, this.worldType, this.gameMode).then(world => {
+            this.minecraft.player.creative = (this.gameMode === "creative");
+            this.minecraft.player.spectator = (this.gameMode === "spectator");
 
-        this.minecraft.playerController = new PlayerController(this.minecraft);
-        this.minecraft.loadWorld(world);
-        this.minecraft.ingameOverlay.chatOverlay.clearChat();
-        this.minecraft.player.creative = (this.gameMode === "creative");
-        this.minecraft.player.spectator = (this.gameMode === "spectator");
-
-        if (this.minecraft.player.creative) {
-            this.minecraft.musicManager.playMusic('creative');
-        }
+            if (this.minecraft.player.creative) {
+                this.minecraft.musicManager.playMusic('creative');
+            }
+        });
     }
+
+
 
     keyTyped(key, character) {
         super.keyTyped(key, character);

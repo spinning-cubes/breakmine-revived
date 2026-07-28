@@ -39,8 +39,8 @@ export default class GuiYesNo extends GuiScreen {
     }
 
     drawScreen(stack, mouseX, mouseY, partialTicks) {
-        this.drawDefaultBackground(stack);
-        
+        this.drawBackground(stack, this.textureBackground, this.width, this.height);
+
         this.drawCenteredString(stack, this.message1, this.width / 2, 70, 0xffffffff);
         this.drawCenteredString(stack, this.message2, this.width / 2, 90, 0xffffffff);
 

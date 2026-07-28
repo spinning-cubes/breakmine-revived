@@ -75,10 +75,10 @@ export class BlockRegistry {
         BlockRegistry.TORCH = new BlockTorch(50, 9);
         BlockRegistry.GRASS_PATH = new BlockGrassPath(19, 15);
 
-        BlockRegistry.GOLD_ORE = new BlockStoneLike(21, 0, "gold_ore", "Gold Ore", 3.0, [90, 1], 'iron');
+        BlockRegistry.GOLD_ORE = new BlockStoneLike(21, 0, "gold_ore", "Gold Ore", 3.0, [21, 1], 'iron');
         BlockRegistry.DIAMOND_ORE = new BlockStoneLike(22, 0, "diamond_ore", "Diamond Ore", 3.0, [88, 1], 'iron');
         BlockRegistry.COAL_ORE = new BlockStoneLike(23, 0, "coal_ore", "Coal Ore", 3.0, [87, 2], 'wood');
-        BlockRegistry.IRON_ORE = new BlockStoneLike(24, 0, "iron_ore", "Iron Ore", 3.0, [86, 2], 'stone');
+        BlockRegistry.IRON_ORE = new BlockStoneLike(24, 0, "iron_ore", "Iron Ore", 3.0, [24, 2], 'stone');
         BlockRegistry.IRON_BLOCK = new BlockStoneLike(25, 0, "iron_block", "Iron Block", 3.0, [0, 0], 'stone');
         BlockRegistry.GOLD_BLOCK = new BlockStoneLike(26, 0, "gold_block", "Gold Block", 3.0, [0, 0], 'iron');
         BlockRegistry.DIAMOND_BLOCK = new BlockStoneLike(27, 0, "diamond_block", "Diamond Block", 3.0, [0, 0], 'iron');

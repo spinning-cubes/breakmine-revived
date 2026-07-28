@@ -18,8 +18,8 @@ export default class GuiDeath extends GuiScreen {
             this.minecraft.displayScreen(null);
         }));
 
-        this.buttonList.push(new GuiButton("Quit to Title", this.width / 2 + 2, y + 24 * 2, 98, 20, () => {
-            this.minecraft.loadWorld(null);
+        this.buttonList.push(new GuiButton("Quit to Title", this.width / 2 + 2, y + 24 * 2, 98, 20, async () => {
+            await this.minecraft.loadWorld(null);
         }));
     }
 

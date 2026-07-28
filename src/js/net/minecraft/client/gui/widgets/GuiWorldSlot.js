@@ -30,7 +30,7 @@ export default class GuiWorldSlot extends GuiButton {
         
         this.drawString(stack, this.worldName, slotX + 2, slotY + 1, WHITE, true, false);
         this.drawString(stack, this.worldDate, slotX + 2, slotY + 12, GRAY, true, false);
-        this.drawString(stack, this.worldDetails, slotX + 2, slotY + 22, GRAY, true, false);
+        this.drawString(stack, this.worldDetails.charAt(0).toUpperCase() + this.worldDetails.slice(1), slotX + 2, slotY + 22, GRAY, true, false);
     }
     
     mouseClicked(mouseX, mouseY, mouseButton) {
