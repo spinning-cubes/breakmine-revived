@@ -6,9 +6,9 @@
   "scripts": {
     "start": "electron .",
     "start-dev": "concurrently \"vite\" \"wait-on http://localhost:3000 && electron .\"",
-    "dev:https": "vite",
-    "dev:http": "vite --config vite.http.config.js",
-    "dev:all": "concurrently \"npm run dev:https\" \"npm run dev:http\"",
+    "devs:https": "vite",
+    "devs:http": "vite --config vite.http.config.js",
+    "devs:all": "concurrently \"npm run devs:https\" \"npm run devs:http\"",
     "build": "vite build",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1",
