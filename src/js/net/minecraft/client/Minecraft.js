@@ -385,7 +385,7 @@ export default class Minecraft {
             await new Promise(r => setTimeout(r, 0));
         }
 
-        world.spawn.y = world.getHeightAt(world.spawn.x, world.spawn.z) + 8;
+        world.spawn.y = world.getHeightAt(world.spawn.x, world.spawn.z) + 1;
         this.player.respawn();
 
         if (this.loadingScreen !== null) {
