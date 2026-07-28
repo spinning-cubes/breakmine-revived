@@ -243,11 +243,11 @@ export default class GameWindow {
                 }
                 .mobile-btn {
                     pointer-events: auto;
-                    background: rgba(0, 0, 0, 0.45);
-                    color: #fff;
+                    background: rgba(0, 0, 0, 0.25);
+                    color: rgba(255, 255, 255, 0.7);
                     border: none;
                     padding: 0;
-                    border-radius: 6px;
+                    border-radius: 50%;
                     font-weight: bold;
                     display: flex;
                     align-items: center;
@@ -256,14 +256,15 @@ export default class GameWindow {
                 }
                 .mobile-btn:active {
                     background: rgba(255, 255, 255, 0.3);
+                    color: #fff;
                 }
                 .joystick-zone {
                     position: absolute;
                     bottom: 30px;
                     width: 130px;
                     height: 130px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
                     border-radius: 50%;
                     pointer-events: auto;
                     touch-action: none;
@@ -277,44 +278,50 @@ export default class GameWindow {
                     left: 50%;
                     width: 45px;
                     height: 45px;
-                    background: rgba(255, 255, 255, 0.4);
+                    background: rgba(255, 255, 255, 0.3);
                     border-radius: 50%;
                     transform: translate(-50%, -50%);
                     pointer-events: none;
                 }
+
+                #mbtn-prev {
+                    position: absolute;
+                    bottom: 45px;
+                    left: 170px;
+                }
+                #mbtn-next {
+                    position: absolute;
+                    bottom: 45px;
+                    right: 170px;
+                }
+                .arrow-btn {
+                    width: 42px;
+                    height: 42px;
+                    font-size: 18px;
+                }
+
                 #mobile-actions {
                     position: absolute;
-                    bottom: 170px;
-                    right: 30px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                }
-                .action-btn {
-                    width: 50px;
-                    height: 50px;
-                    font-size: 12px;
-                }
-                #mobile-hotbar-arrows {
-                    position: absolute;
-                    bottom: 15px;
+                    bottom: 20px;
                     left: 50%;
                     transform: translateX(-50%);
                     display: flex;
-                    gap: 15px;
+                    gap: 12px;
                 }
-                .arrow-btn {
-                    width: 48px;
-                    height: 38px;
-                    font-size: 16px;
+                .action-btn {
+                    width: 42px;
+                    height: 42px;
+                    font-size: 10px;
+                    border-radius: 50%;
                 }
+
                 #mobile-gui-close {
                     position: fixed;
                     top: 15px;
                     right: 15px;
-                    width: 40px;
-                    height: 40px;
-                    font-size: 20px;
+                    width: 38px;
+                    height: 38px;
+                    font-size: 18px;
                     z-index: 10000;
                     display: none;
                 }
@@ -322,33 +329,26 @@ export default class GameWindow {
             document.head.appendChild(style);
         }
 
-        // 2. Inject Overlay & Close Button Elements
+        // 2. Inject Overlay & GUI Close Elements
         let overlay = document.getElementById('mobile-controls-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'mobile-controls-overlay';
             overlay.innerHTML = `
-                <!-- Movement Joystick (Left) -->
                 <div id="joystick-move-zone" class="joystick-zone">
                     <div id="joystick-move-knob" class="joystick-knob"></div>
                 </div>
+                <button class="mobile-btn arrow-btn" id="mbtn-prev">&lt;</button>
 
-                <!-- Camera Look Joystick (Right) -->
                 <div id="joystick-look-zone" class="joystick-zone">
                     <div id="joystick-look-knob" class="joystick-knob"></div>
                 </div>
+                <button class="mobile-btn arrow-btn" id="mbtn-next">&gt;</button>
 
-                <!-- Actions Container -->
                 <div id="mobile-actions">
-                    <button class="mobile-btn action-btn" id="mbtn-e">E</button>
                     <button class="mobile-btn action-btn" id="mbtn-shift">SHIFT</button>
-                    <button class="mobile-btn action-btn" id="mbtn-space">SPACE</button>
-                </div>
-
-                <!-- Hotbar Scroll Arrows -->
-                <div id="mobile-hotbar-arrows">
-                    <button class="mobile-btn arrow-btn" id="mbtn-prev">&lt;</button>
-                    <button class="mobile-btn arrow-btn" id="mbtn-next">&gt;</button>
+                    <button class="mobile-btn action-btn" id="mbtn-space">JUMP</button>
+                    <button class="mobile-btn action-btn" id="mbtn-e">INV</button>
                 </div>
             `;
             document.body.appendChild(overlay);
@@ -366,7 +366,7 @@ export default class GameWindow {
         this.mobileOverlay = overlay;
         this.guiCloseBtn = guiCloseBtn;
 
-        // Close GUI Event
+        // Close GUI Button Handler
         guiCloseBtn.addEventListener('touchstart', e => {
             e.preventDefault();
             let currentScreen = this.minecraft.currentScreen;
@@ -461,7 +461,7 @@ export default class GameWindow {
             lookVectorY = 0;
         });
 
-        // Continuous Look Update Loop
+        // Continuous Look & Mobile State Update Loop
         setInterval(() => {
             if (this.minecraft.currentScreen === null && (lookVectorX !== 0 || lookVectorY !== 0)) {
                 this.mouseMotionX += lookVectorX * 12;
@@ -470,7 +470,14 @@ export default class GameWindow {
             this.updateMobileUIState();
         }, 16);
 
-        // 4. GUI Touch Pass-Through for Screens
+        // 4. Minecraft PE Place / Break System + GUI Pass-Through
+        let peTouchId = null;
+        let peStartX = 0;
+        let peStartY = 0;
+        let peStartTime = 0;
+        let peBreakInterval = null;
+        let isBreaking = false;
+
         this.registerListener(window, 'touchstart', event => {
             this.initialSoundEngine();
 
@@ -485,6 +492,29 @@ export default class GameWindow {
                         0
                     );
                 }
+                return;
+            }
+
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                let touch = event.changedTouches[i];
+                if (touch.target.closest('#mobile-controls-overlay, #mobile-gui-close')) continue;
+
+                if (peTouchId === null) {
+                    peTouchId = touch.identifier;
+                    peStartX = touch.clientX;
+                    peStartY = touch.clientY;
+                    peStartTime = Date.now();
+                    isBreaking = false;
+
+                    if (peBreakInterval) clearInterval(peBreakInterval);
+
+                    peBreakInterval = setInterval(() => {
+                        if (peTouchId !== null && (Date.now() - peStartTime) >= 200) {
+                            isBreaking = true;
+                            this.minecraft.onMouseClicked(0); // Break block
+                        }
+                    }, 180);
+                }
             }
         }, false);
 
@@ -498,6 +528,18 @@ export default class GameWindow {
                         0
                     );
                 }
+                return;
+            }
+
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                let touch = event.changedTouches[i];
+                if (touch.identifier === peTouchId) {
+                    let dist = Math.hypot(touch.clientX - peStartX, touch.clientY - peStartY);
+                    if (dist > 15) {
+                        if (peBreakInterval) clearInterval(peBreakInterval);
+                        peTouchId = null;
+                    }
+                }
             }
         }, false);
 
@@ -510,6 +552,21 @@ export default class GameWindow {
                         touch.clientY / this.scaleFactor,
                         0
                     );
+                }
+                return;
+            }
+
+            for (let i = 0; i < event.changedTouches.length; i++) {
+                let touch = event.changedTouches[i];
+                if (touch.identifier === peTouchId) {
+                    if (peBreakInterval) clearInterval(peBreakInterval);
+
+                    if (!isBreaking && (Date.now() - peStartTime) < 200) {
+                        this.minecraft.onMouseClicked(2); // Place block
+                    }
+
+                    peTouchId = null;
+                    isBreaking = false;
                 }
             }
         }, false);
@@ -537,7 +594,6 @@ export default class GameWindow {
         bindKeyButton('mbtn-shift', 'ShiftLeft');
         bindKeyButton('mbtn-e', 'KeyE');
 
-        // Hotbar Cycling via Arrow Buttons
         document.getElementById('mbtn-prev').addEventListener('touchstart', e => {
             e.preventDefault();
             this.minecraft.onMouseScroll(-1);
