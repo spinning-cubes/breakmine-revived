@@ -19,7 +19,7 @@ export default defineConfig({
     plugins: [copyResourcesPlugin()],
     server: {
         port: 3000,
-        allowedHosts: ["breakmine.minetest.land"],
+        allowedHosts: ["breakmine.minetest.land", "breakmine.logicerror.dev"],
     },
     build: {
         outDir: "dist",
