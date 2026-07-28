@@ -6,8 +6,8 @@
   "scripts": {
     "start": "electron .",
     "start-dev": "concurrently \"vite --config vite.http.config.js\" \"wait-on http://localhost:8000 && electron .\"",
-    "devs:https": "vite",
-    "devs:http": "vite --config vite.http.config.js",
+    "devs:https": "vite --host",
+    "devs:http": "vite --host --config vite.http.config.js",
     "devs:all": "concurrently \"npm run devs:https\" \"npm run devs:http\"",
     "build": "vite build",
     "preview": "vite preview",
