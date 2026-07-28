@@ -63,9 +63,9 @@ function sendSpawnPosition(player) {
 function sendChunks(player) {
     const worldChanges = getWorldChanges();
 
-    // Send a 9x9 chunk area around spawn to give client enough terrain
-    for (let cx = -4; cx <= 4; cx++) {
-        for (let cz = -4; cz <= 4; cz++) {
+    // Send a 5x5 chunk area around spawn to give client enough terrain
+    for (let cx = -2; cx <= 2; cx++) {
+        for (let cz = -2; cz <= 2; cz++) {
             sendSingleChunk(player, cx, cz, worldChanges);
         }
     }
