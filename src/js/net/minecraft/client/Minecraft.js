@@ -401,6 +401,17 @@ export default class Minecraft {
         }
 
         this.musicManager.playMusic('game');
+
+        // Fix: Set player position after chunks are loaded
+        if (this.player && this.world.spawn) {
+            const spawn = this.world.spawn;
+            let y = spawn.y;
+            while (y > 0 && !this.world.isBlockAt(spawn.x, y - 1, spawn.z)) {
+                y--;
+            }
+            this.player.setPosition(spawn.x, y, spawn.z);
+            this.player.fallDistance = 0;
+        }
     }
 
     _getWorldDB() {

@@ -85,7 +85,7 @@ export default class GuiTexturePacks extends GuiScreen {
             }
         });
 
-        this.buttonUpload = new GuiButton(this.minecraft, "Upload .zip", this.width / 2 + 5, this.height - 28, 150, 20, () => {
+        this.buttonUpload = new GuiButton(this.minecraft, "Upload .zip", this.width / 2 + 5, this.height - 52, 150, 20, () => {
             this.uploadTexturePack();
         });
 
@@ -101,7 +101,7 @@ export default class GuiTexturePacks extends GuiScreen {
             }
         });
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Back", this.width / 2 + 5, this.height - 52, 150, 20, () => {
+        this.buttonList.push(new GuiButton(this.minecraft, "Back", this.width / 2 + 5, this.height - 28, 150, 20, () => {
             this.minecraft.displayScreen(this.previousScreen);
         }));
         
@@ -128,27 +128,27 @@ export default class GuiTexturePacks extends GuiScreen {
         const packFiles = await this.filesystem.listDir('texture_packs/');
         
         // Get all subdirectories in texture_packs/
-         for (const fileName of packFiles) {
-             if (fileName.endsWith('/meta.json') || fileName.endsWith('/meta.toml')) {
-                 const metadata = await this.filesystem.loadFile(fileName);
-                 if (!metadata) continue;
-                 let packData = null;
-                 try {
-                     packData = fileName.endsWith('.json') ? JSON.parse(metadata) : toml.parse(metadata);
-                 } catch (e) {
-                     console.error('Failed to parse texture pack metadata:', e);
-                     continue;
-                 }
-                 const packId = packData.id || fileName.split('/').slice(-2, -1)[0];
-                 this.texturePacks.push({
-                     id: packId,
-                     name: packData.name || 'Unknown Pack',
-                     description: packData.description || 'No description',
-                     version: packData.version || 'Unknown',
-                     author: packData.author || 'Unknown'
-                 });
-             }
-         }
+        for (const fileName of packFiles) {
+            if (fileName.endsWith('/meta.json') || fileName.endsWith('/meta.toml')) {
+                const metadata = await this.filesystem.loadFile(fileName);
+                if (!metadata) continue;
+                let packData = null;
+                try {
+                    packData = fileName.endsWith('.json') ? JSON.parse(metadata) : toml.parse(metadata);
+                } catch (e) {
+                    console.error('Failed to parse texture pack metadata:', e);
+                    continue;
+                }
+                const packId = packData.id || fileName.split('/').slice(-2, -1)[0];
+                this.texturePacks.push({
+                    id: packId,
+                    name: packData.name || 'Unknown Pack',
+                    description: packData.description || 'No description',
+                    version: packData.version || 'Unknown',
+                    author: packData.author || 'Unknown'
+                });
+            }
+        }
     }
 
     uploadTexturePack() {
@@ -211,9 +211,8 @@ export default class GuiTexturePacks extends GuiScreen {
                 author: 'Unknown'
             };
             
-// Save metadata
-             const metadataFilePath = `texture_packs/${packId}/meta.json`;
-             await this.filesystem.saveFile(JSON.stringify(packData), metadataFilePath);
+            const metadataFilePath = `texture_packs/${packId}/meta.json`;
+            await this.filesystem.saveFile(JSON.stringify(packData), metadataFilePath);
             
             // Extract and save textures
             for (const [path, zipEntry] of Object.entries(zip.files)) {

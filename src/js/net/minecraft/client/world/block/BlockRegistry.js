@@ -172,7 +172,7 @@ export class BlockRegistry {
         for (const mat of toolMaterials) {
             const matName = mat === 'wood' ? 'Wooden' : mat.charAt(0).toUpperCase() + mat.slice(1);
             const itemName = mat === 'gold' ? 'Golden' : mat;
-            const texName = mat === 'wood' ? 'wooden' : mat;
+            const texName = mat === 'gold' ? 'golden' : mat === 'wood' ? 'wooden' : mat;
             BlockRegistry[`${mat.toUpperCase()}_PICKAXE`] = new ItemPickaxe(toolId++, `${texName}_pickaxe`, `${matName} Pickaxe`, mat);
             BlockRegistry[`${mat.toUpperCase()}_SWORD`] = new ItemSword(toolId++, `${texName}_sword`, `${matName} Sword`, mat);
             BlockRegistry[`${mat.toUpperCase()}_SHOVEL`] = new ItemShovel(toolId++, `${texName}_shovel`, `${matName} Shovel`, mat);
