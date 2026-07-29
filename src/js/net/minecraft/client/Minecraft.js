@@ -241,9 +241,9 @@ export default class Minecraft {
 
         // 3. Trigger Notification
         function sendNotification(versionNumber) {
-            const title = `A new version of Breakmine is availible (${versionNumber})!`;
+            const title = `New version of Breakmine!`;
             const options = {
-                body: 'Reload to play',
+                body: `A new version of Breakmine is availible (${versionNumber})!\nReload now (or click this notification) to apply updates.`,
                 icon: 'https://breakmine.com/favicon.ico', // Optional icon
                 requireInteraction: true
             };

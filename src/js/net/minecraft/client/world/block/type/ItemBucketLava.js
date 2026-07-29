@@ -2,7 +2,7 @@ import ItemGeneric from "./ItemGeneric.js";
 import { BlockRegistry } from "../BlockRegistry.js";
 import Block from "../Block.js";
 
-export default class ItemBucketEmpty extends ItemGeneric {
+export default class ItemBucketLava extends ItemGeneric {
 
     constructor(id, textureSlotId, description) {
         super(id, textureSlotId, description);
@@ -14,13 +14,16 @@ export default class ItemBucketEmpty extends ItemGeneric {
         }
 
         const targetTypeId = world.getBlockAt(x, y, z);
-        if (targetTypeId !== BlockRegistry.WATER.getId() && targetTypeId !== BlockRegistry.LAVA.getId()) {
+        const targetBlock = Block.getById(targetTypeId);
+        const isAirOrReplaceable = targetTypeId === 0 || (targetBlock && targetBlock.isReplaceable(world, x, y, z));
+        const isNotLava = targetTypeId !== BlockRegistry.LAVA.getId();
+
+        if (!isAirOrReplaceable || !isNotLava) {
             return;
         }
 
-        const block = Block.getById(targetTypeId);
-        world.setBlockAt(x, y, z, 0);
-        itemstack.typeId = block === BlockRegistry.WATER ? BlockRegistry.ITEM_BUCKET_WATER.getId() : BlockRegistry.ITEM_BUCKET_LAVA.getId();
+        world.setBlockAt(x, y, z, BlockRegistry.LAVA.getId());
+        itemstack.typeId = BlockRegistry.ITEM_BUCKET_EMPTY.getId();
         itemstack.count = Math.max(1, itemstack.count || 1);
     }
 }

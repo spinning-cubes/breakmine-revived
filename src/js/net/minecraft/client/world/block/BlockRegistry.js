@@ -44,6 +44,7 @@ import BlockSlab from "./type/BlockSlab.js";
 import BlockBeans from "./type/BlockBeans.js";
 import BlockMoldyBeans from "./type/BlockMoldyBeans.js";
 import BlockWire from "./type/BlockWire.js";
+import ItemBucketLava from "./type/ItemBucketLava.js";
 
 export class BlockRegistry {
 
@@ -182,6 +183,7 @@ export class BlockRegistry {
 
         BlockRegistry.ITEM_BUCKET_EMPTY = new ItemBucketEmpty(118, 'bucket', 'Empty Bucket');
         BlockRegistry.ITEM_BUCKET_WATER = new ItemBucketWater(119, 'water_bucket', 'Water Bucket');
+        BlockRegistry.ITEM_BUCKET_LAVA = new ItemBucketLava(120, 'lava_bucket', 'Lava Bucket');
 
         BlockRegistry.init = true;
     }
