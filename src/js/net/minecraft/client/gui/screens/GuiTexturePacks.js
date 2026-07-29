@@ -3,7 +3,44 @@ import GuiButton from "../widgets/GuiButton.js";
 import GuiTexturePackSlotContainer from "../widgets/GuiTexturePackSlotContainer.js";
 import FileSystem from "../../fs/Filesystem.js";
 import * as THREE from "../../../../../../../libraries/three.module.js";
-import toml from "toml";
+
+function parseToml(str) {
+    const result = {};
+    let currentSection = null;
+    
+    const lines = str.split(/\r?\n/);
+    for (let line of lines) {
+        line = line.trim();
+        
+        if (!line || line.startsWith('#')) continue;
+        
+        const sectionMatch = line.match(/^\[([^\]]+)\]$/);
+        if (sectionMatch) {
+            currentSection = sectionMatch[1];
+            if (!result[currentSection]) result[currentSection] = {};
+            continue;
+        }
+        
+        const kvMatch = line.match(/^([^=]+?)\s*=\s*(.*)$/);
+        if (kvMatch) {
+            let key = kvMatch[1].trim();
+            let value = kvMatch[2].trim();
+            
+            if ((value.startsWith('"') && value.endsWith('"')) || 
+                (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+            }
+            
+            if (currentSection) {
+                result[currentSection][key] = value;
+            } else {
+                result[key] = value;
+            }
+        }
+    }
+    
+    return result;
+}
 
 export default class GuiTexturePacks extends GuiScreen {
 
