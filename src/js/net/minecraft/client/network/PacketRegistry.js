@@ -47,6 +47,7 @@ import ServerResetWorldPacket from "./packet/play/server/ServerResetWorldPacket.
 import ServerTimeUpdatePacket from "./packet/play/server/ServerTimeUpdatePacket.js";
 import ServerSpawnObjectPacket from "./packet/play/server/ServerSpawnObjectPacket.js";
 import ClientUpdateSignTextPacket from "./packet/play/client/ClientUpdateSignTextPacket.js";
+import ClientModListPacket from "./packet/play/client/ClientModListPacket.js";
 import ServerUpdateSignTextPacket from "./packet/play/server/ServerUpdateSignTextPacket.js";
 
 export default class PacketRegistry {
@@ -113,6 +114,7 @@ export default class PacketRegistry {
         this.registerClient(ProtocolState.PLAY, 0x09, ClientDropItemPacket);
         this.registerClient(ProtocolState.PLAY, 0x0E, ClientUpdateSignTextPacket);
         this.registerClient(ProtocolState.PLAY, 0x0D, ClientPickupItemPacket);
+        this.registerClient(ProtocolState.PLAY, 0x1F, ClientModListPacket);
     }
 
     registerClient(state, id, packet) {

@@ -15,6 +15,7 @@ export default class TextureAtlas {
         this.canvas = null;
         this.texture = null;
         this.loaded = false;
+        this._nextModIndex = 0; // Tracks next available slot for mod textures
         
         // Initialize texture name to slot ID mapping
         this.initializeTextureNameToSlotId();
@@ -45,6 +46,29 @@ export default class TextureAtlas {
         for (const [name, slotId] of Object.entries(mapping)) {
             this.textureNameToSlotId.set(name, slotId);
         }
+    }
+
+    registerTexture(name, slotId) {
+        this.textureNameToSlotId.set(name, slotId);
+    }
+
+    /**
+     * Resize the atlas to accommodate mod textures.
+     * Call BEFORE loadTextures() if you expect many mods.
+     * @param {number} newSize  Must be a multiple of textureSize (16). e.g. 512 for 1024 slots.
+     */
+    resizeAtlas(newSize = 512) {
+        if (this.loaded) {
+            console.warn('[TextureAtlas] Cannot resize atlas after textures are loaded.');
+            return;
+        }
+        if (newSize % this.textureSize !== 0) {
+            console.warn(`[TextureAtlas] Atlas size ${newSize} is not a multiple of texture size ${this.textureSize}`);
+            return;
+        }
+        this.atlasSize = newSize;
+        this.texturesPerRow = this.atlasSize / this.textureSize;
+        console.log(`[TextureAtlas] Resized to ${newSize}x${newSize} (${this.texturesPerRow}x${this.texturesPerRow} slots)`);
     }
 
     async loadTextures() {
@@ -91,6 +115,9 @@ export default class TextureAtlas {
             }
         }
 
+        // Set the mod texture starting index after all vanilla textures
+        this._nextModIndex = index;
+
         // Create THREE texture from canvas
         this.texture = new THREE.CanvasTexture(this.canvas);
         this.texture.magFilter = THREE.NearestFilter;
@@ -103,6 +130,45 @@ export default class TextureAtlas {
         console.log(`Texture atlas loaded with ${index} textures`);
         
         return this.texture;
+    }
+
+    /**
+     * Register a mod texture from an HTMLImageElement into the next available atlas slot.
+     * @param {string} namespacedKey  e.g. 'unbreakable_block:unbreakable_block'
+     * @param {HTMLImageElement} image  16x16 pixel image
+     * @returns {{ x: number, y: number, index: number }} atlas coordinates
+     */
+    registerModTexture(namespacedKey, image) {
+        if (!this.canvas) {
+            console.warn('[TextureAtlas] Cannot register mod texture — atlas not yet built.');
+            return { x: 0, y: 0, index: 0 };
+        }
+
+        const maxSlots = this.texturesPerRow * this.texturesPerRow;
+        if (this._nextModIndex >= maxSlots) {
+            console.error(`[TextureAtlas] Atlas full (${maxSlots} slots). Cannot register mod texture '${namespacedKey}'.`);
+            return { x: 0, y: 0, index: 0 };
+        }
+
+        const index = this._nextModIndex++;
+        const x = (index % this.texturesPerRow) * this.textureSize;
+        const y = Math.floor(index / this.texturesPerRow) * this.textureSize;
+
+        const ctx = this.canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(image, 0, 0, this.textureSize, this.textureSize, x, y, this.textureSize, this.textureSize);
+
+        const coords = { x, y, index };
+        this.textureMap.set(namespacedKey, coords);
+        this.reverseTextureMap.set(index, namespacedKey);
+
+        // Flag the THREE texture for GPU re-upload
+        if (this.texture) {
+            this.texture.needsUpdate = true;
+        }
+
+        console.log(`[TextureAtlas] Registered mod texture '${namespacedKey}' at slot ${index} (${x}, ${y})`);
+        return coords;
     }
 
     async getTextureFiles() {
@@ -376,12 +442,12 @@ export default class TextureAtlas {
     }
 
     getTextureCoords(textureName) {
+        // Direct lookup (handles both vanilla and namespaced mod textures)
         const coords = this.textureMap.get(textureName);
-        if (!coords) {
-            console.warn(`Texture not found: ${textureName}`);
-            return { x: 0, y: 0, index: 0 };
-        }
-        return coords;
+        if (coords) return coords;
+
+        console.warn(`Texture not found: ${textureName}`);
+        return { x: 0, y: 0, index: 0 };
     }
 
     getTextureIndex(textureName) {
@@ -391,6 +457,20 @@ export default class TextureAtlas {
 
     getTextureNameByIndex(index) {
         return this.reverseTextureMap.get(index) || null;
+    }
+
+    /**
+     * Check if a texture key is namespaced (mod texture).
+     * @param {string} name
+     * @returns {{ modId: string, textureName: string } | null}
+     */
+    parseModTextureKey(name) {
+        if (!name || !name.includes(':')) return null;
+        const colonIndex = name.indexOf(':');
+        return {
+            modId: name.substring(0, colonIndex),
+            textureName: name.substring(colonIndex + 1)
+        };
     }
 
 

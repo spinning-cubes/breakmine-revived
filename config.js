@@ -9,7 +9,8 @@ const defaults = {
     default_gamemode: 'creative',
     default_op: 'true',
     op_player_list: [],
-    motd: 'Brand new server'
+    motd: 'Brand new server',
+    allowMods: false
 };
 
 function parseValue(value) {

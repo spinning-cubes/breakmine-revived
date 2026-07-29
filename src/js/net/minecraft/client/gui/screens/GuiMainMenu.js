@@ -10,8 +10,10 @@ import GuiSelectWorld from "./GuiSelectWorld.js";
 import GuiMultiplayer from "./GuiMultiplayer.js";
 import GuiAccount from "./GuiAccount.js";
 import GuiTexturePacks from "./GuiTexturePacks.js";
+import GuiMods from "./GuiMods.js";
 import { SplashTexts } from "../../../../../../resources/splashes.js";
 import GuiYesNo from "./GuiYesNo.js";
+import { Version } from "../../../../../../resources/version.js";
 
 export default class GuiMainMenu extends GuiScreen {
 
@@ -27,7 +29,7 @@ export default class GuiMainMenu extends GuiScreen {
         super.init();
         this.textureLogo = this.getTexture("gui/title/minecraft.png");
 
-        let y = this.height / 4 + 48;
+        let y = this.height / 4 + 36;
 
         if (Notification.permission !== "granted") {
             this.buttonList.push(new GuiButton(this.minecraft, "Enable Notifications", 0, 0, 130, 20, async () => {
@@ -56,18 +58,22 @@ export default class GuiMainMenu extends GuiScreen {
         }
         this.buttonList.push(btntemp);
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Account", this.width / 2 - 100, y + 24 * 2, 98, 20, () => {
+        this.buttonList.push(new GuiButton(this.minecraft, "Mods", this.width / 2 - 100, y + 24 * 2, 200, 20, () => {
+            this.minecraft.displayScreen(new GuiMods(this.minecraft, this));
+        }));
+
+        this.buttonList.push(new GuiButton(this.minecraft, "Account", this.width / 2 - 100, y + 24 * 3, 98, 20, () => {
             this.minecraft.displayScreen(new GuiAccount(this));
         }));//.setEnabled(false).setTooltip("Coming soon!"));
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Options...", this.width / 2 - 100, y + 72 + 12, 98, 20, () => {
+        this.buttonList.push(new GuiButton(this.minecraft, "Options...", this.width / 2 - 100, y + 96 + 12, 98, 20, () => {
             this.minecraft.displayScreen(new GuiOptions(this));
         }));
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Texture Packs", this.width / 2 + 2, y + 24 * 2, 98, 20, () => {
+        this.buttonList.push(new GuiButton(this.minecraft, "Texture Packs", this.width / 2 + 2, y + 24 * 3, 98, 20, () => {
             this.minecraft.displayScreen(new GuiTexturePacks(this));
         }));
-        this.buttonList.push(new GuiButton(this.minecraft, "Quit Game", this.width / 2 + 2, y + 72 + 12, 98, 20, () => {
+        this.buttonList.push(new GuiButton(this.minecraft, "Quit Game", this.width / 2 + 2, y + 96 + 12, 98, 20, () => {
             this.minecraft.stop();
         }).setEnabled(false));
         
@@ -99,11 +105,14 @@ export default class GuiMainMenu extends GuiScreen {
         this.drawLogo(stack, x, y);
 
         // Draw version
-        this.drawString(stack, "Updated at " + Minecraft.TIMESTAMP, 2, this.height - 20, 0xFFFFFFff);
-        this.drawString(stack, "Breakmine " + Minecraft.VERSION, 2, this.height - 10, 0xFFFFFFff);
+        this.drawRightString(stack, "Updated at " + Minecraft.TIMESTAMP, 2, this.height - 20, 0xFFFFFFff);
+
+        // Draw Patchwork version
+        this.drawString(stack, "Patchwork " + Version.PATCHWORK_VERSION, 2, this.height - 20, 0xFFFFFFff);
 
         // Draw copyright
-        this.drawRightString(stack, "(C) 2026 SpinningCubes under SCLv1.", this.width - 2, this.height - 10);
+        this.drawRightString(stack, "(C) 2026 SpinningCubes under SCLv1.", this.width - 2, this.height - 10, 0xFFFFFFff);
+        this.drawString(stack, "Breakmine " + Minecraft.VERSION, this.width - 2, this.height - 10, 0xFFFFFFff);
 
         // Draw buttons
         super.drawScreen(stack, mouseX, mouseY, partialTicks);
@@ -112,9 +121,9 @@ export default class GuiMainMenu extends GuiScreen {
         this.drawSplash(stack);
 
         // Draw warning
-        let pageText = "In development, expect bugs and breaking changes.";
-        let centerX = Math.floor(this.width / 2);
-        this.drawString(stack, pageText, centerX - this.getStringWidth(stack, pageText) / 2, 10, 0xFF6363, false);
+        //let pageText = "In development, expect bugs and breaking changes.";
+        //let centerX = Math.floor(this.width / 2);
+        //this.drawString(stack, pageText, centerX - this.getStringWidth(stack, pageText) / 2, 10, 0xFF6363, false);
     }
 
     updateScreen() {

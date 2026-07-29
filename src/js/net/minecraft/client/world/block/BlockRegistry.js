@@ -193,4 +193,10 @@ export class BlockRegistry {
     static getAllBlocks() {
         return this;
     }
+
+    static registerBlockClass(id, name, blockClass) {
+        const block = new blockClass(id, 0);
+        Block.blocks.set(id, block);
+        return block;
+    }
 }

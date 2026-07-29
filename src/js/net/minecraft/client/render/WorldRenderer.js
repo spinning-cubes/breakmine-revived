@@ -200,6 +200,22 @@ export default class WorldRenderer {
     async initialize() {
         // Load texture atlas asynchronously
         await this.textureAtlas.loadTextures();
+
+        // Load all enabled mods (registers blocks + textures into the atlas)
+        if (this.minecraft.modLoader) {
+            await this.minecraft.modLoader.loadAllMods();
+            
+            // Rebind renderers so the GPU sees new mod textures
+            if (this.blockRenderer) {
+                this.blockRenderer.tessellator.bindTexture(
+                    this.textureAtlas.getTexture()
+                );
+            }
+            if (this.translucentBatcher) {
+                this.translucentBatcher.mesh.material.map = this.textureAtlas.getTexture();
+                this.translucentBatcher.mesh.material.needsUpdate = true;
+            }
+        }
         
         // Rebind block renderer to texture atlas after it's loaded
         if (this.blockRenderer && this.textureAtlas.isLoaded()) {

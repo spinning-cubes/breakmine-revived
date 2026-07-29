@@ -14,6 +14,7 @@ import BoundingBox from "../util/BoundingBox.js";
 import {BlockRegistry} from "./world/block/BlockRegistry.js";
 import FontRenderer from "./render/gui/FontRenderer.js";
 import GrassColorizer from "./render/GrassColorizer.js";
+import ModLoader from "./ModLoader.js";
 import GuiMainMenu from "./gui/screens/GuiMainMenu.js";
 import GuiLoadingScreen from "./gui/screens/GuiLoadingScreen.js";
 import * as THREE from "../../../../../libraries/three.module.js";
@@ -124,6 +125,19 @@ export default class Minecraft {
         BlockRegistry.create();
         CraftingRegistry.reset();
         SmeltingRegistry.reset();
+
+        this.blockList = BlockRegistry.getAllBlocks();
+
+        // Expose Block class globally for mod sandboxing
+        window.__ModBlockClass__ = Block;
+
+        // Mixin: allow mods to register custom blocks
+        this.registerBlockClass = (id, name, blockClass) => {
+            return BlockRegistry.registerBlockClass(id, name, blockClass);
+        };
+
+        // Create mod loader and expose it
+        this.modLoader = new ModLoader(this);
 
         // Tools are registered in BlockRegistry.create() alongside blocks and items
 
@@ -344,6 +358,33 @@ export default class Minecraft {
             } else {
                 return undefined;
             }
+        });
+
+        // Mod loader mixin functions
+        Mixin.registerFunction('mod:list', () => {
+            if (this.modLoader) {
+                return [...this.modLoader.mods.keys()];
+            }
+            return [];
+        });
+
+        Mixin.registerFunction('mod:isEnabled', (modId) => {
+            return this.modLoader ? this.modLoader.enabledMods.has(modId) : false;
+        });
+
+        Mixin.registerFunction('mod:getBlock', (modId, blockId) => {
+            const namespacedId = `${modId}:${blockId}`;
+            if (this.modLoader) {
+                const entry = this.modLoader.getMod(modId);
+                if (entry) {
+                    return entry.blockClasses.get(namespacedId);
+                }
+            }
+            return undefined;
+        });
+
+        Mixin.registerFunction('mod:getLoader', () => {
+            return this.modLoader;
         });
     }
 

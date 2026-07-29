@@ -20,6 +20,7 @@ const {
     createDisconnectPacket
 } = require('./packets');
 const { isSpectator } = require('./players');
+const config = require('./config');
 const Logger = require('./logger');
 
 let log = Logger;
@@ -303,6 +304,11 @@ function handlePlayPacket(player, packetId, buffer, offset) {
             handleUpdateSignText(player, buffer, offset);
             break;
         }
+
+        case 0x1F: { // Client Mod List (custom)
+            handleModListPacket(player, buffer, offset);
+            break;
+        }
     }
 }
 
@@ -520,6 +526,36 @@ function handleUpdateSignText(player, buffer, offset) {
         if (p.ws.readyState === 1) {
             sendSignTextUpdate(p.ws, x, y, z, text);
         }
+    }
+}
+
+function handleModListPacket(player, buffer, offset) {
+    let count = 0;
+    [count, offset] = readVarInt(buffer, offset);
+    const mods = [];
+    for (let i = 0; i < count; i++) {
+        let modId, modName, modVersion;
+        [modId, offset] = readString(buffer, offset);
+        [modName, offset] = readString(buffer, offset);
+        [modVersion, offset] = readString(buffer, offset);
+        mods.push({ id: modId, name: modName, version: modVersion });
+    }
+
+    player.mods = mods;
+
+    if (!config.allowMods && mods.length > 0) {
+        const modNames = mods.map(m => m.name).join(', ');
+        log.info('Server', `${player.username} kicked — mods not allowed (has: ${modNames})`);
+        if (player.ws.readyState === 1) {
+            const { createDisconnectPacket } = require('./packets');
+            player.ws.send(createDisconnectPacket(`§cThis server does not allow mods. Please disable your mods to join.`));
+            player.ws.close();
+        }
+        return;
+    }
+
+    if (mods.length > 0) {
+        log.info('Server', `${player.username} has mods: ${mods.map(m => `${m.name} v${m.version}`).join(', ')}`);
     }
 }
 

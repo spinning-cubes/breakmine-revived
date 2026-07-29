@@ -6,6 +6,7 @@ import PlayerControllerMultiplayer from "../controller/PlayerControllerMultiplay
 import ClientPlayerPositionRotationPacket from "../packet/play/client/ClientPlayerPositionRotationPacket.js";
 import PlayerEntity from "../../entity/PlayerEntity.js";
 import ServerAnimationPacket from "../packet/play/server/ServerAnimationPacket.js";
+import ClientModListPacket from "../packet/play/client/ClientModListPacket.js";
 import ClientConfirmTransactionPacket from "../packet/play/client/ClientConfirmTransactionPacket.js";
 import ItemEntity from "../../entity/ItemEntity.js";
 
@@ -30,6 +31,19 @@ export default class NetworkPlayHandler extends PacketHandler {
         let world = new WorldClient(this.minecraft);
         this.minecraft.loadWorld(world);
         this.minecraft.ingameOverlay.chatOverlay.clearChat();
+
+        // Send installed mod list to server
+        if (this.minecraft.modLoader) {
+            const modList = [];
+            for (const [modId, entry] of this.minecraft.modLoader.mods) {
+                modList.push({
+                    id: modId,
+                    name: entry.name,
+                    version: entry.version
+                });
+            }
+            this.networkManager.sendPacket(new ClientModListPacket(modList));
+        }
     }
 
     handleServerChat(packet) {

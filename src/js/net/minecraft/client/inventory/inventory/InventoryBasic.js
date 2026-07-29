@@ -51,6 +51,8 @@ export default class InventoryBasic extends Inventory {
             this.items[index] = new ItemStack(0, 0);
         } else if (typeof itemStack === 'number') {
             this.items[index] = new ItemStack(itemStack, 1);
+        } else if (typeof itemStack === 'string') {
+            this.items[index] = new ItemStack(itemStack, 1);
         } else {
             this.items[index] = itemStack.copy();
         }
