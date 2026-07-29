@@ -16,7 +16,7 @@ export default class ItemBucketLava extends ItemGeneric {
         const targetTypeId = world.getBlockAt(x, y, z);
         const targetBlock = Block.getById(targetTypeId);
         const isAirOrReplaceable = targetTypeId === 0 || (targetBlock && targetBlock.isReplaceable(world, x, y, z));
-        const isNotLava = targetTypeId !== BlockRegistry.LAVA.getId();
+        const isNotLava = targetTypeId !== BlockRegistry.LAVA.getId() && targetTypeId !== BlockRegistry.WATER.getId();
 
         if (!isAirOrReplaceable || !isNotLava) {
             return;

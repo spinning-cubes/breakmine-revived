@@ -15,7 +15,7 @@ export default class ItemBucketWater extends ItemGeneric {
 
         const targetTypeId = world.getBlockAt(x, y, z);
         const targetBlock = Block.getById(targetTypeId);
-        const canPlace = targetTypeId === 0 || (targetBlock && targetBlock.isReplaceable(world, x, y, z) && targetTypeId !== BlockRegistry.WATER.getId());
+        const canPlace = targetTypeId === 0 || (targetBlock && targetBlock.isReplaceable(world, x, y, z) && targetTypeId !== BlockRegistry.WATER.getId() && targetTypeId !== BlockRegistry.LAVA.getId());
 
         if (!canPlace) {
             return;
