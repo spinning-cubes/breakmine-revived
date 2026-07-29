@@ -232,6 +232,7 @@ export default class TextureAtlas {
             "gold_ingot.png",
             "bucket.png",
             "water_bucket.png",
+            "lava_bucket.png",
             ...toolTextureNames
         ];
 
