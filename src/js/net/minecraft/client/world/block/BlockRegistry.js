@@ -45,6 +45,7 @@ import BlockBeans from "./type/BlockBeans.js";
 import BlockMoldyBeans from "./type/BlockMoldyBeans.js";
 import BlockWire from "./type/BlockWire.js";
 import ItemBucketLava from "./type/ItemBucketLava.js";
+import BlockSign from "./type/BlockSign.js";
 
 export class BlockRegistry {
 
@@ -149,6 +150,7 @@ export class BlockRegistry {
         BlockRegistry.BEANS = new BlockBeans(78, 0);
         BlockRegistry.MOLDY_BEANS = new BlockMoldyBeans(79, 0);
         BlockRegistry.WIRE = new BlockWire(80, 0);
+        BlockRegistry.SIGN = new BlockSign(121, 0);
 
         BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
         BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");

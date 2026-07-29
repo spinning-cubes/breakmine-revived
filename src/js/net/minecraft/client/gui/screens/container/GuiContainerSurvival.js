@@ -32,6 +32,7 @@ export default class GuiContainerSurvival extends GuiContainer {
     }
 
     drawTitle(stack) {
+        
     }
 
     drawInventoryBackground(stack) {
