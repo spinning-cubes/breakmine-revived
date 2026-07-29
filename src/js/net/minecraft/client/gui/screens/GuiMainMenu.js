@@ -11,6 +11,7 @@ import GuiMultiplayer from "./GuiMultiplayer.js";
 import GuiAccount from "./GuiAccount.js";
 import GuiTexturePacks from "./GuiTexturePacks.js";
 import { SplashTexts } from "../../../../../../resources/splashes.js";
+import GuiYesNo from "./GuiYesNo.js";
 
 export default class GuiMainMenu extends GuiScreen {
 
@@ -27,6 +28,14 @@ export default class GuiMainMenu extends GuiScreen {
         this.textureLogo = this.getTexture("gui/title/minecraft.png");
 
         let y = this.height / 4 + 48;
+
+        if (Notification.permission !== "denied") {
+            this.buttonList.push(new GuiButton(this.minecraft, "Enable Notifications", 0, 0, 200, 20, async () => {
+                this.minecraft.displayScreen(new GuiYesNo(this, "Do you want to enable notifications?", "We will only send you notifications about updates.", "Yes", "No", () => {
+                    this.minecraft.initVersionChecker();
+                }));
+            }));
+        }
 
         this.buttonList.push(new GuiButton(this.minecraft, "Singleplayer", this.width / 2 - 100, y, 200, 20, async () => {
             const hasSave = await this.minecraft.hasSaveData();

@@ -16,7 +16,7 @@ export default class BlockCraftingTable extends Block {
             case EnumBlockFace.TOP:
                 return 'crafting_table_top';
             case EnumBlockFace.BOTTOM:
-                return 'planks_oak';
+                return 'oak_planks';
             default:
                 return 'crafting_table_side';
         }
