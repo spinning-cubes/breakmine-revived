@@ -47,6 +47,9 @@ export default class BlockRenderer {
             case BlockRenderType.TORCH:
                 this.renderTorch(world, block, x, y, z);
                 break;
+            case BlockRenderType.SIGN:
+                this.renderSign(world, block, x, y, z);
+                break;
         }
     }
 
@@ -528,6 +531,26 @@ export default class BlockRenderer {
         this.addFace(world, EnumBlockFace.TOP, false, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV + 8 / 256);
     }
 
+    renderSign(world, block, x, y, z) {
+        const data = world ? world.getBlockDataAt(x, y, z) : 0;
+        const xAxis = data & 1;
+
+        // Render post with log texture (always centered)
+        this.renderFakeBlockWithBlockClassWithBoundingBox(world, BlockRegistry.LOG, false, x, y, z, 
+            new BoundingBox(0.4375, 0, 0.4375, 0.5625, 0.4375, 0.5625));
+
+        // Render board with planks texture (rotated based on data)
+        if (xAxis) {
+            // X-axis rotation: board extends along X axis (0 to 1), thin on Z axis
+            this.renderFakeBlockWithBlockClassWithBoundingBox(world, BlockRegistry.WOOD, false, x, y, z,
+                new BoundingBox(0, 0.4375, 0.4375, 1, 1, 0.5625));
+        } else {
+            // Z-axis rotation: board extends along Z axis (0 to 1), thin on X axis
+            this.renderFakeBlockWithBlockClassWithBoundingBox(world, BlockRegistry.WOOD, false, x, y, z,
+                new BoundingBox(0.4375, 0.4375, 0, 0.5625, 1, 1));
+        }
+    }
+
     addDistortFace(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX, distortZ) {
         if (face === EnumBlockFace.NORTH) {
             this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, maxY, minZ, minU, minV);
@@ -608,6 +631,9 @@ export default class BlockRenderer {
                     this.renderFace(null, block, boundingBox, EnumBlockFace.NORTH, false, 0, 0, 0);
                     this.renderFace(null, block, boundingBox, EnumBlockFace.EAST, false, 0, 0, 0);
                     break;
+                case BlockRenderType.SIGN:
+                    this.renderSign(null, block, 0, 0, 0);
+                    break;
                 default:
                     this.renderGuiItem(block);
                     break;
@@ -632,6 +658,7 @@ export default class BlockRenderer {
         } else {
             switch (block.getRenderType()) {
                 case BlockRenderType.BLOCK:
+                case BlockRenderType.SIGN:
                     mesh.rotation.x = MathHelper.toRadians(45 / 1.5);
                     mesh.rotation.y = -MathHelper.toRadians(45 + 90);
                     break;

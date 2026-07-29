@@ -13,6 +13,7 @@ import ItemStack from "../item/ItemStack.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
 import TranslucentMeshBatcher from "./TranslucentMeshBatcher.js";
 import GuiFunctions from "../gui/screens/GuiFunctions.js";
+import SignTextRenderer from "./SignTextRenderer.js";
 
 export default class WorldRenderer {
 
@@ -95,6 +96,9 @@ export default class WorldRenderer {
 
         // Entity render manager
         this.entityRenderManager = new EntityRenderManager(this);
+
+        // Sign text renderer
+        this.signTextRenderer = new SignTextRenderer(this);
 
         this.equippedProgress = 0;
         this.prevEquippedProgress = 0;
@@ -1286,6 +1290,11 @@ export default class WorldRenderer {
     }
 
     reset() {
+        // Clear sign text meshes
+        if (this.signTextRenderer) {
+            this.signTextRenderer.clear();
+        }
+
         // Remove world group from scene if it exists
         if (this.minecraft.world !== null) {
             this.scene.remove(this.minecraft.world.group);

@@ -75,6 +75,7 @@ class Start {
             "terrain/pack/minecraft/textures/blocks/destroy_stage_8.png",
             "terrain/pack/minecraft/textures/blocks/destroy_stage_9.png",
             "terrain/pack/minecraft/textures/misc/shadow.png",
+            "terrain/pack/minecraft/textures/blocks/oak_planks.png",
         ]).then((resources) => {
             // Launch actual game on canvas
             window.app = new Minecraft(canvasWrapperId, resources);

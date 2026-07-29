@@ -497,8 +497,25 @@ export default class World {
             return;
         }
 
+        // Get old block before changing
+        let oldTypeId = this.getBlockAt(x, y, z);
+        let oldBlock = Block.getById(oldTypeId);
+
         let chunk = this.getChunkAt(x >> 4, z >> 4);
         chunk.setBlockAt(x & 15, y, z & 15, type, data);
+
+        // Call onBlockRemoved for the old block if it's being replaced
+        if (oldBlock && oldBlock.onBlockRemoved && (type === 0 || oldTypeId !== type)) {
+            oldBlock.onBlockRemoved(this, x, y, z);
+        }
+
+        // Call onBlockPlaced for the new block if it's being placed
+        if (type !== 0 && type !== oldTypeId) {
+            let newBlock = Block.getById(type);
+            if (newBlock && newBlock.onBlockPlaced) {
+                newBlock.onBlockPlaced(this, x, y, z, null);
+            }
+        }
 
         // Schedule ticks for adjacent blocks when a block is removed
         if (type === 0) {

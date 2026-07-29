@@ -75,18 +75,7 @@ export default class GameWindow {
             this.updateWindowSize();
         });
         this.registerListener(document, 'mousedown', event => {
-            // In-Game mouse click
-            this.minecraft.onMouseClicked(event.button);
-
-            this.mouseButtons[event.button] = true;
-
-            // Start interval to repeat the mouse event
-            if (this.mouseDownInterval !== null) {
-                clearInterval(this.mouseDownInterval);
-            }
-            this.mouseDownInterval = setInterval(_ => this.minecraft.onMouseClicked(event.button), 250);
-
-            // Handle mouse click on screen
+            // Handle mouse click on screen first
             let currentScreen = this.minecraft.currentScreen;
             if (currentScreen !== null) {
                 currentScreen.mouseClicked(
@@ -94,6 +83,17 @@ export default class GameWindow {
                     event.y / this.scaleFactor,
                     event.button
                 );
+            } else {
+                // In-Game mouse click (only when no GUI is open)
+                this.minecraft.onMouseClicked(event.button);
+
+                this.mouseButtons[event.button] = true;
+
+                // Start interval to repeat the mouse event
+                if (this.mouseDownInterval !== null) {
+                    clearInterval(this.mouseDownInterval);
+                }
+                this.mouseDownInterval = setInterval(_ => this.minecraft.onMouseClicked(event.button), 250);
             }
 
             // Fix cursor lock state

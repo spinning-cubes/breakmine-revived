@@ -343,6 +343,26 @@ export default class NetworkPlayHandler extends PacketHandler {
         this.minecraft.world.setBlockAt(position.getX(), position.getY(), position.getZ(), typeId, blockData);
     }
 
+    handleSignTextUpdate(packet) {
+        let position = packet.getBlockPosition();
+        let text = packet.getText();
+
+        if (this.minecraft.world && this.minecraft.world.blockInventories) {
+            const key = `${position.getX()},${position.getY()},${position.getZ()}`;
+            this.minecraft.world.blockInventories.set(key, { text: text });
+
+            // Update sign text rendering
+            if (this.minecraft.worldRenderer && this.minecraft.worldRenderer.signTextRenderer) {
+                this.minecraft.worldRenderer.signTextRenderer.updateSign(
+                    this.minecraft.world,
+                    position.getX(),
+                    position.getY(),
+                    position.getZ()
+                );
+            }
+        }
+    }
+
     handleDisconnect(packet) {
         this.minecraft.loadWorld(null);
         this.minecraft.displayScreen(new GuiDisconnected(packet.getReason()));

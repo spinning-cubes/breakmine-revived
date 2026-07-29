@@ -478,6 +478,11 @@ export default class Minecraft {
         world.spawn.y = world.getHeightAt(world.spawn.x, world.spawn.z) + 1;
         this.player.respawn();
 
+        // Load sign text for all signs in the world
+        if (this.worldRenderer.signTextRenderer) {
+            this.worldRenderer.signTextRenderer.updateAllSigns(world);
+        }
+
         if (this.loadingScreen !== null) {
             this.loadingScreen = null;
             this.displayScreen(null);
@@ -1482,7 +1487,7 @@ export default class Minecraft {
                     let z = hitResult.z + hitResult.face.z;
 
                     let blockCheck = Block.getById(this.world.getBlockAt(hitResult.x, hitResult.y, hitResult.z));
-                    if (blockCheck.onMouseButton(this.world, hitResult.x, hitResult.y, hitResult.z, button)) return;
+                    if (blockCheck && blockCheck.onMouseButton && blockCheck.onMouseButton(this.world, hitResult.x, hitResult.y, hitResult.z, button)) return;
 
                     let placedBoundingBox = new BoundingBox(x, y, z, x + 1, y + 1, z + 1);
 

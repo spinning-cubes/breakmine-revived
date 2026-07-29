@@ -13,6 +13,7 @@ export default class GuiTextField extends GuiButton {
         this.cursorCounter = 0;
         this.maxLength = 80;
         this.renderBackground = true;
+        this.centered = false;
 
         this.renderE = true;
         this.cursorPosition = 0;
@@ -27,7 +28,7 @@ export default class GuiTextField extends GuiButton {
         this.isFocused = this.alwaysFocused || this.isFocused;
         
         let cursorVisible = this.isFocused && Math.floor(this.cursorCounter / 6) % 2 === 0;
-        let textColor = this.enabled ? 0xffffff : 0x707070ff;
+        let textColor = this.noShadow ? 0x000000 : (this.enabled ? 0xffffff : 0x707070ff);
 
         // Draw background
         if (this.renderBackground) {
@@ -36,7 +37,14 @@ export default class GuiTextField extends GuiButton {
         }
 
         // Draw text
-        this.drawString(stack, this.text, this.x + 2, this.y + this.height / 2 - 4, textColor, true, false);
+        let textX;
+        if (this.centered) {
+            const textWidth = this.getStringWidth(stack, this.text, true);
+            textX = this.x + (this.width - textWidth) / 2;
+        } else {
+            textX = this.x + 2;
+        }
+        this.drawString(stack, this.text, textX, this.y + this.height / 2 - 4, textColor, !this.noShadow, false);
 
         // TODO: Draw suggestions
         // this.drawString(stack, suggestion[0], this.x + 2 + this.getStringWidth(stack, this.text), this.y + this.height / 2 - 14, textColor);
@@ -47,7 +55,14 @@ export default class GuiTextField extends GuiButton {
             let textBeforeCursor = this.text.substring(0, this.cursorPosition);
             let cursorOffset = this.getStringWidth(stack, textBeforeCursor, true);
             
-            this.drawString(stack, "_", this.x + 2 + cursorOffset, this.y + this.height / 2 - 3, textColor);
+            let cursorX;
+            if (this.centered) {
+                const textWidth = this.getStringWidth(stack, this.text, true);
+                cursorX = this.x + (this.width - textWidth) / 2 + cursorOffset;
+            } else {
+                cursorX = this.x + 2 + cursorOffset;
+            }
+            this.drawString(stack, "_", cursorX, this.y + this.height / 2 - 3, textColor);
         }
     }
 
