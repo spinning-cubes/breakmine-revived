@@ -134,12 +134,6 @@ export default class GuiTexturePacks extends GuiScreen {
             }
         }
     }
-                         console.error('Failed to parse texture pack metadata:', e);
-                     }
-                 }
-             }
-         }
-    }
 
     uploadTexturePack() {
         const input = document.createElement('input');
