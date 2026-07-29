@@ -108,73 +108,92 @@ export default class GuiServerSlot extends GuiButton {
     }
 
     startPing() {
-        // Try to ping by opening a WebSocket to the server address (assumes ws proxy)
-        if (!this.worldDate) return;
+        if (!this.worldDetails) return;
 
-        // If address already contains ws:// or wss://, use it directly
-        let address = this.worldDetails.trim();
+        let rawAddress = this.worldDetails.trim();
         let addresses = [];
 
-        if (address.startsWith('ws://') || address.startsWith('wss://')) {
-            addresses.push(address);
+        if (rawAddress.startsWith('ws://') || rawAddress.startsWith('wss://')) {
+            addresses.push(rawAddress);
         } else {
-            if (!address.includes(':')) {
-                address = address + ':25565';
-            }
-            addresses.push('wss://' + address);
-            addresses.push('ws://' + address);
+            // Try wss first, then ws (using exact raw address without appending ports)
+            addresses.push('wss://' + rawAddress);
+            addresses.push('ws://' + rawAddress);
         }
 
-        let settled = false;
-        let pingSentAt = null;
-        let connected = false;
-
         const tryPing = (url) => {
-            try {
-                const ws = new WebSocket(url);
+            let settled = false;
+            let pingSentAt = null;
+            let ws = null;
+            let timeoutId = null;
 
-                const finish = (success, elapsed = null, payload = null) => {
-                    if (settled) return;
-                    settled = true;
-                    if (success) {
-                        this.pingMs = elapsed ?? 0;
-                        if (payload && typeof payload === 'object') {
-                            if (typeof payload.players === 'number') this.playerCount = payload.players;
-                            if (typeof payload.maxPlayers === 'number') this.maxPlayers = payload.maxPlayers;
-                        }
-                    } else {
-                        // If we have more addresses to try, continue
-                        if (addresses.length > 0) {
-                            settled = false;
-                            tryPing(addresses.shift());
-                            return;
-                        }
-                        this.pingMs = -1;
+            const cleanup = () => {
+                if (timeoutId) clearTimeout(timeoutId);
+                if (ws) {
+                    try {
+                        ws.onopen = null;
+                        ws.onmessage = null;
+                        ws.onerror = null;
+                        ws.onclose = null;
+                        ws.close();
+                    } catch (e) {}
+                }
+            };
+
+            const finish = (success, elapsed = null, payload = null) => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+
+                if (success) {
+                    this.pingMs = elapsed ?? 0;
+                    if (payload && typeof payload === 'object') {
+                        if (typeof payload.players === 'number') this.playerCount = payload.players;
+                        if (typeof payload.maxPlayers === 'number') this.maxPlayers = payload.maxPlayers;
                     }
                     this.pingIcon = this.computeIconIndex(this.pingMs);
-                    try { ws.close(); } catch (e) {}
-                };
+                } else {
+                    if (addresses.length > 0) {
+                        tryPing(addresses.shift());
+                    } else {
+                        this.pingMs = -1;
+                        this.pingIcon = 5;
+                    }
+                }
+            };
+
+            try {
+                ws = new WebSocket(url);
+
+                timeoutId = setTimeout(() => {
+                    finish(false);
+                }, 2000);
 
                 ws.addEventListener('open', () => {
-                    connected = true;
                     pingSentAt = Date.now();
-                    try { ws.send('ping'); } catch (e) { if (!settled) finish(false); }
+                    try {
+                        ws.send('ping');
+                    } catch (e) {
+                        finish(false);
+                    }
                 });
+
                 ws.addEventListener('message', (event) => {
                     if (pingSentAt !== null) {
                         try {
                             const payload = typeof event.data === 'string' ? JSON.parse(event.data) : null;
                             finish(true, Date.now() - pingSentAt, payload);
-                        } catch (e) { finish(true, Date.now() - pingSentAt); }
+                        } catch (e) {
+                            finish(true, Date.now() - pingSentAt);
+                        }
                     }
                 });
-                ws.addEventListener('error', () => { if (!connected && !settled) finish(false); });
-                ws.addEventListener('close', () => { if (!connected && !settled) finish(false); });
 
-                setTimeout(() => { if (!connected && !settled) finish(false); }, 2000);
+                ws.addEventListener('error', () => finish(false));
+                ws.addEventListener('close', () => finish(false));
+
             } catch (e) {
-                if (addresses.length > 0) tryPing(addresses.shift());
-                else { this.pingMs = -1; this.pingIcon = 5; }
+                finish(false);
             }
         };
 
