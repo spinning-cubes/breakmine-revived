@@ -1,6 +1,8 @@
 import GuiScreen from "../GuiScreen.js";
 import GuiButton from "../widgets/GuiButton.js";
 import GuiTextField from "../widgets/GuiTextField.js";
+import ClientUpdateSignTextPacket from "../../network/packet/play/client/ClientUpdateSignTextPacket.js";
+import BlockPosition from "../../../util/BlockPosition.js";
 
 export default class GuiSign extends GuiScreen {
 
@@ -93,9 +95,16 @@ export default class GuiSign extends GuiScreen {
             }
 
             // Send sign text update to server if connected
-            if (this.minecraft.networkManager && this.minecraft.networkManager.isConnected()) {
-                const packet = new ClientUpdateSignTextPacket(this.blockPosition, this.signText);
-                this.minecraft.networkManager.sendPacket(packet);
+            if (!this.minecraft.isSingleplayer()) {
+                const nm = this.minecraft.playerController?.getNetworkHandler?.()?.getNetworkManager?.();
+                if (nm) {
+                    const blockPos = new BlockPosition(this.blockPosition.x, this.blockPosition.y, this.blockPosition.z);
+                    const packet = new ClientUpdateSignTextPacket(blockPos, this.signText);
+                    nm.sendPacket(packet);
+                }
+            } else {
+                // Trigger immediate save in singleplayer
+                this.minecraft.saveWorld();
             }
         }
 

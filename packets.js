@@ -156,6 +156,22 @@ function sendBlockChange(ws, x, y, z, blockState) {
     ws.send(makePacket(0x23, data.subarray(0, offset)));
 }
 
+function sendSignTextUpdate(ws, x, y, z, text) {
+    const data = Buffer.alloc(256);
+    let offset = 0;
+
+    // Protocol 47: Pack position as 64-bit long
+    let xPacked = BigInt(x) & ((1n << 26n) - 1n);
+    let yPacked = BigInt(y) & ((1n << 12n) - 1n);
+    let zPacked = BigInt(z) & ((1n << 26n) - 1n);
+    let packedPos = (xPacked << 38n) | (yPacked << 26n) | zPacked;
+
+    data.writeBigUInt64BE(packedPos, offset); offset += 8;
+    offset += writeString(data, text, offset);
+
+    ws.send(makePacket(0x49, data.subarray(0, offset)));
+}
+
 function sendChatMessage(text) {
     const chatJson = JSON.stringify({ text });
     const chatData = Buffer.alloc(Buffer.byteLength(chatJson) + 5);
@@ -334,6 +350,7 @@ module.exports = {
     sendTimeUpdate,
     sendPlayerPositionLook,
     sendBlockChange,
+    sendSignTextUpdate,
     sendChatMessage,
     createSpawnPlayerPacket,
     createEntityTeleportPacket,

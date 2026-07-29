@@ -152,6 +152,17 @@ function handleLoginPacket(player, packetId, buffer, offset) {
                 type: 'blockInventories',
                 inventories: getAllBlockInventoriesState()
             }));
+
+            // Send sign text updates for all signs
+            const { getBlockInventories } = require('./world');
+            const { sendSignTextUpdate } = require('./packets');
+            const inventories = getBlockInventories();
+            for (const [key, inv] of inventories) {
+                if (inv && inv.text) {
+                    const [x, y, z] = key.split(',').map(Number);
+                    sendSignTextUpdate(player.ws, x, y, z, inv.text);
+                }
+            }
         }
 
         // Send initial time to client
@@ -502,15 +513,12 @@ function handleUpdateSignText(player, buffer, offset) {
     setBlockInventory(blockKey, { text: text });
     saveWorld();
 
-    // Broadcast sign text update to all players
+    // Broadcast sign text update to all players via packet
+    const { sendSignTextUpdate } = require('./packets');
     const players = getPlayers();
     for (const p of players.values()) {
         if (p.ws.readyState === 1) {
-            p.ws.send(JSON.stringify({
-                type: 'blockInventory',
-                key: blockKey,
-                inventory: { text: text }
-            }));
+            sendSignTextUpdate(p.ws, x, y, z, text);
         }
     }
 }
