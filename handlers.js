@@ -287,6 +287,11 @@ function handlePlayPacket(player, packetId, buffer, offset) {
             handlePickupItem(player, buffer, offset);
             break;
         }
+
+        case 0x0E: { // Client Update Sign Text
+            handleUpdateSignText(player, buffer, offset);
+            break;
+        }
     }
 }
 
@@ -481,6 +486,29 @@ function handlePickupItem(player, buffer, offset) {
     for (const p of players.values()) {
         if (p.ws.readyState === 1) {
             p.ws.send(destroyPacket);
+        }
+    }
+}
+
+function handleUpdateSignText(player, buffer, offset) {
+    const [x, y, z] = readPosition(buffer, offset);
+    const [text, textBytes] = readString(buffer, offset + 8);
+
+    const blockKey = `${x},${y},${z}`;
+    const { setBlockInventory, saveWorld } = require('./world');
+    
+    setBlockInventory(blockKey, { text: text });
+    saveWorld();
+
+    // Broadcast sign text update to all players
+    const players = getPlayers();
+    for (const p of players.values()) {
+        if (p.ws.readyState === 1) {
+            p.ws.send(JSON.stringify({
+                type: 'blockInventory',
+                key: blockKey,
+                inventory: { text: text }
+            }));
         }
     }
 }
