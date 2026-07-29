@@ -87,7 +87,7 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         player.username = username;
 
         const existingPlayer = findPlayerByUsername(username);
-        if (existingPlayer) {
+        if (existingPlayer && false) {
             const reason = `§cA player with the name \"${username}\" is already online.`;
             if (player.ws.readyState === 1) {
                 player.ws.send(createDisconnectPacket(reason));
