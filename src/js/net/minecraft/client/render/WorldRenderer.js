@@ -64,6 +64,11 @@ export default class WorldRenderer {
         // Create texture atlas for dynamic block textures
         this.textureAtlas = new TextureAtlas(minecraft);
         
+        // Load selected texture pack if set in settings
+        if (minecraft.settings.selectedTexturePack) {
+            this.textureAtlas.texturePath = `texture_packs/${minecraft.settings.selectedTexturePack}/`;
+        }
+        
         // Load terrain texture (fallback for now)
         this.textureTerrain = minecraft.getThreeTexture('terrain/terrain.png');
         this.textureTerrain.magFilter = THREE.NearestFilter;

@@ -146,6 +146,9 @@ export default class Minecraft {
         this.soundManager = new SoundManager();
         this.musicManager = new MusicManager();
 
+        // Create filesystem for texture packs
+        this.filesystem = new FileSystem('TexturePackDB', 'texture_packs');
+
         // If in prelaunch mode; display the menu for it instead
         if (window.isPreLaunch) {
             console.log("Prelaunch mode; game won't start until menu is exited.");
@@ -281,10 +284,10 @@ export default class Minecraft {
         this.musicManager.stopMusic();
 
         if (world === null) {
-            // Save world before quitting
-            if (this.world !== null && this.isSingleplayer()) {
-                await this.saveWorld();
-            }
+            // Save world before quitting (disabled)
+            // if (this.world !== null && this.isSingleplayer()) {
+            //     await this.saveWorld();
+            // }
 
             this.worldRenderer.reset();
             this.itemRenderer.reset();
@@ -337,6 +340,12 @@ export default class Minecraft {
             this.world = world;
             this.worldRenderer.scene.add(this.world.group);
 
+            // Reload texture atlas with selected pack if set
+            if (this.settings.selectedTexturePack && this.worldRenderer.textureAtlas) {
+                this.worldRenderer.textureAtlas.texturePath = `texture_packs/${this.settings.selectedTexturePack}/`;
+                await this.worldRenderer.textureAtlas.loadTextures();
+            }
+
             // Create player
             this.player = this.playerController.createPlayer(this.world);
             this.player.username = this.session.getProfile().getUsername();
@@ -356,10 +365,10 @@ export default class Minecraft {
     }
 
     async _loadWorldAsync(world) {
-        // Load saved chunk data from IndexedDB before generating new chunks
-        if (this.isSingleplayer()) {
-            await this.loadWorldSave(world, this.currentWorldKey);
-        }
+        // Load saved chunk data from IndexedDB before generating new chunks (disabled)
+        // if (this.isSingleplayer()) {
+        //     await this.loadWorldSave(world, this.currentWorldKey);
+        // }
 
         const provider = world.getChunkProvider();
         const viewDistance = this.settings.viewDistance;
@@ -385,9 +394,6 @@ export default class Minecraft {
 
             await new Promise(r => setTimeout(r, 0));
         }
-
-        world.spawn.y = world.getHeightAt(world.spawn.x, world.spawn.z) + 1;
-        this.player.respawn();
 
         if (this.loadingScreen !== null) {
             this.loadingScreen = null;
@@ -458,65 +464,33 @@ export default class Minecraft {
     }
 
     async _loadWorldIndex() {
-        const db = await this._getWorldDB();
-
-        // Check if index exists; if not, try migrating old save
-        const checkTx = db.transaction('saves', 'readonly');
-        const checkGet = await new Promise(r => {
-            const req = checkTx.objectStore('saves').get('world_index');
-            req.onsuccess = () => r(req.result);
-            req.onerror = () => r(null);
-        });
-
-        if (!checkGet) {
-            await this._migrateOldSave();
-        }
-
-        return new Promise((resolve) => {
-            const tx = db.transaction('saves', 'readonly');
-            const get = tx.objectStore('saves').get('world_index');
-            get.onsuccess = () => resolve(get.result ? get.result.data : []);
-            get.onerror = () => resolve([]);
-        });
+        // Disabled - world save functionality removed
+        return [];
     }
 
     async _saveWorldIndex(index) {
-        const db = await this._getWorldDB();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction('saves', 'readwrite');
-            tx.objectStore('saves').put({ key: 'world_index', data: index, timestamp: Date.now() });
-            tx.oncomplete = () => resolve();
-            tx.onerror = (e) => reject(e.target.error);
-        });
+        // Disabled - world save functionality removed
+        return;
     }
 
     async _saveWorldToDB(worldKey, saveData) {
-        const db = await this._getWorldDB();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction('saves', 'readwrite');
-            tx.objectStore('saves').put({ key: worldKey, data: saveData, timestamp: Date.now() });
-            tx.oncomplete = () => resolve();
-            tx.onerror = (e) => reject(e.target.error);
-        });
+        // Disabled - world save functionality removed
+        return;
     }
 
     async _loadWorldFromDB(worldKey) {
-        const db = await this._getWorldDB();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction('saves', 'readonly');
-            const get = tx.objectStore('saves').get(worldKey);
-            get.onsuccess = () => resolve(get.result ? get.result.data : null);
-            get.onerror = (e) => reject(e.target.error);
-        });
+        // Disabled - world load functionality removed
+        return null;
     }
 
     async hasSaveData() {
-        const index = await this._loadWorldIndex();
-        return index.length > 0;
+        // Disabled - world save functionality removed
+        return false;
     }
 
     async getWorldList() {
-        return this._loadWorldIndex();
+        // Disabled - world save functionality removed
+        return [];
     }
 
     async createNewWorld(name, seedLong, worldType, gameMode) {
@@ -527,22 +501,22 @@ export default class Minecraft {
         let provider = new ChunkProviderGenerateWorker(world, seedLong, worldType);
         world.setChunkProvider(provider);
 
-        // Add to world index
-        const index = await this._loadWorldIndex();
-        index.push({
-            key: worldKey,
-            name: name,
-            seedLow: seedLong.low,
-            seedHigh: seedLong.high,
-            worldType: worldType,
-            gameMode: gameMode || 'survival',
-            lastPlayed: Date.now(),
-            time: 0,
-            spawnX: 0,
-            spawnY: 0,
-            spawnZ: 0,
-        });
-        await this._saveWorldIndex(index);
+        // Add to world index (disabled)
+        // const index = await this._loadWorldIndex();
+        // index.push({
+        //     key: worldKey,
+        //     name: name,
+        //     seedLow: seedLong.low,
+        //     seedHigh: seedLong.high,
+        //     worldType: worldType,
+        //     gameMode: gameMode || 'survival',
+        //     lastPlayed: Date.now(),
+        //     time: 0,
+        //     spawnX: 0,
+        //     spawnY: 0,
+        //     spawnZ: 0,
+        // });
+        // await this._saveWorldIndex(index);
 
         this.playerController = new PlayerController(this);
         await this.loadWorld(world);
@@ -552,245 +526,23 @@ export default class Minecraft {
     }
 
     async saveWorld() {
-        if (!this.world || !this.isSingleplayer() || !this.currentWorldKey) return;
-
-        const provider = this.world.getChunkProvider();
-        const chunks = provider.getChunks();
-        const modifiedData = {};
-        const dirtySections = [];
-
-        for (const [index, chunk] of chunks) {
-            if (chunk.hasDirtySections()) {
-                modifiedData[index] = chunk.serialize();
-                dirtySections.push(chunk.sections);
-            }
-        }
-
-        try {
-            const seed = this.world.getSeed();
-            const saveData = {
-                name: '',
-                seedLow: seed && typeof seed === 'object' ? seed.low : 0,
-                seedHigh: seed && typeof seed === 'object' ? seed.high : 0,
-                worldType: provider.worldType || 'normal',
-                spawnX: this.world.spawn.x,
-                spawnY: this.world.spawn.y,
-                spawnZ: this.world.spawn.z,
-                time: this.world.time,
-                chunks: modifiedData
-            };
-
-            if (Object.keys(modifiedData).length > 0) {
-                for (const sections of dirtySections) {
-                    for (const section of sections) {
-                        section.isDirty = false;
-                    }
-                }
-            }
-
-            if (this.world.blockInventories && this.world.blockInventories.size > 0) {
-                const inventories = [];
-                for (const [key, inv] of this.world.blockInventories) {
-                    const state = inv.toNetworkState();
-                    for (const prop of Object.keys(inv)) {
-                        if (prop !== 'items' && typeof inv[prop] !== 'function') {
-                            state[prop] = inv[prop];
-                        }
-                    }
-                    inventories.push({ key, state });
-                }
-                saveData.blockInventories = inventories;
-            }
-
-            if (this.player && this.player.inventory) {
-                saveData.playerInventory = this.player.inventory.toNetworkState();
-            }
-
-            if (this.player) {
-                saveData.playerPos = { x: this.player.x, y: this.player.y, z: this.player.z };
-                saveData.playerRot = { yaw: this.player.rotationYaw, pitch: this.player.rotationPitch };
-                saveData.playerHealth = this.player.health;
-                saveData.playerGameMode = {
-                    creative: this.player.creative,
-                    spectator: this.player.spectator,
-                    flying: this.player.flying,
-                };
-            }
-
-            // Save dropped items
-            const itemEntities = [];
-            if (this.world.entities) {
-                for (const entity of this.world.entities) {
-                    if (entity.constructor.name === 'ItemEntity') {
-                        itemEntities.push({
-                            blockId: entity.getBlockId(),
-                            x: entity.x,
-                            y: entity.y,
-                            z: entity.z,
-                            motionX: entity.motionX,
-                            motionY: entity.motionY,
-                            motionZ: entity.motionZ,
-                        });
-                    }
-                }
-            }
-            if (itemEntities.length > 0) {
-                saveData.itemEntities = itemEntities;
-            }
-
-            await this._saveWorldToDB(this.currentWorldKey, saveData);
-
-            // Update world index metadata
-            const index = await this._loadWorldIndex();
-            const entry = index.find(e => e.key === this.currentWorldKey);
-            if (entry) {
-                if (!entry.name && saveData.name) entry.name = saveData.name;
-                entry.lastPlayed = Date.now();
-                entry.time = this.world.time;
-                entry.spawnX = this.world.spawn.x;
-                entry.spawnY = this.world.spawn.y;
-                entry.spawnZ = this.world.spawn.z;
-                if (this.player) {
-                    entry.gameMode = this.player.creative ? 'creative' : this.player.spectator ? 'spectator' : 'survival';
-                }
-                await this._saveWorldIndex(index);
-            }
-        } catch (err) {
-            console.error('Failed to save world:', err);
-        }
+        // Disabled - world save functionality removed
+        return;
     }
 
     async loadWorldSave(world, worldKey) {
-        if (!this.isSingleplayer()) return;
-
-        try {
-            const saveData = await this._loadWorldFromDB(worldKey);
-            if (!saveData) return;
-            const provider = world.getChunkProvider();
-
-            if (saveData.seedLow !== undefined) {
-                const currentSeed = world.getSeed();
-                if (currentSeed && typeof currentSeed === 'object') {
-                    if (currentSeed.low !== saveData.seedLow || currentSeed.high !== saveData.seedHigh) {
-                        return;
-                    }
-                }
-            }
-
-            for (const key in saveData.chunks) {
-                const chunkData = saveData.chunks[key];
-                const chunk = Chunk.deserialize(world, chunkData);
-                chunk.setModifiedAllSections();
-                provider.getChunks().set(parseInt(key), chunk);
-                world.group.add(chunk.group);
-            }
-
-            if (saveData.spawnX !== undefined) {
-                world.spawn.x = saveData.spawnX;
-                world.spawn.y = saveData.spawnY;
-                world.spawn.z = saveData.spawnZ;
-            }
-            if (saveData.time !== undefined) {
-                world.time = saveData.time;
-            }
-
-            if (saveData.blockInventories) {
-                if (!world.blockInventories) {
-                    world.blockInventories = new Map();
-                }
-                for (const entry of saveData.blockInventories) {
-                    const inv = new InventoryBasic(entry.state.size || 1);
-                    inv.applyNetworkState(entry.state);
-                    world.blockInventories.set(entry.key, inv);
-                }
-            }
-
-            if (saveData.playerInventory && this.player && this.player.inventory) {
-                this.player.inventory.applyNetworkState(saveData.playerInventory);
-            }
-        } catch (err) {
-            console.error('Failed to load world save:', err);
-        }
+        // Disabled - world load functionality removed
+        return;
     }
 
     async loadSavedWorld(worldKey) {
-        const saveData = await this._loadWorldFromDB(worldKey);
-        if (!saveData) return false;
-
-        this.currentWorldKey = worldKey;
-
-        let seedLong;
-        if (saveData.seedLow !== undefined) {
-            seedLong = new Long(saveData.seedLow, saveData.seedHigh);
-        } else {
-            seedLong = new Long(0, 0);
-        }
-
-        const worldType = saveData.worldType || 'normal';
-
-        let world = new World(this);
-        let provider = new ChunkProviderGenerateWorker(world, seedLong, worldType);
-        world.setChunkProvider(provider);
-
-        this.playerController = new PlayerController(this);
-        await this.loadWorld(world);
-        this.ingameOverlay.chatOverlay.clearChat();
-
-        const index = await this._loadWorldIndex();
-        const entry = index.find(e => e.key === worldKey);
-        if (entry) {
-            if (this.player) {
-                this.player.creative = (entry.gameMode === 'creative');
-                this.player.spectator = (entry.gameMode === 'spectator');
-                if (this.player.spectator) this.player.flying = true;
-            }
-        }
-
-        if (saveData.playerPos && this.player) {
-            this.player.setPositionAndRotation(
-                saveData.playerPos.x, saveData.playerPos.y, saveData.playerPos.z,
-                saveData.playerRot ? saveData.playerRot.yaw : 0,
-                saveData.playerRot ? saveData.playerRot.pitch : 0
-            );
-        }
-
-        if (saveData.playerHealth !== undefined && this.player) {
-            this.player.health = saveData.playerHealth;
-            this.player.isDead = this.player.health <= 0;
-        }
-
-        if (saveData.playerGameMode && this.player) {
-            this.player.creative = saveData.playerGameMode.creative;
-            this.player.spectator = saveData.playerGameMode.spectator;
-            this.player.flying = this.player.spectator || saveData.playerGameMode.flying;
-        }
-
-        if (saveData.itemEntities && this.world && this.world.entities) {
-            for (const itemData of saveData.itemEntities) {
-                const item = new ItemEntity(this, this.world, itemData.blockId, itemData.x, itemData.y, itemData.z);
-                item.motionX = itemData.motionX || 0;
-                item.motionY = itemData.motionY || 0;
-                item.motionZ = itemData.motionZ || 0;
-                item.tickCount = 0;
-                this.world.addEntity(item);
-            }
-        }
-
-        return true;
+        // Disabled - world load functionality removed
+        return false;
     }
 
     async deleteWorld(worldKey) {
-        const db = await this._getWorldDB();
-        await new Promise((resolve, reject) => {
-            const tx = db.transaction('saves', 'readwrite');
-            tx.objectStore('saves').delete(worldKey);
-            tx.oncomplete = () => resolve();
-            tx.onerror = (e) => reject(e.target.error);
-        });
-
-        const index = await this._loadWorldIndex();
-        const filtered = index.filter(e => e.key !== worldKey);
-        await this._saveWorldIndex(filtered);
+        // Disabled - world save functionality removed
+        return;
     }
 
     hasInGameFocus() {
@@ -1037,13 +789,13 @@ export default class Minecraft {
             this.world.getChunkProvider().requestChunksInRadius(cameraChunkX, cameraChunkZ, renderDistance);
         }
 
-        // Auto-save world every 30 seconds
-        if (this.isInGame() && this.isSingleplayer() && this.loadingScreen === null) {
-            if (Date.now() - this.lastSaveTime > this.saveInterval) {
-                this.lastSaveTime = Date.now();
-                this.saveWorld();
-            }
-        }
+        // Auto-save world every 30 seconds (disabled)
+        // if (this.isInGame() && this.isSingleplayer() && this.loadingScreen === null) {
+        //     if (Date.now() - this.lastSaveTime > this.saveInterval) {
+        //         this.lastSaveTime = Date.now();
+        //         this.saveWorld();
+        //     }
+        // }
     }
 
     handleMiningTicks() {

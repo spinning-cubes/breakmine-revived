@@ -31,6 +31,8 @@ export default class GameSettings {
         this.username = '';
 
         this.loggedIn = false;
+
+        this.selectedTexturePack = null;
     }
 
     load() {

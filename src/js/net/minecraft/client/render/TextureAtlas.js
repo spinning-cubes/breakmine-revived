@@ -233,6 +233,15 @@ export default class TextureAtlas {
             ...toolTextureNames
         ];
 
+        // If using texture pack, adjust paths
+        if (this.texturePath.startsWith('texture_packs/')) {
+            const packId = this.texturePath.split('/')[1];
+            return [
+                ...blockTextures.map(name => 'blocks/' + name),
+                ...itemTextures.map(name => 'items/' + name)
+            ];
+        }
+
         return [
             ...blockTextures.map(name => 'terrain/pack/minecraft/textures/blocks/' + name),
             ...itemTextures.map(name => 'terrain/pack/minecraft/textures/items/' + name)
@@ -249,6 +258,43 @@ export default class TextureAtlas {
                 image.onload = () => resolve(image);
                 image.onerror = () => reject(new Error(`Failed to load image: ${path}`));
                 image.src = this.minecraft.resources[path].src;
+            } else if (this.texturePath.startsWith('texture_packs/')) {
+                // Load from texture pack filesystem
+                const packId = this.texturePath.split('/')[1];
+                // path might be just filename or full path
+                let relativePath = path;
+                if (path.includes('/')) {
+                    relativePath = path.replace(/^terrain\/pack\/minecraft\/textures\/blocks\//, '').replace(/^terrain\/pack\/minecraft\/textures\/items\//, '');
+                }
+                const fsPath = `texture_packs/${packId}/${relativePath}.b64`;
+                
+                if (this.minecraft.filesystem) {
+                    this.minecraft.filesystem.loadBinaryFile(fsPath)
+                        .then(data => {
+                            if (data) {
+                                const blob = new Blob([data], { type: 'image/png' });
+                                const imageUrl = URL.createObjectURL(blob);
+                                image.onload = () => {
+                                    URL.revokeObjectURL(imageUrl);
+                                    resolve(image);
+                                };
+                                image.onerror = () => {
+                                    URL.revokeObjectURL(imageUrl);
+                                    reject(new Error(`Failed to load image: ${path}`));
+                                };
+                                image.src = imageUrl;
+                            } else {
+                                // Fall back to default texture
+                                this.loadDefaultTexture(path, image, resolve, reject);
+                            }
+                        })
+                        .catch(error => {
+                            console.warn(`Failed to load from texture pack: ${error.message}, falling back to default`);
+                            this.loadDefaultTexture(path, image, resolve, reject);
+                        });
+                } else {
+                    this.loadDefaultTexture(path, image, resolve, reject);
+                }
             } else {
                 // Try loading from filesystem using fetch
                 fetch(`src/resources/${path}`)
@@ -275,6 +321,47 @@ export default class TextureAtlas {
                     });
             }
         });
+    }
+
+    loadDefaultTexture(path, image, resolve, reject) {
+        // Fall back to default texture path (Simplistic)
+        let defaultPath = path;
+        
+        // If path is just filename (from simplified structure), construct default path
+        if (!path.includes('/')) {
+            // Try blocks first, then items
+            defaultPath = 'terrain/pack/minecraft/textures/blocks/' + path;
+        } else if (path.startsWith('blocks/')) {
+            defaultPath = 'terrain/pack/minecraft/textures/' + path;
+        } else if (path.startsWith('items/')) {
+            defaultPath = 'terrain/pack/minecraft/textures/' + path;
+        } else {
+            // Handle other path formats
+            defaultPath = path.replace(/^texture_packs\/[^\/]+\//, 'terrain/pack/minecraft/textures/blocks/');
+        }
+        
+        fetch(`src/resources/${defaultPath}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const imageUrl = URL.createObjectURL(blob);
+                image.onload = () => {
+                    URL.revokeObjectURL(imageUrl);
+                    resolve(image);
+                };
+                image.onerror = () => {
+                    URL.revokeObjectURL(imageUrl);
+                    reject(new Error(`Failed to load image: ${defaultPath}`));
+                };
+                image.src = imageUrl;
+            })
+            .catch(error => {
+                reject(new Error(`Failed to fetch default image: ${defaultPath} - ${error.message}`));
+            });
     }
 
     getTextureName(path) {

@@ -9,6 +9,7 @@ import GuiCreateWorld from "./GuiCreateWorld.js";
 import GuiSelectWorld from "./GuiSelectWorld.js";
 import GuiMultiplayer from "./GuiMultiplayer.js";
 import GuiAccount from "./GuiAccount.js";
+import GuiTexturePacks from "./GuiTexturePacks.js";
 import { SplashTexts } from "../../../../../../resources/splashes.js";
 
 export default class GuiMainMenu extends GuiScreen {
@@ -52,9 +53,9 @@ export default class GuiMainMenu extends GuiScreen {
             this.minecraft.displayScreen(new GuiOptions(this));
         }));
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Textures & Mods", this.width / 2 + 2, y + 24 * 2, 98, 20, () => {
-
-        }).setEnabled(false).setTooltip("Coming soon!"));
+        this.buttonList.push(new GuiButton(this.minecraft, "Texture Packs", this.width / 2 + 2, y + 24 * 2, 98, 20, () => {
+            this.minecraft.displayScreen(new GuiTexturePacks(this));
+        }));
         this.buttonList.push(new GuiButton(this.minecraft, "Quit Game", this.width / 2 + 2, y + 72 + 12, 98, 20, () => {
             this.minecraft.stop();
         }).setEnabled(false));

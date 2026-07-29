@@ -188,6 +188,59 @@ export default class FileSystem {
         }
     }
 
+    async saveBinaryFile(data, filename) {
+        // data can be Uint8Array, ArrayBuffer, or base64 string
+        let base64Data;
+        
+        if (typeof data === 'string') {
+            // Assume it's already base64
+            base64Data = data;
+        } else if (data instanceof Uint8Array) {
+            base64Data = toBase64(data);
+        } else if (data instanceof ArrayBuffer) {
+            base64Data = toBase64(new Uint8Array(data));
+        } else {
+            return Promise.reject(new Error("Data must be string, Uint8Array, or ArrayBuffer"));
+        }
+
+        const lsKey = this.localStoragePrefix + filename;
+
+        try {
+            localStorage.setItem(lsKey, base64Data);
+            await this._deleteFileFromIndexedDB(filename);
+            console.log(`Saved binary file '${filename}' in LocalStorage`);
+            return;
+        } catch (e) {
+            console.warn(`LocalStorage quota exceeded or failed for '${filename}'`);
+            console.warn(`Using IndexedDB instead`);
+            
+            const store = await this._getTransactionStore('readwrite');
+            if (!store) {
+                return Promise.reject(new Error("Save failed! IndexedDB not available"));
+            }
+            
+            localStorage.removeItem(lsKey);
+
+            return new Promise((resolve, reject) => {
+                const fileRecord = {
+                    fileName: filename,
+                    data: base64Data,
+                    timestamp: Date.now()
+                };
+                const request = store.put(fileRecord);
+                
+                request.onsuccess = () => {
+                    console.log(`Saved binary file '${filename}' in IndexedDB.`);
+                    resolve();
+                };
+                request.onerror = (event) => {
+                    console.error("IndexedDB save error:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+    }
+
     async loadFile(filename) {
         const lsKey = this.localStoragePrefix + filename;
         let fileData = null;
@@ -226,6 +279,34 @@ export default class FileSystem {
         }
 
         return decompressedText;
+    }
+
+    async loadBinaryFile(filename) {
+        const lsKey = this.localStoragePrefix + filename;
+        let fileData = null;
+
+        fileData = localStorage.getItem(lsKey);
+        
+        if (fileData === null) {
+            const store = await this._getTransactionStore('readonly');
+            if (store) {
+                fileData = await new Promise((resolve, reject) => {
+                    const request = store.get(filename);
+                    request.onsuccess = (event) => {
+                        const record = event.target.result;
+                        resolve(record ? record.data : null);
+                    };
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            }
+        }
+
+        if (fileData === null) {
+            return null; 
+        }
+
+        // Return as Uint8Array
+        return fromBase64(fileData);
     }
 
     async deleteFile(filename) {
