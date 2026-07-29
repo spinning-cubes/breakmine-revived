@@ -104,7 +104,7 @@ wss.on('connection', (ws) => {
             const payload = {
                 type: 'status',
                 players: getPlayerCount(),
-                maxPlayers: 20
+                maxPlayers: 35
             };
             ws.send(JSON.stringify(payload));
             return;
