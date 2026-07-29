@@ -91,48 +91,27 @@ export default class GuiTexturePacks extends GuiScreen {
         const packFiles = await this.filesystem.listDir('texture_packs/');
         
         // Get all subdirectories in texture_packs/
-        const packDirs = [...new Set(packFiles
-            .filter(f => f.endsWith('/'))
-            .map(f => f.slice(0, -1))
-        )];
-
-        for (const packDir of packDirs) {
-            // Look for meta.json or meta.toml in each pack directory
-            const metaJsonPath = `texture_packs/${packDir}/meta.json`;
-            const metaTomlPath = `texture_packs/${packDir}/meta.toml`;
-            
-            let packData = null;
-            
-            if (await this.filesystem.fileExists(metaJsonPath)) {
-                const metadata = await this.filesystem.loadFile(metaJsonPath);
-                if (metadata) {
-                    try {
-                        packData = JSON.parse(metadata);
-                    } catch (e) {
-                        console.error('Failed to parse texture pack metadata:', e);
-                    }
-                }
-            } else if (await this.filesystem.fileExists(metaTomlPath)) {
-                const metadata = await this.filesystem.loadFile(metaTomlPath);
-                if (metadata) {
-                    try {
-                        packData = toml.parse(metadata);
-                    } catch (e) {
-                        console.error('Failed to parse texture pack metadata:', e);
-                    }
-                }
-            }
-            
-            if (packData) {
-                this.texturePacks.push({
-                    id: packData.id || packDir,
-                    name: packData.name || 'Unknown Pack',
-                    description: packData.description || 'No description',
-                    version: packData.version || 'Unknown',
-                    author: packData.author || 'Unknown'
-                });
-            }
-        }
+         for (const fileName of packFiles) {
+             if (fileName.endsWith('/meta.json') || fileName.endsWith('/meta.toml')) {
+                 const metadata = await this.filesystem.loadFile(fileName);
+                 if (!metadata) continue;
+                 let packData = null;
+                 try {
+                     packData = fileName.endsWith('.json') ? JSON.parse(metadata) : toml.parse(metadata);
+                 } catch (e) {
+                     console.error('Failed to parse texture pack metadata:', e);
+                     continue;
+                 }
+                 const packId = packData.id || fileName.split('/').slice(-2, -1)[0];
+                 this.texturePacks.push({
+                     id: packId,
+                     name: packData.name || 'Unknown Pack',
+                     description: packData.description || 'No description',
+                     version: packData.version || 'Unknown',
+                     author: packData.author || 'Unknown'
+                 });
+             }
+         }
     }
 
     uploadTexturePack() {
@@ -195,8 +174,9 @@ export default class GuiTexturePacks extends GuiScreen {
                 author: 'Unknown'
             };
             
-            // Save metadata
-            await this.filesystem.saveFile(JSON.stringify(packData), `texture_packs/${packId}.json`);
+// Save metadata
+             const metadataFilePath = `texture_packs/${packId}/meta.json`;
+             await this.filesystem.saveFile(JSON.stringify(packData), metadataFilePath);
             
             // Extract and save textures
             for (const [path, zipEntry] of Object.entries(zip.files)) {
@@ -281,7 +261,7 @@ export default class GuiTexturePacks extends GuiScreen {
 
     async deleteTexturePack(packId) {
         // Delete metadata
-        await this.filesystem.deleteFile(`texture_packs/${packId}.json`);
+        await this.filesystem.deleteFile(`texture_packs/${packId}/meta.json`);
         
         // Delete all texture files for this pack
         const packFiles = await this.filesystem.listDir(`texture_packs/${packId}/`);
