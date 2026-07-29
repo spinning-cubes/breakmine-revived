@@ -180,8 +180,8 @@ export class BlockRegistry {
             BlockRegistry[`${mat.toUpperCase()}_HOE`] = new ItemHoe(toolId++, `${texName}_hoe`, `${matName} Hoe`, mat);
         }
 
-        BlockRegistry.ITEM_BUCKET_EMPTY = new ItemBucketEmpty(116, 'bucket_empty', 'Empty Bucket');
-        BlockRegistry.ITEM_BUCKET_WATER = new ItemBucketWater(117, 'bucket_water', 'Water Bucket');
+        BlockRegistry.ITEM_BUCKET_EMPTY = new ItemBucketEmpty(118, 'bucket', 'Empty Bucket');
+        BlockRegistry.ITEM_BUCKET_WATER = new ItemBucketWater(119, 'water_bucket', 'Water Bucket');
 
         BlockRegistry.init = true;
     }
