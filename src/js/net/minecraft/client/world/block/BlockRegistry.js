@@ -30,6 +30,8 @@ import ItemSword from "./type/ItemSword.js";
 import ItemShovel from "./type/ItemShovel.js";
 import ItemAxe from "./type/ItemAxe.js";
 import ItemHoe from "./type/ItemHoe.js";
+import ItemBucketWater from "./type/ItemBucketWater.js";
+import ItemBucketEmpty from "./type/ItemBucketEmpty.js";
 import BlockBush from "./type/BlockBush.js";
 import BlockFence from "./type/BlockFence.js";
 import BlockWoodPanel from "./type/BlockWoodPanel.js";
@@ -177,6 +179,9 @@ export class BlockRegistry {
             BlockRegistry[`${mat.toUpperCase()}_AXE`] = new ItemAxe(toolId++, `${texName}_axe`, `${matName} Axe`, mat);
             BlockRegistry[`${mat.toUpperCase()}_HOE`] = new ItemHoe(toolId++, `${texName}_hoe`, `${matName} Hoe`, mat);
         }
+
+        BlockRegistry.ITEM_BUCKET_EMPTY = new ItemBucketEmpty(116, 'bucket_empty', 'Empty Bucket');
+        BlockRegistry.ITEM_BUCKET_WATER = new ItemBucketWater(117, 'bucket_water', 'Water Bucket');
 
         BlockRegistry.init = true;
     }

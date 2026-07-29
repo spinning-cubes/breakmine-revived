@@ -230,6 +230,8 @@ export default class TextureAtlas {
             "diamond.png",
             "emerald.png",
             "gold_ingot.png",
+            "bucket_empty.png",
+            "bucket_water.png",
             ...toolTextureNames
         ];
 
