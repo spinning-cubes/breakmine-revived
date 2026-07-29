@@ -494,6 +494,8 @@ function handleUpdateSignText(player, buffer, offset) {
     const [x, y, z] = readPosition(buffer, offset);
     const [text, textBytes] = readString(buffer, offset + 8);
 
+    log.info('Server', `Sign text update: ${x},${y},${z} = "${text}"`);
+
     const blockKey = `${x},${y},${z}`;
     const { setBlockInventory, saveWorld } = require('./world');
     
