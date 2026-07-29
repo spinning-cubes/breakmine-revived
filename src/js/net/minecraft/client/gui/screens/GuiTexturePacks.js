@@ -3,6 +3,7 @@ import GuiButton from "../widgets/GuiButton.js";
 import GuiTexturePackSlotContainer from "../widgets/GuiTexturePackSlotContainer.js";
 import FileSystem from "../../fs/Filesystem.js";
 import * as THREE from "../../../../../../../libraries/three.module.js";
+import toml from "toml";
 
 export default class GuiTexturePacks extends GuiScreen {
 
@@ -89,25 +90,56 @@ export default class GuiTexturePacks extends GuiScreen {
         
         const packFiles = await this.filesystem.listDir('texture_packs/');
         
-        for (const fileName of packFiles) {
-            if (fileName.endsWith('.json')) {
-                const metadata = await this.filesystem.loadFile(fileName);
-                if (metadata) {
-                    try {
-                        const packData = JSON.parse(metadata);
-                        this.texturePacks.push({
-                            id: packData.id,
-                            name: packData.name || 'Unknown Pack',
-                            description: packData.description || 'No description',
-                            version: packData.version || 'Unknown',
-                            author: packData.author || 'Unknown'
-                        });
-                    } catch (e) {
-                        console.error('Failed to parse texture pack metadata:', e);
-                    }
-                }
-            }
-        }
+         for (const fileName of packFiles) {
+             if (fileName.endsWith('.json')) {
+                 const metadata = await this.filesystem.loadFile(fileName);
+                 if (metadata) {
+                     try {
+                         const packData = JSON.parse(metadata);
+                         // Example texture pack metadata JSON:
+                         // {
+                         //     "id": "example_pack",
+                         //     "name": "Example Pack",
+                         //     "description": "This is an example pack.",
+                         //     "version": "1.0",
+                         //     "author": "Example Person"
+                         // }
+                         this.texturePacks.push({
+                             id: packData.id,
+                             name: packData.name || 'Unknown Pack',
+                             description: packData.description || 'No description',
+                             version: packData.version || 'Unknown',
+                             author: packData.author || 'Unknown'
+                         });
+                     } catch (e) {
+                         console.error('Failed to parse texture pack metadata:', e);
+                     }
+                 }
+             } else if (fileName.endsWith('.toml')) {
+                 const metadata = await this.filesystem.loadFile(fileName);
+                 if (metadata) {
+                     try {
+                         const packData = toml.parse(metadata);
+                         // Example texture pack metadata TOML:
+                         // [pack]
+                         // id = "example_pack"
+                         // name = "Example Pack"
+                         // description = "This is an example pack."
+                         // version = "1.0"
+                         // author = "Example Person"
+                         this.texturePacks.push({
+                             id: packData.id,
+                             name: packData.name || 'Unknown Pack',
+                             description: packData.description || 'No description',
+                             version: packData.version || 'Unknown',
+                             author: packData.author || 'Unknown'
+                         });
+                     } catch (e) {
+                         console.error('Failed to parse texture pack metadata:', e);
+                     }
+                 }
+             }
+         }
     }
 
     uploadTexturePack() {
