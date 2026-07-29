@@ -414,30 +414,43 @@ function generateChunks(chunkCoords, seedData, worldType) {
         ? new FlatWorldGenerator(world, seed)
         : new WorldGenerator(world, seed, worldType);
 
+    // Collect all chunk coordinates that need to be populated (requested + 1-ring neighbors)
+    const populateKeys = new Set();
+    const populateCoords = [];
     for (const [cx, cz] of chunkCoords) {
-        if (world.chunkExists(cx, cz)) continue;
-
-        const neighbors = [
-            [cx - 1, cz - 1], [cx, cz - 1], [cx + 1, cz - 1],
-            [cx - 1, cz    ],                  [cx + 1, cz    ],
-            [cx - 1, cz + 1], [cx, cz + 1], [cx + 1, cz + 1],
-        ];
-
-        for (const [nx, nz] of neighbors) {
-            if (!world.chunkExists(nx, nz)) {
-                const nc = generator.newChunk(world, nx, nz, ChunkStub);
-                world.addChunk(nc);
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                const px = cx + dx;
+                const pz = cz + dz;
+                const key = `${px},${pz}`;
+                if (!populateKeys.has(key)) {
+                    populateKeys.add(key);
+                    populateCoords.push([px, pz]);
+                }
             }
         }
-
-        const chunk = generator.newChunk(world, cx, cz, ChunkStub);
-        world.addChunk(chunk);
     }
 
-    for (const [cx, cz] of chunkCoords) {
-        generator.populateChunk(cx, cz);
+    // 1. Generate base terrain for populated chunks and their 1-ring neighbors
+    for (const [px, pz] of populateCoords) {
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                const tx = px + dx;
+                const tz = pz + dz;
+                if (!world.chunkExists(tx, tz)) {
+                    const chunk = generator.newChunk(world, tx, tz, ChunkStub);
+                    world.addChunk(chunk);
+                }
+            }
+        }
     }
 
+    // 2. Populate target chunks AND neighbors so cross-chunk structures (trees) spill correctly
+    for (const [px, pz] of populateCoords) {
+        generator.populateChunk(px, pz);
+    }
+
+    // 3. Serialize and return requested chunks
     const requested = [];
     for (const [cx, cz] of chunkCoords) {
         const chunk = world.getChunkAt(cx, cz);
