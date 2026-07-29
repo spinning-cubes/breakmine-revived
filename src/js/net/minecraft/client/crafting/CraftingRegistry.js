@@ -61,7 +61,11 @@ export default class CraftingRegistry {
             this.registerShapedRecipe(BlockRegistry.ITEM_STICK.id, 4, 1, 2, [
                 woodBlockId,
                 woodBlockId
-            ])
+            ]);
+            this.registerShapedRecipe(BlockRegistry.SIGN.id, 3, 3, 2, [
+                woodBlockId, woodBlockId, woodBlockId,
+                0, BlockRegistry.ITEM_STICK.id, 0
+            ]);
         }
     }
 
