@@ -105,14 +105,14 @@ export default class GuiMainMenu extends GuiScreen {
         this.drawLogo(stack, x, y);
 
         // Draw version
-        this.drawRightString(stack, "Updated at " + Minecraft.TIMESTAMP, 2, this.height - 20, 0xFFFFFFff);
+        this.drawRightString(stack, "Updated at " + Minecraft.TIMESTAMP, this.width - 2, this.height - 20, 0xFFFFFFff);
+        this.drawString(stack, "Breakmine " + Minecraft.VERSION, 2, this.height - 10, 0xFFFFFFff);
 
         // Draw Patchwork version
         this.drawString(stack, "Patchwork " + Version.PATCHWORK_VERSION, 2, this.height - 20, 0xFFFFFFff);
 
         // Draw copyright
-        this.drawRightString(stack, "(C) 2026 SpinningCubes under SCLv1.", this.width - 2, this.height - 10, 0xFFFFFFff);
-        this.drawString(stack, "Breakmine " + Minecraft.VERSION, this.width - 2, this.height - 10, 0xFFFFFFff);
+        this.drawRightString(stack, "(C) 2026 SpinningCubes under SCLv1.", this.width - 2, this.height - 10);
 
         // Draw buttons
         super.drawScreen(stack, mouseX, mouseY, partialTicks);
