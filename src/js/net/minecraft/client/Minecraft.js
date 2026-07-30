@@ -281,9 +281,7 @@ export default class Minecraft {
         // src/js/net/minecraft/client/world/World.js
         Mixin.registerFunction('game:teleportEntityPos', (eid, x, y, z) => {
             if (this.world && this.world.getEntityById(eid)) {
-                this.world.getEntityById(eid).x = x;
-                this.world.getEntityById(eid).y = y;
-                this.world.getEntityById(eid).z = z;
+                this.world.getEntityById(eid).setPosition(x, y, z);
                 return true;
             } else {
                 return undefined;
@@ -347,6 +345,14 @@ export default class Minecraft {
         Mixin.registerFunction('game:getGame', () => {
             if (this) {
                 return this;
+            } else {
+                return undefined;
+            }
+        });
+
+        Mixin.registerFunction('game:getEntityById', (eid) => {
+            if (this.world && this.world.getEntityById(eid)) {
+                return this.world.getEntityById(eid);
             } else {
                 return undefined;
             }

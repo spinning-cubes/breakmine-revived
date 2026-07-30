@@ -193,17 +193,25 @@ export default class GameWindow {
             }
 
             let currentScreen = this.minecraft.currentScreen;
-            if (currentScreen !== null) {
-                currentScreen.keyTyped(event.code, event.key);
-            } else {
-                this.minecraft.onKeyPressed(event.code);
+            let payload = { key: event.code, char: event.key, type: 'keydown', screen: currentScreen !== null, cancelled: false };
+            globalThis.Mixin?.emitCancellable('game:keypress', payload);
+
+            if (!payload.cancelled) {
+                if (currentScreen !== null) {
+                    currentScreen.keyTyped(event.code, event.key);
+                } else {
+                    this.minecraft.onKeyPressed(event.code);
+                }
             }
 
             this.requestCursorUpdate();
         }, false);
         this.registerListener(window, 'keyup', event => {
             let currentScreen = this.minecraft.currentScreen;
-            if (currentScreen !== null) {
+            let payload = { key: event.code, char: event.key, type: 'keyup', screen: currentScreen !== null, cancelled: false };
+            globalThis.Mixin?.emitCancellable('game:keypress', payload);
+
+            if (!payload.cancelled && currentScreen !== null) {
                 currentScreen.keyReleased(event.code);
             }
         });

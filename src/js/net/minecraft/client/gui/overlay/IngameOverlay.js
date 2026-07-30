@@ -55,7 +55,7 @@ export default class IngameOverlay extends Gui {
 
         // Render health bar (hidden in creative and spectator)
         if (!this.minecraft.player.creative && !this.minecraft.player.spectator) {
-            this.renderHealth(stack, this.window.width / 2 - 91, this.window.height - 22 - 10)
+            this.renderHealth(stack, this.window.width / 2 - 91, this.window.height - 22 - 11)
         }
 
         // Render chat canvas
@@ -110,7 +110,7 @@ export default class IngameOverlay extends Gui {
 
     renderHealth(stack, x, y) {
         const health = this.minecraft.player.health;
-        const size = 9;
+        const size = 11;
         const maxHearts = 10;
         const fullHearts = Math.floor(health / 2);
     

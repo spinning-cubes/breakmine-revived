@@ -102,6 +102,14 @@ export default class ModLoader {
                 const b64 = await entry.async('base64');
                 const filename = path.split('/').pop();
                 await this.filesystem.saveBinaryFile(b64, `mods/${modId}/textures/${filename}.b64`);
+            } else if (path.startsWith('crafting/') && path.endsWith('.js')) {
+                const src = await entry.async('string');
+                const filename = path.split('/').pop();
+                await this.filesystem.saveFile(src, `mods/${modId}/crafting/${filename}`);
+            } else if (path.startsWith('smelting/') && path.endsWith('.js')) {
+                const src = await entry.async('string');
+                const filename = path.split('/').pop();
+                await this.filesystem.saveFile(src, `mods/${modId}/smelting/${filename}`);
             }
         }
 
@@ -302,6 +310,14 @@ export default class ModLoader {
             .filter(f => f.startsWith('items/') && f.endsWith('.js'))
             .map(f => f.replace(/^items\//, ''));
 
+        const craftingFiles = relFiles
+            .filter(f => f.startsWith('crafting/') && f.endsWith('.js'))
+            .map(f => f.replace(/^crafting\//, ''));
+
+        const smeltingFiles = relFiles
+            .filter(f => f.startsWith('smelting/') && f.endsWith('.js'))
+            .map(f => f.replace(/^smelting\//, ''));
+
         entry.textureNames = relFiles
             .filter(f => f.startsWith('textures/') && f.endsWith('.png.b64'))
             .map(f => f.replace(/^textures\//, '').replace(/\.png\.b64$/, ''));
@@ -315,10 +331,16 @@ export default class ModLoader {
         // 5. Load and register item classes
         await this._registerModItems(modId, entry, itemFiles);
 
-        // 6. Call ModLoad.onLoad if present
+        // 6. Register crafting recipes
+        await this._registerModCrafting(modId, entry, craftingFiles);
+
+        // 7. Register smelting recipes
+        await this._registerModSmelting(modId, entry, smeltingFiles);
+
+        // 8. Call ModLoad.onLoad if present
         await this._callModLoad(modId, entry);
 
-        // 7. Store
+        // 9. Store
         this.mods.set(modId, entry);
 
         console.log(`[ModLoader] Loaded mod '${entry.name}' — ${entry.blockIds.length} block(s), ${entry.itemIds.length} item(s), ${entry.textureNames.length} texture(s)`);
@@ -419,6 +441,147 @@ export default class ModLoader {
             } catch (err) {
                 console.error(`[ModLoader] Failed to load item '${filename}' from mod '${modId}':`, err);
             }
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     *  Internal — register crafting recipes
+     * ------------------------------------------------------------------ */
+
+    async _registerModCrafting(modId, entry, craftingFiles) {
+        for (const filename of craftingFiles) {
+            try {
+                const src = await this.filesystem.loadFile(`mods/${modId}/crafting/${filename}`);
+                if (!src) continue;
+
+                let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
+                transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
+
+                const match = transformed.match(/class\s+(\w+)/);
+                if (!match) continue;
+                const className = match[1];
+
+                // Extract block name: BlockOakTableCrafting → OakTable
+                let blockName = className;
+                if (blockName.startsWith('Block')) blockName = blockName.substring(5);
+                if (blockName.endsWith('Crafting')) blockName = blockName.slice(0, -8);
+                const blockId = blockName.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+                const namespacedId = `${modId}:${blockId}`;
+
+                const resultBlock = BlockRegistry.get(namespacedId);
+                if (!resultBlock) {
+                    console.warn(`[ModLoader] Crafting recipe '${filename}' target block '${namespacedId}' not found, skipping`);
+                    continue;
+                }
+                const resultTypeId = resultBlock.id;
+
+                const wrapped = `
+                    return (function() {
+                        "use strict";
+                        ${transformed}
+                        if (typeof ${className} !== 'undefined') {
+                            return ${className};
+                        }
+                        return null;
+                    })
+                `;
+                const factory = new Function(wrapped)();
+                const recipeClass = factory();
+                if (!recipeClass) continue;
+
+                const resultCount = recipeClass.amount_output || 1;
+                const ingredients = recipeClass.recipe || [];
+                const shapeless = recipeClass.shapeless === true;
+
+                if (ingredients.length === 0) {
+                    console.warn(`[ModLoader] Crafting recipe '${filename}' has no ingredients, skipping`);
+                    continue;
+                }
+
+                if (shapeless) {
+                    CraftingRegistry.registerShapelessRecipe(resultTypeId, resultCount, ingredients);
+                } else {
+                    let width = recipeClass.width || 0;
+                    let height = recipeClass.height || 0;
+                    if (!width || !height) {
+                        if (ingredients.length === 1) { width = 1; height = 1; }
+                        else if (ingredients.length === 4) { width = 2; height = 2; }
+                        else if (ingredients.length === 9) { width = 3; height = 3; }
+                        else if (ingredients.length % 3 === 0) { width = 3; height = ingredients.length / 3; }
+                        else if (ingredients.length % 2 === 0) { width = 2; height = ingredients.length / 2; }
+                        else { width = ingredients.length; height = 1; }
+                    }
+                    CraftingRegistry.registerShapedRecipe(resultTypeId, resultCount, width, height, ingredients);
+                }
+
+                console.log(`[ModLoader]   Registered crafting recipe for '${namespacedId}' from ${filename}`);
+            } catch (err) {
+                console.error(`[ModLoader] Failed to load crafting recipe '${filename}' from mod '${modId}':`, err);
+            }
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     *  Internal — register smelting recipes
+     * ------------------------------------------------------------------ */
+
+    async _registerModSmelting(modId, entry, smeltingFiles) {
+        try {
+            const { default: SmeltingRecipe } = await import('./smelting/SmeltingRecipe.js');
+            const { SmeltingRegistry } = await import('./smelting/SmeltingRegistry.js');
+
+            for (const filename of smeltingFiles) {
+                try {
+                    const src = await this.filesystem.loadFile(`mods/${modId}/smelting/${filename}`);
+                    if (!src) continue;
+
+                    let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
+                    transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
+
+                    const match = transformed.match(/class\s+(\w+)/);
+                    if (!match) continue;
+                    const className = match[1];
+
+                    // Extract block name: BlockOakTableSmelting → OakTable
+                    let blockName = className;
+                    if (blockName.startsWith('Block')) blockName = blockName.substring(5);
+                    if (blockName.endsWith('Smelting')) blockName = blockName.slice(0, -8);
+                    const blockId = blockName.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+                    const namespacedId = `${modId}:${blockId}`;
+
+                    const resultBlock = BlockRegistry.get(namespacedId);
+                    if (!resultBlock) {
+                        console.warn(`[ModLoader] Smelting recipe '${filename}' target block '${namespacedId}' not found, skipping`);
+                        continue;
+                    }
+                    const resultTypeId = resultBlock.id;
+
+                    const wrapped = `
+                        return (function() {
+                            "use strict";
+                            ${transformed}
+                            if (typeof ${className} !== 'undefined') {
+                                return ${className};
+                            }
+                            return null;
+                        })
+                    `;
+                    const factory = new Function(wrapped)();
+                    const recipeClass = factory();
+                    if (!recipeClass) continue;
+
+                    const inputId = recipeClass.input || 0;
+                    const resultCount = recipeClass.amount_output || 1;
+                    if (inputId) {
+                        SmeltingRegistry.registerRecipe(new SmeltingRecipe(inputId, resultTypeId, resultCount));
+                        console.log(`[ModLoader]   Registered smelting recipe for '${namespacedId}' from ${filename}`);
+                    }
+                } catch (err) {
+                    console.error(`[ModLoader] Failed to load smelting recipe '${filename}' from mod '${modId}':`, err);
+                }
+            }
+        } catch (err) {
+            console.error(`[ModLoader] Could not import SmeltingRecipe/SmeltingRegistry for mod '${modId}':`, err);
         }
     }
 

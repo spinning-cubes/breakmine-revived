@@ -41,6 +41,11 @@ export default class GuiPresets extends GuiScreen {
                 name: "Plain Hills",
                 details: "A large area of hills with some trees.",
                 seed: "-6548455560752389939"
+            },
+            {
+                name: "Survival Island",
+                details: "Island with one tree.",
+                seed: "-1066700400963168986"
             }
         ];
 
