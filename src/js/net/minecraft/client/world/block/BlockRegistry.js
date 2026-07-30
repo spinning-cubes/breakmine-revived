@@ -50,9 +50,63 @@ import BlockSign from "./type/BlockSign.js";
 export class BlockRegistry {
 
     static init = false;
+    static DEFAULT_NAMESPACE = "breakmine";
+
+    static registry = new Map();
+    static idMap = new Map();
+
+    static hashString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0;
+        }
+        return hash >>> 0;
+    }
+
+    static normalizeKey(key) {
+        if (typeof key !== "string") return key;
+        const strKey = key.toLowerCase();
+        return strKey.includes(":") ? strKey : `${BlockRegistry.DEFAULT_NAMESPACE}:${strKey}`;
+    }
+
+    static register(identifier, block) {
+        const fullKey = typeof identifier === "string"
+            ? this.normalizeKey(identifier)
+            : `${BlockRegistry.DEFAULT_NAMESPACE}:${block.name || block.id}`;
+
+        const [namespace, name] = fullKey.split(":");
+        const hashId = this.hashString(fullKey);
+
+        block.identifier = fullKey;
+        block.namespace = namespace;
+        block.name = name || block.name;
+        block.hashId = hashId;
+
+        this.registry.set(fullKey, block);
+        this.registry.set(name, block);
+
+        if (block.id !== undefined) {
+            this.idMap.set(block.id, block);
+        }
+        this.idMap.set(hashId, block);
+
+        return block;
+    }
+
+    static get(key) {
+        if (typeof key === "number") {
+            return this.idMap.get(key) || Block.blocks.get(key);
+        }
+        const normalized = this.normalizeKey(key);
+        return this.registry.get(normalized) || this.registry.get(key);
+    }
+
+    static registerBlockClass(id, name, blockClass) {
+        const block = new blockClass(id, 0);
+        return this.register(name, block);
+    }
 
     static create() {
-        // Sounds
         Block.sounds.stone = new Sound("stone", 1.0);
         Block.sounds.wood = new Sound("wood", 1.0);
         Block.sounds.gravel = new Sound("gravel", 1.0);
@@ -62,7 +116,6 @@ export class BlockRegistry {
         Block.sounds.glass = new SoundGlass("stone", 1.0);
         Block.sounds.leaves = new Sound("leaves", 1.0);
 
-        // Blocks
         BlockRegistry.STONE = new BlockStone(1, 0);
         BlockRegistry.GRASS = new BlockGrass(2, 1);
         BlockRegistry.DIRT = new BlockDirt(3, 2);
@@ -117,27 +170,22 @@ export class BlockRegistry {
         BlockRegistry.LOGIC = new BlockLogic(56, 0);
         BlockRegistry.TAN_WOOL = new BlockWool(57, 0, "tan_wool", "Tan Wool");
 
-        // Spruce
         BlockRegistry.SPRUCE_PLANKS = new BlockWood(58, 0, "spruce", "Spruce Planks");
         BlockRegistry.SPRUCE_LOG = new BlockLog(59, 0, "spruce", "Spruce Log");
         BlockRegistry.SPRUCE_FENCE = new BlockFence(60, 0, "spruce", 58);
 
-        // Birch
         BlockRegistry.BIRCH_PLANKS = new BlockWood(61, 0, "birch", "Birch Planks");
         BlockRegistry.BIRCH_LOG = new BlockLog(62, 0, "birch", "Birch Log");
         BlockRegistry.BIRCH_FENCE = new BlockFence(63, 0, "birch", 61);
 
-        // Jungle
         BlockRegistry.JUNGLE_PLANKS = new BlockWood(64, 0, "jungle", "Jungle Planks");
         BlockRegistry.JUNGLE_LOG = new BlockLog(65, 0, "jungle", "Jungle Log");
         BlockRegistry.JUNGLE_FENCE = new BlockFence(66, 0, "jungle", 64);
 
-        // Acacia
         BlockRegistry.ACACIA_PLANKS = new BlockWood(67, 0, "acacia", "Acacia Planks");
         BlockRegistry.ACACIA_LOG = new BlockLog(68, 0, "acacia", "Acacia Log");
         BlockRegistry.ACACIA_FENCE = new BlockFence(69, 0, "acacia", 67);
 
-        // Slabs
         BlockRegistry.COBBLESTONE_SLAB = new BlockSlab(70, 0, "cobblestone", "Cobblestone Slab", Block.sounds.stone);
         BlockRegistry.WOOD_SLAB = new BlockSlab(71, 0, "oak_planks", "Oak Slab", Block.sounds.wood);
         BlockRegistry.SPRUCE_SLAB = new BlockSlab(72, 0, "spruce_planks", "Spruce Slab", Block.sounds.wood);
@@ -155,7 +203,6 @@ export class BlockRegistry {
         BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
         BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");
 
-        // Items
         BlockRegistry.ITEM_APPLE = new ItemApple(83, 14);
         BlockRegistry.ITEM_BREAD = new ItemBread(84, 15);
         BlockRegistry.ITEM_STICK = new ItemStick(85, 16);
@@ -169,7 +216,6 @@ export class BlockRegistry {
         BlockRegistry.STONEBRICK = new BlockStoneLike(116, 0, "stonebrick", "Stone Bricks");
         BlockRegistry.DARK_STONEBRICK = new BlockStoneLike(117, 0, "dark_stonebrick", "Dark Stone Bricks");
 
-        // Tools (IDs 91-115)
         const toolMaterials = ['wood', 'stone', 'iron', 'diamond', 'gold'];
         let toolId = 91;
         for (const mat of toolMaterials) {
@@ -187,16 +233,24 @@ export class BlockRegistry {
         BlockRegistry.ITEM_BUCKET_WATER = new ItemBucketWater(119, 'water_bucket', 'Water Bucket');
         BlockRegistry.ITEM_BUCKET_LAVA = new ItemBucketLava(120, 'lava_bucket', 'Lava Bucket');
 
+        for (const [key, val] of Object.entries(BlockRegistry)) {
+            if (val && typeof val === "object" && val.id !== undefined) {
+                const nameKey = key.toLowerCase().replace(/^item_/, "");
+                BlockRegistry.register(nameKey, val);
+            }
+        }
+
+        const originalGetById = Block.getById;
+        Block.getById = function(typeId) {
+            let block = originalGetById.call(this, typeId);
+            if (block) return block;
+            return BlockRegistry.idMap.get(typeId) || null;
+        };
+
         BlockRegistry.init = true;
     }
 
     static getAllBlocks() {
         return this;
-    }
-
-    static registerBlockClass(id, name, blockClass) {
-        const block = new blockClass(id, 0);
-        Block.blocks.set(id, block);
-        return block;
     }
 }

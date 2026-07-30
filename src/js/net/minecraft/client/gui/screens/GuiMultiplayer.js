@@ -226,7 +226,7 @@ export default class GuiMultiplayer extends GuiScreen {
     drawScreen(stack, mouseX, mouseY, partialTicks) {
         this.worldSlotContainer.drawScreen(stack, mouseX, mouseY, partialTicks);
         this.drawCenteredString(stack, "Play Multiplayer", this.width / 2, 20);
-        this.drawCenteredString(stack, "Multiplayer is still in development, expect bugs and breaking changes.", this.width / 2, 5, 0xFF6363);
+        //this.drawCenteredString(stack, "Multiplayer is still in development, expect bugs and breaking changes.", this.width / 2, 5, 0xFF6363);
         super.drawScreen(stack, mouseX, mouseY, partialTicks);
     }
     

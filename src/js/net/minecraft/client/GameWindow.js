@@ -193,10 +193,10 @@ export default class GameWindow {
             }
 
             let currentScreen = this.minecraft.currentScreen;
-            if (currentScreen === null) {
-                this.minecraft.onKeyPressed(event.code);
-            } else {
+            if (currentScreen !== null) {
                 currentScreen.keyTyped(event.code, event.key);
+            } else {
+                this.minecraft.onKeyPressed(event.code);
             }
 
             this.requestCursorUpdate();

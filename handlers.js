@@ -530,8 +530,9 @@ function handleUpdateSignText(player, buffer, offset) {
 }
 
 function handleModListPacket(player, buffer, offset) {
-    let count = 0;
-    [count, offset] = readVarInt(buffer, offset);
+    let count, countBytes;
+    [count, countBytes] = readVarInt(buffer, offset);
+    offset += countBytes;
     const mods = [];
     for (let i = 0; i < count; i++) {
         let modId, modName, modVersion;
