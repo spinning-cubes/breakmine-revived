@@ -122,4 +122,8 @@ export default class Tessellator {
         return mesh;
     }
 
+    finishDrawing() {
+        return this.draw();
+    }
+
 }

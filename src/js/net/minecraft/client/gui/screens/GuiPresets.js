@@ -43,9 +43,9 @@ export default class GuiPresets extends GuiScreen {
                 seed: "-6548455560752389939"
             },
             {
-                name: "Survival Island",
-                details: "Island with one tree.",
-                seed: "-1066700400963168986"
+                name: "Mountains of Oz",
+                details: "Really cool mountains.",
+                seed: "5872522473413159476"
             }
         ];
 

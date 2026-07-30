@@ -95,13 +95,13 @@ export default class GuiMods extends GuiScreen {
 
         if (hasSelection) {
             const mod = this.mods[this.selectedIndex];
-            this.buttonToggle.name = mod.enabled ? "Disable" : "Enable";
+            this.buttonToggle.string = mod.enabled ? "Disable" : "Enable";
         } else {
-            this.buttonToggle.name = "Toggle";
+            this.buttonToggle.string = "Toggle";
         }
 
         if (this.buttonBack) {
-            this.buttonBack.name = this.dirty ? "Reload" : "Cancel";
+            this.buttonBack.string = this.dirty ? "Reload" : "Cancel";
         }
     }
 
