@@ -378,13 +378,14 @@ export default class NetworkPlayHandler extends PacketHandler {
     }
 
     handleDisconnect(packet) {
+        this.disconnectReason = packet.getReason();
         this.minecraft.loadWorld(null);
-        this.minecraft.displayScreen(new GuiDisconnected(packet.getReason()));
+        this.minecraft.displayScreen(new GuiDisconnected(this.disconnectReason));
     }
 
     onDisconnect() {
         this.minecraft.loadWorld(null);
-        this.minecraft.displayScreen(new GuiDisconnected("Disconnected from server"));
+        this.minecraft.displayScreen(new GuiDisconnected(this.disconnectReason || "Disconnected from server"));
     }
 
     getNetworkManager() {

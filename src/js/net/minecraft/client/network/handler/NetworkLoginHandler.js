@@ -32,8 +32,9 @@ export default class NetworkLoginHandler extends PacketHandler {
     }
 
     handleLoginDisconnect(packet) {
-        console.log("[Network] Disconnected from server: " + packet.message);
-        this.networkManager.minecraft.displayScreen(new GuiDisconnected(packet.message));
+        this.disconnectReason = packet.message;
+        console.log("[Network] Disconnected from server: " + this.disconnectReason);
+        this.networkManager.minecraft.displayScreen(new GuiDisconnected(this.disconnectReason));
     }
 
     handleLoginSuccess(packet) {
@@ -47,7 +48,7 @@ export default class NetworkLoginHandler extends PacketHandler {
 
     onDisconnect() {
         if (this.networkManager.minecraft.isInGame()) {
-            this.networkManager.minecraft.displayScreen(new GuiDisconnected("Disconnected from server"));
+            this.networkManager.minecraft.displayScreen(new GuiDisconnected(this.disconnectReason || "Disconnected from server"));
         }
     }
 
