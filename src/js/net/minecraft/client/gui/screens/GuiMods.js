@@ -13,6 +13,7 @@ export default class GuiMods extends GuiScreen {
         this.mods = [];
         this.modSlotContainer = null;
         this.selectedIndex = -1;
+        this.dirty = false;
     }
 
     setSelectedWorld(index) {
@@ -39,18 +40,19 @@ export default class GuiMods extends GuiScreen {
         this.modSlotContainer = new GuiModSlotContainer(this, this.mods);
         this.rebuildSlotList();
 
-        this.buttonUpload = new GuiButton(this.minecraft, "Upload Mod (.zip)", this.width / 2 - 155, this.height - 52, 150, 20, () => {
-            this.uploadMod();
-        });
-
-        this.buttonToggle = new GuiButton(this.minecraft, "Toggle", this.width / 2 + 5, this.height - 52, 150, 20, async () => {
+        this.buttonToggle = new GuiButton(this.minecraft, "Toggle", this.width / 2 - 155, this.height - 52, 150, 20, async () => {
             if (this.selectedIndex < 0 || this.selectedIndex >= this.mods.length) return;
             const mod = this.mods[this.selectedIndex];
             const newState = !mod.enabled;
             await this.minecraft.modLoader.toggleMod(mod.id, newState);
+            this.dirty = true;
             await this.refreshModList();
             this.rebuildSlotList();
             this.updateButtonStates();
+        });
+
+        this.buttonUpload = new GuiButton(this.minecraft, "Upload .zip", this.width / 2 + 5, this.height - 52, 150, 20, () => {
+            this.uploadMod();
         });
 
         this.buttonDelete = new GuiButton(this.minecraft, "Delete", this.width / 2 - 155, this.height - 28, 150, 20, async () => {
@@ -58,6 +60,7 @@ export default class GuiMods extends GuiScreen {
             const mod = this.mods[this.selectedIndex];
             this.minecraft.displayScreen(new GuiYesNo(this, `Delete mod "${mod.name}" by ${mod.author}?`, "This action cannot be undone!", "Delete", "Cancel", async () => {
                 await this.minecraft.modLoader.uninstallMod(mod.id);
+                this.dirty = true;
                 await this.refreshModList();
                 this.rebuildSlotList();
                 this.selectedIndex = -1;
@@ -65,15 +68,24 @@ export default class GuiMods extends GuiScreen {
             }));
         });
 
+        this.buttonBack = new GuiButton(this.minecraft, "Cancel", this.width / 2 + 5, this.height - 28, 150, 20, () => {
+            this.goBack();
+        });
+
         this.buttonList.push(this.buttonUpload);
         this.buttonList.push(this.buttonToggle);
         this.buttonList.push(this.buttonDelete);
-
-        this.buttonList.push(new GuiButton(this.minecraft, "Back", this.width / 2 + 5, this.height - 28, 150, 20, () => {
-            this.minecraft.displayScreen(this.previousScreen);
-        }));
+        this.buttonList.push(this.buttonBack);
 
         this.updateButtonStates();
+    }
+
+    goBack() {
+        if (this.dirty) {
+            window.location.reload();
+        } else {
+            this.minecraft.displayScreen(this.previousScreen);
+        }
     }
 
     updateButtonStates() {
@@ -86,6 +98,10 @@ export default class GuiMods extends GuiScreen {
             this.buttonToggle.name = mod.enabled ? "Disable" : "Enable";
         } else {
             this.buttonToggle.name = "Toggle";
+        }
+
+        if (this.buttonBack) {
+            this.buttonBack.name = this.dirty ? "Reload" : "Cancel";
         }
     }
 
@@ -103,6 +119,7 @@ export default class GuiMods extends GuiScreen {
             if (!file) return;
             try {
                 await this.minecraft.modLoader.installModFromZip(file);
+                this.dirty = true;
                 await this.refreshModList();
                 this.rebuildSlotList();
                 this.selectedIndex = this.mods.length - 1;
@@ -119,8 +136,8 @@ export default class GuiMods extends GuiScreen {
         this.drawCenteredString(stack, "Mods", this.width / 2, 16);
 
         if (this.mods.length === 0) {
-            this.drawCenteredString(stack, "No mods installed.", this.width / 2, this.height / 2 - 10);
-            this.drawCenteredString(stack, "Upload a .zip mod file to get started.", this.width / 2, this.height / 2 + 10);
+            this.drawRect(stack, 0, 32, this.width, this.height - 64, "rgba(0, 0, 0, 0.5)");
+            this.drawCenteredString(stack, "No mods installed.", this.width / 2, this.height / 2 - 20);
         } else if (this.modSlotContainer) {
             this.modSlotContainer.drawScreen(stack, mouseX, mouseY, partialTicks);
         }
@@ -143,7 +160,7 @@ export default class GuiMods extends GuiScreen {
 
     keyTyped(key, character) {
         if (key === "Escape") {
-            this.minecraft.displayScreen(this.previousScreen);
+            this.goBack();
             return true;
         }
         return super.keyTyped(key, character);

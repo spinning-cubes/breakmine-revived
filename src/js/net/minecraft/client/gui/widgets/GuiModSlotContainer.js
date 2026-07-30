@@ -64,6 +64,10 @@ export default class GuiModSlotContainer extends GuiWorldSlotContainer {
         stack.restore();
     }
 
+    drawBackgroundPart(stack, top, bottom) {
+        this.parentGui.drawRect(stack, 0, top, this.parentGui.width, bottom, "rgba(0, 0, 0, 0.5)");
+    }
+
     mouseScrolled(mouseX, mouseY, delta) {
         const maxScroll = Math.max(0, this.slotList.length * (this.slotHeight + 2) - (this.bottom - this.top));
         this.amountScrolled -= delta > 0 ? 12 : -12;
