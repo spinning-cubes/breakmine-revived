@@ -535,10 +535,13 @@ function handleModListPacket(player, buffer, offset) {
     offset += countBytes;
     const mods = [];
     for (let i = 0; i < count; i++) {
-        let modId, modName, modVersion;
-        [modId, offset] = readString(buffer, offset);
-        [modName, offset] = readString(buffer, offset);
-        [modVersion, offset] = readString(buffer, offset);
+        let modId, modName, modVersion, bytes;
+        [modId, bytes] = readString(buffer, offset);
+        offset += bytes;
+        [modName, bytes] = readString(buffer, offset);
+        offset += bytes;
+        [modVersion, bytes] = readString(buffer, offset);
+        offset += bytes;
         mods.push({ id: modId, name: modName, version: modVersion });
     }
 
