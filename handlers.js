@@ -490,8 +490,8 @@ function handleBlockPlacement(player, buffer, offset) {
         } else if (isStair) { // Custom Stair Rotation
             let yaw = player.yaw ?? player.rotationYaw ?? 0;
             let dirIndex = Math.floor((yaw * 4 / 360) + 0.5) & 3;
-            // Map dirIndex (0: South, 1: West, 2: North, 3: East) to BlockStair constants (3: NORTH, 0: EAST, 2: SOUTH, 1: WEST)
-            metadata = [2, 1, 3, 0][dirIndex];
+            // Inverted array mapping (3: NORTH, 0: EAST, 2: SOUTH, 1: WEST) to match client placement
+            metadata = [3, 0, 2, 1][dirIndex];
             // Upside-down stair if placed against bottom face of overhead block
             if (direction === 0) metadata |= 4;
         } else if (blockId === 121) { // BlockRegistry.SIGN
