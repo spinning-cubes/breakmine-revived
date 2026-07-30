@@ -40,8 +40,13 @@ export default class GuiConnecting extends GuiScreen {
         this.networkManager.setNetworkHandler(new NetworkLoginHandler(this.networkManager));
         this.networkManager.connect(address, port, this.proxy);
 
-        // Send Minecraft protocol handshake
-        this.networkManager.sendPacket(new HandshakePacket(Minecraft.PROTOCOL_VERSION, ProtocolState.LOGIN));
+        const mods = [];
+        if (this.minecraft.modLoader) {
+            for (const [modId, entry] of this.minecraft.modLoader.mods) {
+                mods.push({ id: modId, name: entry.name, version: entry.version });
+            }
+        }
+        this.networkManager.sendPacket(new HandshakePacket(Minecraft.PROTOCOL_VERSION, ProtocolState.LOGIN, mods));
         this.networkManager.sendPacket(new LoginStartPacket(this.minecraft.getSession().getProfile().getUsername()));
     }
 

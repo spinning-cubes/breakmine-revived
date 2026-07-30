@@ -78,7 +78,39 @@ function handlePacket(player, buffer) {
 }
 
 function handleHandshakePacket(player, packetId, buffer, offset) {
-    player.protocolState = 'login';
+    let ver, verBytes, addr, addrBytes, port, state, stateBytes;
+    [ver, verBytes] = readVarInt(buffer, offset);
+    offset += verBytes;
+    [addr, addrBytes] = readString(buffer, offset);
+    offset += addrBytes;
+    port = buffer.readUInt16BE(offset);
+    offset += 2;
+    [state, stateBytes] = readVarInt(buffer, offset);
+    offset += stateBytes;
+
+    player.protocolState = state === 2 ? 'login' : 'status';
+
+    if (state === 2 && buffer.length - offset > 0) {
+        let count, countBytes;
+        [count, countBytes] = readVarInt(buffer, offset);
+        offset += countBytes;
+        const mods = [];
+        for (let i = 0; i < count; i++) {
+            let modId, modName, modVersion, bytes;
+            [modId, bytes] = readString(buffer, offset);
+            offset += bytes;
+            [modName, bytes] = readString(buffer, offset);
+            offset += bytes;
+            [modVersion, bytes] = readString(buffer, offset);
+            offset += bytes;
+            mods.push({ id: modId, name: modName, version: modVersion });
+        }
+        player.mods = mods;
+
+        if (mods.length > 0) {
+            log.info('Server', `${player.username || 'Unknown'} has mods: ${mods.map(m => `${m.name} v${m.version}`).join(', ')}`);
+        }
+    }
 }
 
 function handleLoginPacket(player, packetId, buffer, offset) {
@@ -86,6 +118,16 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         const [username, bytesConsumed] = readString(buffer, offset);
 
         player.username = username;
+
+        if (!config.allowMods && player.mods && player.mods.length > 0) {
+            const modNames = player.mods.map(m => m.name).join(', ');
+            log.info('Server', `${username} kicked — mods not allowed (has: ${modNames})`);
+            if (player.ws.readyState === 1) {
+                player.ws.send(createDisconnectPacket(`§cThis server does not allow mods. Please disable your mods to join.`));
+                player.ws.close();
+            }
+            return;
+        }
 
         const existingPlayer = findPlayerByUsername(username);
         if (existingPlayer && false) {
@@ -305,10 +347,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
             break;
         }
 
-        case 0x1F: { // Client Mod List (custom)
-            handleModListPacket(player, buffer, offset);
-            break;
-        }
+
     }
 }
 
@@ -526,40 +565,6 @@ function handleUpdateSignText(player, buffer, offset) {
         if (p.ws.readyState === 1) {
             sendSignTextUpdate(p.ws, x, y, z, text);
         }
-    }
-}
-
-function handleModListPacket(player, buffer, offset) {
-    let count, countBytes;
-    [count, countBytes] = readVarInt(buffer, offset);
-    offset += countBytes;
-    const mods = [];
-    for (let i = 0; i < count; i++) {
-        let modId, modName, modVersion, bytes;
-        [modId, bytes] = readString(buffer, offset);
-        offset += bytes;
-        [modName, bytes] = readString(buffer, offset);
-        offset += bytes;
-        [modVersion, bytes] = readString(buffer, offset);
-        offset += bytes;
-        mods.push({ id: modId, name: modName, version: modVersion });
-    }
-
-    player.mods = mods;
-
-    if (!config.allowMods && mods.length > 0) {
-        const modNames = mods.map(m => m.name).join(', ');
-        log.info('Server', `${player.username} kicked — mods not allowed (has: ${modNames})`);
-        if (player.ws.readyState === 1) {
-            const { createDisconnectPacket } = require('./packets');
-            player.ws.send(createDisconnectPacket(`§cThis server does not allow mods. Please disable your mods to join.`));
-            player.ws.close();
-        }
-        return;
-    }
-
-    if (mods.length > 0) {
-        log.info('Server', `${player.username} has mods: ${mods.map(m => `${m.name} v${m.version}`).join(', ')}`);
     }
 }
 
