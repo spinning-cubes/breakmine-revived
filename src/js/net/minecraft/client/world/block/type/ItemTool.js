@@ -1,3 +1,4 @@
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 import Item from "../Item.js";
 
 export default class ItemTool extends Item {
@@ -19,6 +20,7 @@ export default class ItemTool extends Item {
         this.toolType = toolType;
         this.durability = ItemTool.materials.indexOf(material) * 64;
         this.isTool = true;
+        this.inventoryTab = EnumCreativeInventoryTab.TOOLS;
     }
 
     efficiency() {

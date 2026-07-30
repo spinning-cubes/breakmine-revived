@@ -1,6 +1,7 @@
 import Block from "../Block.js";
 import EnumBlockFace from "../../../../util/EnumBlockFace.js";
 import { BlockRegistry } from "../BlockRegistry.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockGrass extends Block {
 
@@ -11,6 +12,7 @@ export default class BlockGrass extends Block {
 
         // Sound
         this.sound = Block.sounds.grass;
+        this.inventoryTab = EnumCreativeInventoryTab.DECORATION;
     }
     
     getPreferredToolType() {

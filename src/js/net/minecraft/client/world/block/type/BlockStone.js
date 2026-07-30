@@ -1,3 +1,4 @@
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 import Block from "../Block.js";
 
 export default class BlockStone extends Block {
@@ -6,6 +7,7 @@ export default class BlockStone extends Block {
         super(id, textureSlotId);
         this.description = "Stone";
         this.hardness = 1.5;
+        this.inventoryTab = EnumCreativeInventoryTab.MATERIALS;
     }
 
     handHardnessMultiplier() {

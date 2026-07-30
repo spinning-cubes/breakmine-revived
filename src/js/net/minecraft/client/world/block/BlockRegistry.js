@@ -133,12 +133,8 @@ export class BlockRegistry {
         BlockRegistry.STONE = new BlockStone(1, 0);
         BlockRegistry.GRASS = new BlockGrass(2, 1);
         BlockRegistry.DIRT = new BlockDirt(3, 2);
-        BlockRegistry.COBBLE_STONE = new BlockCobblestone(4, 14);
-        BlockRegistry.WOOD = new BlockWood(5, 10, "oak", "Oak Planks");
-        BlockRegistry.MOSSY_COBBLESTONE = new BlockMossyCobblestone(6, 14);
         BlockRegistry.BEDROCK = new BlockBedrock(7, 11);
         BlockRegistry.GRAVEL = new BlockGravel(13, 13);
-        BlockRegistry.LOG = new BlockLog(17, 4, "oak", "Oak Log");
         BlockRegistry.LEAVE = new BlockLeave(18, 6);
         BlockRegistry.GLASS = new BlockGlass(20, 12);
         BlockRegistry.WATER = new BlockWater(9, 7);
@@ -146,6 +142,59 @@ export class BlockRegistry {
         BlockRegistry.TORCH = new BlockTorch(50, 9);
         BlockRegistry.GRASS_PATH = new BlockGrassPath(19, 15);
 
+        // --- WOOD TYPES ---
+        // Oak
+        BlockRegistry.LOG = new BlockLog(17, 4, "oak", "Oak Log");
+        BlockRegistry.WOOD = new BlockWood(5, 10, "oak", "Oak Planks");
+        BlockRegistry.OAK_STAIRS = new BlockStair(150, 0, 5, "Oak");
+        BlockRegistry.WOOD_SLAB = new BlockSlab(71, 0, "oak_planks", "Oak Slab", Block.sounds.wood);
+        BlockRegistry.FENCE = new BlockFence(36, 0, "oak", 5);
+
+        // Spruce
+        BlockRegistry.SPRUCE_LOG = new BlockLog(59, 0, "spruce", "Spruce Log");
+        BlockRegistry.SPRUCE_PLANKS = new BlockWood(58, 0, "spruce", "Spruce Planks");
+        BlockRegistry.SPRUCE_STAIRS = new BlockStair(151, 0, 58, "Spruce");
+        BlockRegistry.SPRUCE_SLAB = new BlockSlab(72, 0, "spruce_planks", "Spruce Slab", Block.sounds.wood);
+        BlockRegistry.SPRUCE_FENCE = new BlockFence(60, 0, "spruce", 58);
+
+        // Birch
+        BlockRegistry.BIRCH_LOG = new BlockLog(62, 0, "birch", "Birch Log");
+        BlockRegistry.BIRCH_PLANKS = new BlockWood(61, 0, "birch", "Birch Planks");
+        BlockRegistry.BIRCH_STAIRS = new BlockStair(152, 0, 61, "Birch");
+        BlockRegistry.BIRCH_SLAB = new BlockSlab(73, 0, "birch_planks", "Birch Slab", Block.sounds.wood);
+        BlockRegistry.BIRCH_FENCE = new BlockFence(63, 0, "birch", 61);
+
+        // Jungle
+        BlockRegistry.JUNGLE_LOG = new BlockLog(65, 0, "jungle", "Jungle Log");
+        BlockRegistry.JUNGLE_PLANKS = new BlockWood(64, 0, "jungle", "Jungle Planks");
+        BlockRegistry.JUNGLE_STAIRS = new BlockStair(153, 0, 64, "Jungle");
+        BlockRegistry.JUNGLE_SLAB = new BlockSlab(74, 0, "jungle_planks", "Jungle Slab", Block.sounds.wood);
+        BlockRegistry.JUNGLE_FENCE = new BlockFence(66, 0, "jungle", 64);
+
+        // Acacia
+        BlockRegistry.ACACIA_LOG = new BlockLog(68, 0, "acacia", "Acacia Log");
+        BlockRegistry.ACACIA_PLANKS = new BlockWood(67, 0, "acacia", "Acacia Planks");
+        BlockRegistry.ACACIA_STAIRS = new BlockStair(154, 0, 67, "Acacia");
+        BlockRegistry.ACACIA_SLAB = new BlockSlab(75, 0, "acacia_planks", "Acacia Slab", Block.sounds.wood);
+        BlockRegistry.ACACIA_FENCE = new BlockFence(69, 0, "acacia", 67);
+        
+        // --- STONE & BRICK VARIANTS ---
+        // Cobblestone
+        BlockRegistry.COBBLE_STONE = new BlockCobblestone(4, 14);
+        BlockRegistry.COBBLESTONE_STAIRS = new BlockStair(155, 0, 4, "Cobblestone");
+        BlockRegistry.COBBLESTONE_SLAB = new BlockSlab(70, 0, "cobblestone", "Cobblestone Slab", Block.sounds.stone);
+
+        // Mossy Cobblestone
+        BlockRegistry.MOSSY_COBBLESTONE = new BlockMossyCobblestone(6, 14);
+        BlockRegistry.MOSSY_COBBLESTONE_STAIRS = new BlockStair(156, 0, 6, "Mossy Cobblestone");
+        BlockRegistry.MOSSY_COBBLESTONE_SLAB = new BlockSlab(76, 0, "mossy_cobblestone", "Mossy Cobblestone Slab", Block.sounds.stone);
+
+        // Bricks
+        BlockRegistry.BRICK = new BlockBrick(33, 0);
+        BlockRegistry.BRICK_STAIRS = new BlockStair(157, 0, 33, "Brick");
+        BlockRegistry.BRICK_SLAB = new BlockSlab(77, 0, "brick", "Brick Slab", Block.sounds.stone);
+
+        // --- ORES & MINERAL BLOCKS ---
         BlockRegistry.GOLD_ORE = new BlockStoneLike(21, 0, "gold_ore", "Gold Ore", 3.0, [21, 1], 'iron');
         BlockRegistry.DIAMOND_ORE = new BlockStoneLike(22, 0, "diamond_ore", "Diamond Ore", 3.0, [88, 1], 'iron');
         BlockRegistry.COAL_ORE = new BlockStoneLike(23, 0, "coal_ore", "Coal Ore", 3.0, [87, 2], 'wood');
@@ -156,14 +205,23 @@ export class BlockRegistry {
         BlockRegistry.EMERALD_BLOCK = new BlockStoneLike(28, 0, "emerald_block", "Emerald Block", 3.0, [28, 0], 'iron');
         BlockRegistry.COAL_BLOCK = new BlockStoneLike(29, 0, "coal_block", "Coal Block", 3.0, [29, 0], 'wood');
         BlockRegistry.EMERALD_ORE = new BlockStoneLike(30, 0, "emerald_ore", "Emerald Ore", 3.0, [89, 1], 'iron');
+        BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
+        BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");
 
+        // --- FUNCTIONAL / MISC BLOCKS ---
         BlockRegistry.CRAFTING_TABLE = new BlockCraftingTable(31, 0);
         BlockRegistry.CHEST = new BlockChest(32, 0);
-        BlockRegistry.BRICK = new BlockBrick(33, 0);
         BlockRegistry.FURNACE = new BlockFurnace(34, 0);
         BlockRegistry.BUSH = new BlockBush(35, 0);
-        BlockRegistry.FENCE = new BlockFence(36, 0, "oak", 5);
         BlockRegistry.WOOD_PANEL = new BlockWoodPanel(37, 0);
+        BlockRegistry.BEANS = new BlockBeans(78, 0);
+        BlockRegistry.MOLDY_BEANS = new BlockMoldyBeans(79, 0);
+        //BlockRegistry.WIRE = new BlockWire(80, 0);
+        BlockRegistry.SIGN = new BlockSign(121, 0);
+        BlockRegistry.LAVA = new BlockLava(55, 0);
+        BlockRegistry.LOGIC = new BlockLogic(56, 0);
+
+        // --- WOOL BLOCKS ---
         BlockRegistry.WHITE_WOOL = new BlockWool(38, 0, "white_wool", "White Wool");
         BlockRegistry.ORANGE_WOOL = new BlockWool(39, 0, "orange_wool", "Orange Wool");
         BlockRegistry.MAGENTA_WOOL = new BlockWool(40, 0, "magenta_wool", "Magenta Wool");
@@ -180,52 +238,9 @@ export class BlockRegistry {
         BlockRegistry.GREEN_WOOL = new BlockWool(51, 0, "green_wool", "Green Wool");
         BlockRegistry.RED_WOOL = new BlockWool(52, 0, "red_wool", "Red Wool");
         BlockRegistry.BLACK_WOOL = new BlockWool(53, 0, "black_wool", "Black Wool");
-        BlockRegistry.LAVA = new BlockLava(55, 0);
-        BlockRegistry.LOGIC = new BlockLogic(56, 0);
         BlockRegistry.TAN_WOOL = new BlockWool(57, 0, "tan_wool", "Tan Wool");
 
-        BlockRegistry.SPRUCE_PLANKS = new BlockWood(58, 0, "spruce", "Spruce Planks");
-        BlockRegistry.SPRUCE_LOG = new BlockLog(59, 0, "spruce", "Spruce Log");
-        BlockRegistry.SPRUCE_FENCE = new BlockFence(60, 0, "spruce", 58);
-
-        BlockRegistry.BIRCH_PLANKS = new BlockWood(61, 0, "birch", "Birch Planks");
-        BlockRegistry.BIRCH_LOG = new BlockLog(62, 0, "birch", "Birch Log");
-        BlockRegistry.BIRCH_FENCE = new BlockFence(63, 0, "birch", 61);
-
-        BlockRegistry.JUNGLE_PLANKS = new BlockWood(64, 0, "jungle", "Jungle Planks");
-        BlockRegistry.JUNGLE_LOG = new BlockLog(65, 0, "jungle", "Jungle Log");
-        BlockRegistry.JUNGLE_FENCE = new BlockFence(66, 0, "jungle", 64);
-
-        BlockRegistry.ACACIA_PLANKS = new BlockWood(67, 0, "acacia", "Acacia Planks");
-        BlockRegistry.ACACIA_LOG = new BlockLog(68, 0, "acacia", "Acacia Log");
-        BlockRegistry.ACACIA_FENCE = new BlockFence(69, 0, "acacia", 67);
-
-        BlockRegistry.COBBLESTONE_SLAB = new BlockSlab(70, 0, "cobblestone", "Cobblestone Slab", Block.sounds.stone);
-        BlockRegistry.WOOD_SLAB = new BlockSlab(71, 0, "oak_planks", "Oak Slab", Block.sounds.wood);
-        BlockRegistry.SPRUCE_SLAB = new BlockSlab(72, 0, "spruce_planks", "Spruce Slab", Block.sounds.wood);
-        BlockRegistry.BIRCH_SLAB = new BlockSlab(73, 0, "birch_planks", "Birch Slab", Block.sounds.wood);
-        BlockRegistry.JUNGLE_SLAB = new BlockSlab(74, 0, "jungle_planks", "Jungle Slab", Block.sounds.wood);
-        BlockRegistry.ACACIA_SLAB = new BlockSlab(75, 0, "acacia_planks", "Acacia Slab", Block.sounds.wood);
-        BlockRegistry.MOSSY_COBBLESTONE_SLAB = new BlockSlab(76, 0, "mossy_cobblestone", "Mossy Cobblestone Slab", Block.sounds.stone);
-        BlockRegistry.BRICK_SLAB = new BlockSlab(77, 0, "brick", "Brick Slab", Block.sounds.stone);
-        
-        BlockRegistry.OAK_STAIRS = new BlockStair(150, 0, 5, "Oak");
-        BlockRegistry.SPRUCE_STAIRS = new BlockStair(151, 0, 58, "Spruce");
-        BlockRegistry.BIRCH_STAIRS = new BlockStair(152, 0, 61, "Birch");
-        BlockRegistry.JUNGLE_STAIRS = new BlockStair(153, 0, 64, "Jungle");
-        BlockRegistry.ACACIA_STAIRS = new BlockStair(154, 0, 67, "Acacia");
-        BlockRegistry.COBBLESTONE_STAIRS = new BlockStair(155, 0, 4, "Cobblestone");
-        BlockRegistry.MOSSY_COBBLESTONE_STAIRS = new BlockStair(156, 0, 6, "Mossy Cobblestone");
-        BlockRegistry.BRICK_STAIRS = new BlockStair(157, 0, 33, "Brick");
-
-        BlockRegistry.BEANS = new BlockBeans(78, 0);
-        BlockRegistry.MOLDY_BEANS = new BlockMoldyBeans(79, 0);
-        BlockRegistry.WIRE = new BlockWire(80, 0);
-        BlockRegistry.SIGN = new BlockSign(121, 0);
-
-        BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
-        BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");
-
+        // --- ITEMS & TOOLS ---
         BlockRegistry.ITEM_APPLE = new ItemApple(83, 14);
         BlockRegistry.ITEM_BREAD = new ItemBread(84, 15);
         BlockRegistry.ITEM_STICK = new ItemStick(85, 16);

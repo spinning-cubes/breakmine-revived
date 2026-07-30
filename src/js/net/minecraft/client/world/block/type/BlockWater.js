@@ -1,5 +1,6 @@
 import Block from "../Block.js";
 import EnumBlockFace from "../../../../util/EnumBlockFace.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockWater extends Block {
 
@@ -7,6 +8,7 @@ export default class BlockWater extends Block {
         super(id, textureSlotId);
         this.description = "Water";
         this.hardness = -1.0;
+        this.inventoryTab = EnumCreativeInventoryTab.NOTLISTED;
     }
 
     isReplaceable(world, x, y, z) {

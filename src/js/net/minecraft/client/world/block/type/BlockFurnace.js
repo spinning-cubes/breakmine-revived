@@ -1,6 +1,7 @@
 import Block from "../Block.js";
 import EnumBlockFace from "../../../../util/EnumBlockFace.js";
-import GuiContainerFurnace from "../../../gui/screens/container/GuiContainerFurnace.js"
+import GuiContainerFurnace from "../../../gui/screens/container/GuiContainerFurnace.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockFurnace extends Block {
 
@@ -8,6 +9,7 @@ export default class BlockFurnace extends Block {
         super(id, textureSlotId);
         this.description = "Furnace";
         this.hardness = 3.5;
+        this.inventoryTab = EnumCreativeInventoryTab.MACHINES;
     }
     
     getPreferredToolType() {

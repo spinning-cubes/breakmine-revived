@@ -1,11 +1,13 @@
 import ItemGeneric from "./ItemGeneric.js";
 import { BlockRegistry } from "../BlockRegistry.js";
 import Block from "../Block.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class ItemBucketLava extends ItemGeneric {
 
     constructor(id, textureSlotId, description) {
         super(id, textureSlotId, description);
+        this.inventoryTab = EnumCreativeInventoryTab.TOOLS;
     }
 
     onUse(world, x, y, z, itemstack) {

@@ -1,19 +1,14 @@
 export default class EnumCreativeInventoryTab {
 
-    static BUILDING_BLOCKS = new EnumCreativeInventoryTab("Building Blocks", 1);
-    static DECORATION = new EnumCreativeInventoryTab("Decoration Blocks", 2);
-    static MACHINES = new EnumCreativeInventoryTab("Machines", 3);
-    static TRANSPORTATION = new EnumCreativeInventoryTab("Transportation", 4);
-    static MISC = new EnumCreativeInventoryTab("Miscellaneous", 5);
-    static FOODSTUFFS = new EnumCreativeInventoryTab("Foodstuffs", 8);
-    static TOOLS = new EnumCreativeInventoryTab("Tools", 9);
-    static COMBAT = new EnumCreativeInventoryTab("Combat", 10);
-    static COMBAT = new EnumCreativeInventoryTab("Materials", 10);
-
-    // Legacy API support
-    static WOOL = new EnumCreativeInventoryTab("Wool", -1);
-    static EXPLOSIVES = new EnumCreativeInventoryTab("Explosives", -2);
-    static ITEMS = new EnumCreativeInventoryTab("Items", -3);
+    static BUILDING_BLOCKS = new EnumCreativeInventoryTab("Building Blocks", 1, 2);
+    static DECORATION = new EnumCreativeInventoryTab("Decoration", 2, 49);
+    static MACHINES = new EnumCreativeInventoryTab("Utilities", 3, 34);
+    static FOODSTUFFS = new EnumCreativeInventoryTab("Foodstuffs", 4, 84);
+    static TOOLS = new EnumCreativeInventoryTab("Tools", 5, 91);
+    static COMBAT = new EnumCreativeInventoryTab("Combat", 6, 102);
+    static MATERIALS = new EnumCreativeInventoryTab("Materials", 7, 87);
+    static MODS = new EnumCreativeInventoryTab("Modded Items", 8, 17);
+    static NOTLISTED = new EnumCreativeInventoryTab("Not Listed", 999);
 
     constructor(name, id, icon = 1) {
         this.name = name;

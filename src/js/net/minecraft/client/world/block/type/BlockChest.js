@@ -2,6 +2,7 @@ import Block from "../Block.js";
 import GuiContainerChest from "../../../gui/screens/container/GuiContainerChest.js"
 import EnumBlockFace from "../../../../util/EnumBlockFace.js";
 import BoundingBox from "../../../../util/BoundingBox.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockChest extends Block {
 
@@ -11,6 +12,7 @@ export default class BlockChest extends Block {
         this.hardness = 2.5;
         this.boundingBox = new BoundingBox(0.0625, 0.0, 0.0625, 0.9375, 0.875, 0.9375);
         this.noFaceCull = true;
+        this.inventoryTab = EnumCreativeInventoryTab.MACHINES;
     }
     
     getPreferredToolType() {

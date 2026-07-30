@@ -1,4 +1,5 @@
 import Block from "../Block.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockGravel extends Block {
 
@@ -9,6 +10,7 @@ export default class BlockGravel extends Block {
 
         // Sound
         this.sound = Block.sounds.gravel;
+        this.inventoryTab = EnumCreativeInventoryTab.DECORATION;
     }
     
     getPreferredToolType() {

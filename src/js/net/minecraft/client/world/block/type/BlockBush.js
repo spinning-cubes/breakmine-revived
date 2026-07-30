@@ -1,5 +1,6 @@
 import Block from "../Block.js";
 import { BlockRegistry } from "../BlockRegistry.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockBush extends Block {
 
@@ -10,6 +11,7 @@ export default class BlockBush extends Block {
 
         // Sound
         this.sound = Block.sounds.grass;
+        this.inventoryTab = EnumCreativeInventoryTab.DECORATION;
     }
 
     getTextureForFace(face, data, x, y, z, world) {

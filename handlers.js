@@ -23,6 +23,9 @@ const { isSpectator } = require('./players');
 const config = require('./config');
 const Logger = require('./logger');
 
+const Filter = require('bad-words');
+const filter = new Filter();
+
 let log = Logger;
 
 function canSee(viewer, target) {
@@ -351,6 +354,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
     }
 }
 
+
 function handlePlayerDigging(player, buffer, offset) {
     const status = buffer.readUInt8(offset); // 0: Started, 1: Cancelled, 2: Finished
     const [x, y, z] = readPosition(buffer, offset + 1);
@@ -361,6 +365,11 @@ function handlePlayerDigging(player, buffer, offset) {
         const blockId = 0; // Air (broken block)
 
         addWorldChange(x, y, z, blockId);
+
+        // Delete sign text / block inventory state on server
+        const { deleteBlockInventory } = require('./world');
+        deleteBlockInventory(`${x},${y},${z}`);
+
         saveWorld();
 
         const { sendBlockChange } = require('./packets');
@@ -372,6 +381,31 @@ function handlePlayerDigging(player, buffer, offset) {
 
         // Broadcast animation to other players when block is broken
         broadcastAnimation(player);
+    }
+}
+
+function handleUpdateSignText(player, buffer, offset) {
+    const [x, y, z] = readPosition(buffer, offset);
+    const [rawText, textBytes] = readString(buffer, offset + 8);
+
+    // Clean text using the bad-words library
+    const text = filter.clean(rawText);
+
+    log.info('Server', `Sign text update: ${x},${y},${z} = "${text}"`);
+
+    const blockKey = `${x},${y},${z}`;
+    const { setBlockInventory, saveWorld } = require('./world');
+    
+    setBlockInventory(blockKey, { text: text });
+    saveWorld();
+
+    // Broadcast sign text update to all players via packet
+    const { sendSignTextUpdate } = require('./packets');
+    const players = getPlayers();
+    for (const p of players.values()) {
+        if (p.ws.readyState === 1) {
+            sendSignTextUpdate(p.ws, x, y, z, text);
+        }
     }
 }
 
@@ -542,28 +576,6 @@ function handlePickupItem(player, buffer, offset) {
     for (const p of players.values()) {
         if (p.ws.readyState === 1) {
             p.ws.send(destroyPacket);
-        }
-    }
-}
-
-function handleUpdateSignText(player, buffer, offset) {
-    const [x, y, z] = readPosition(buffer, offset);
-    const [text, textBytes] = readString(buffer, offset + 8);
-
-    log.info('Server', `Sign text update: ${x},${y},${z} = "${text}"`);
-
-    const blockKey = `${x},${y},${z}`;
-    const { setBlockInventory, saveWorld } = require('./world');
-    
-    setBlockInventory(blockKey, { text: text });
-    saveWorld();
-
-    // Broadcast sign text update to all players via packet
-    const { sendSignTextUpdate } = require('./packets');
-    const players = getPlayers();
-    for (const p of players.values()) {
-        if (p.ws.readyState === 1) {
-            sendSignTextUpdate(p.ws, x, y, z, text);
         }
     }
 }

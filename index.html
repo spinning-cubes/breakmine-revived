@@ -153,6 +153,14 @@
     <div id="canvas-container" class="fullscreen"></div>
 </div>
 
+<script>
+if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) && navigator.maxTouchPoints > 0) {
+    if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+    }
+}
+</script>
+
 </body>
 
 <!-- Libraries -->

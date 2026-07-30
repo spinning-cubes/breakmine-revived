@@ -183,6 +183,7 @@ export default class Minecraft {
         this.maxMiningTicks = 30;
         this.lastBlockPos = null;
         this.isMining = false;
+        this.miningProgress = 0;
 
         // Loading screen timeout tracking
         this.lastChunkCount = 0;
@@ -1186,6 +1187,7 @@ export default class Minecraft {
     }
 
     handleMiningTicks() {
+        this.miningProgress = 0;
         if (!this.window.isLocked() || this.player.creative === true || this.player.spectator === true) {
             this.miningTimer = 0;
             this.lastBlockPos = null;
@@ -1256,10 +1258,12 @@ export default class Minecraft {
             requiredTicks = Math.ceil(requiredTicks * Block.handHardnessMultiplier)
         }
 
+        this.miningProgress = Math.min(1, this.miningTimer / Math.max(1, requiredTicks));
         if (this.miningTimer >= requiredTicks) {
             this.breakTargetBlock(hitResult, typeId);
             this.miningTimer = 0;
             this.lastBlockPos = null;
+            this.miningProgress = 0;
         }
     }
 

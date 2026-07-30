@@ -302,6 +302,10 @@ function setWorldTime(time) {
     worldTime = time;
 }
 
+function deleteBlockInventory(key) {
+    blockInventories.delete(key);
+}
+
 function tickWorldTime() {
     worldTime = (worldTime + 1) % 24000;
 }
@@ -378,5 +382,6 @@ module.exports = {
     getWorldTime,
     setWorldTime,
     tickWorldTime,
-    loadCurrentWorld
+    loadCurrentWorld,
+    deleteBlockInventory
 };

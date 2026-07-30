@@ -2,24 +2,20 @@ import Container from "../Container.js";
 import GuiContainerCreative from "../../gui/screens/container/GuiContainerCreative.js";
 import Slot from "../Slot.js";
 import Block from "../../world/block/Block.js";
+import Minecraft from "../../Minecraft.js";
 import InventoryPlayer from "../inventory/InventoryPlayer.js";
-import ItemStack from "../../item/ItemStack.js";
-
 
 export default class ContainerCreative extends Container {
 
-    static ITEMS_PER_PAGE = 45;
-
-    constructor(player) {
+    constructor(player, offset = 0) {
         super();
 
         this.itemList = [];
-        this.currentPage = 0;
-        this.totalPages = 1;
+        this.currentScrollOffset = 0; // Track current scroll position for refresh
 
         let playerInventory = player.inventory;
 
-        // Add creative inventory slots
+        // Add creative inventory slots - 5 rows (original size)
         for (let y = 0; y < 5; ++y) {
             for (let x = 0; x < 9; ++x) {
                 this.addSlot(new Slot(GuiContainerCreative.inventory, y * 9 + x, 9 + x * 18, 18 + y * 18));
@@ -31,43 +27,67 @@ export default class ContainerCreative extends Container {
             this.addSlot(new Slot(playerInventory, x, 9 + x * 18, 112));
         }
 
-        this.initItems();
-        this.goToPage(0);
+        this.initItems(offset);
+        this.scrollTo(0);
+        this.updateFilter(1);
+    }
+
+    updateFilter(tabIndex) {
+        this.itemList = [];
+        
+        Block.blocks.forEach((block) => {
+            if (block.inventoryTab.id === tabIndex) {
+                if (block.id !== 99 && block.id !== 43 && block.id !== -1 && block.id !== 59) {
+                    this.itemList.push(block.getId());
+                }
+            }
+        });
+
+        // Reset scroll to top when changing tabs
+        this.scrollTo(0);
     }
 
     swapWithHotbar(slot, inventoryPlayer, hotbarIndex) {
         let slotInventory = slot.inventory;
-        let slotItem = slotInventory.getItemInSlot(slot.index).copy();
+        let typeId = slotInventory.getItemInSlot(slot.index);
 
-        inventoryPlayer.setItem(hotbarIndex, slotItem);
+        inventoryPlayer.setItem(hotbarIndex, typeId);
 
         this.dirty = true;
     }
 
-    onSlotClick(slot, player, mouseButton = 0) {
+    onSlotClick(slot, player) {
         if (slot.inventory instanceof InventoryPlayer) {
-            super.onSlotClick(slot, player, mouseButton);
+            super.onSlotClick(slot, player);
         } else {
             let inventoryPlayer = player.inventory;
-            let slotItem = slot.inventory.getItemInSlot(slot.index);
-            let cursorItem = slotItem.copy();
-            cursorItem.setCount(mouseButton === 1 ? cursorItem.getMaxStackSize() : 1);
-            inventoryPlayer.itemInCursor = cursorItem;
+            inventoryPlayer.itemInCursor = slot.inventory.getItemInSlot(slot.index);
         }
         this.dirty = true;
     }
 
     scrollTo(scrollOffset) {
+        // Track the current scroll offset for refresh operations
+        this.currentScrollOffset = scrollOffset;
+        
+        // Calculate max scrollable rows for 5 visible rows
+        const visibleRows = 5;
+        const totalRows = Math.ceil(this.itemList.length / 9);
+        const maxRows = Math.max(0, totalRows - visibleRows);
+        
+        let yOffset = Math.floor((scrollOffset * maxRows) + 0.5);
 
-    }
+        if (yOffset < 0) {
+            yOffset = 0;
+        }
+        if (yOffset > maxRows) {
+            yOffset = maxRows;
+        }
 
-    goToPage(page) {
-        this.currentPage = Math.max(0, Math.min(page, this.totalPages - 1));
-        let startIndex = this.currentPage * ContainerCreative.ITEMS_PER_PAGE;
-
+        // Fill the 5 visible rows with items starting from yOffset
         for (let y = 0; y < 5; ++y) {
             for (let x = 0; x < 9; ++x) {
-                let index = startIndex + x + y * 9;
+                let index = x + (y + yOffset) * 9;
 
                 if (index >= 0 && index < this.itemList.length) {
                     GuiContainerCreative.inventory.setItem(x + y * 9, this.itemList[index]);
@@ -76,13 +96,36 @@ export default class ContainerCreative extends Container {
                 }
             }
         }
+
+        this.dirty = true;
     }
 
-
-    initItems() {
+    initItems(offset) {
         Block.blocks.forEach((block) => {
-            this.itemList.push(block.getId());
+            if (block.id !== 99) {
+                if (Minecraft.MODE !== 1) {
+                    if (block.id !== 43 && block.id !== -1 && block.id !== 59 && block.id > offset) {
+                        this.itemList.push(block.getId());
+                    }
+                } else {
+                    if (block.id > offset) {
+                        this.itemList.push(block.getId());
+                    }
+                }
+            }
         });
-        this.totalPages = Math.ceil(this.itemList.length / ContainerCreative.ITEMS_PER_PAGE);
+        this.dirty = true;
+    }
+
+    /**
+     * Refresh the visible inventory items (call this when items are added/removed)
+     */
+    refreshInventoryDisplay() {
+        // Re-populate the itemList from current blocks
+        this.itemList = [];
+        this.initItems(0);
+        // Refresh the current scroll position to show updated items
+        this.scrollTo(this.currentScrollOffset || 0);
+        this.dirty = true;
     }
 }

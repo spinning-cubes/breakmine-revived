@@ -1,4 +1,5 @@
 import Block from "../Block.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockGlass extends Block {
 
@@ -9,6 +10,7 @@ export default class BlockGlass extends Block {
 
         // Sound
         this.sound = Block.sounds.glass;
+        this.inventoryTab = EnumCreativeInventoryTab.DECORATION;
     }
 
     getTextureForFace(face) {

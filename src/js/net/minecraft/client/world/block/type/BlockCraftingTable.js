@@ -1,12 +1,14 @@
 import Block from "../Block.js";
 import GuiContainerCraftingTable from "../../../gui/screens/container/GuiContainerCraftingTable.js";
 import EnumBlockFace from "../../../../util/EnumBlockFace.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockCraftingTable extends Block {
 
     constructor(id, textureSlotId) {
         super(id, textureSlotId);
         this.description = "Crafting Table";
+        this.inventoryTab = EnumCreativeInventoryTab.MACHINES;
     }
 
     getTextureForFace(face) {

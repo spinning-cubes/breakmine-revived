@@ -4,6 +4,7 @@ import EnumBlockFace from "../../../../util/EnumBlockFace.js";
 import BoundingBox from "../../../../util/BoundingBox.js";
 import { BlockRegistry } from "../BlockRegistry.js";
 import BlockRenderType from "../../../../util/BlockRenderType.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockSign extends Block {
 
@@ -12,6 +13,8 @@ export default class BlockSign extends Block {
         this.description = "Sign";
         this.noFaceCull = true;
         this.sound = Block.sounds.wood;
+                
+        this.inventoryTab = EnumCreativeInventoryTab.DECORATION;
     }
 
     isSolid() {

@@ -2,6 +2,7 @@ import BlockRenderType from "../../../util/BlockRenderType.js";
 import EnumBlockFace from "../../../util/EnumBlockFace.js";
 import MovingObjectPosition from "../../../util/MovingObjectPosition.js";
 import BoundingBox from "../../../util/BoundingBox.js";
+import EnumCreativeInventoryTab from "../../gui/EnumCreativeInventoryTab.js";
 
 export default class Block {
 
@@ -33,6 +34,8 @@ export default class Block {
         this.path = false;
         this.noFaceCull = false;
         this.multipart = false;
+
+        this.inventoryTab = EnumCreativeInventoryTab.BUILDING_BLOCKS;
 
         this.mod = "Breakmine";
     }

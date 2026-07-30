@@ -1,6 +1,7 @@
 import Block from "../Block.js";
 import EnumBlockFace from "../../../../util/EnumBlockFace.js";
 import BoundingBox from "../../../../util/BoundingBox.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockGrassPath extends Block {
 
@@ -14,6 +15,7 @@ export default class BlockGrassPath extends Block {
         this.boundingBox = new BoundingBox(0, 0, 0, 1, (1/16) * 15, 1);
 
         this.path = true;
+        this.inventoryTab = EnumCreativeInventoryTab.DECORATION;
     }
 
     getAmbientOcclusion() {

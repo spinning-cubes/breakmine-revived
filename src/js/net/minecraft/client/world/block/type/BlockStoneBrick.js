@@ -1,7 +1,7 @@
 import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 import Block from "../Block.js";
 
-export default class BlockStoneLike extends Block {
+export default class BlockStoneBrick extends Block {
 
     constructor(id, textureSlotId, textureName, name, hardness = 3.0, drop = [4, 1], minLevel = null) {
         super(id, textureSlotId);
@@ -13,7 +13,7 @@ export default class BlockStoneLike extends Block {
 
         // Sound
         this.sound = Block.sounds.stone;
-        this.inventoryTab = EnumCreativeInventoryTab.MATERIALS;
+        this.inventoryTab = EnumCreativeInventoryTab.BUILDING_BLOCKS;
     }
 
     handHardnessMultiplier() {

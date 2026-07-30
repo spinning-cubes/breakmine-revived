@@ -251,7 +251,7 @@ export default class GameWindow {
                 }
                 .mobile-btn {
                     pointer-events: auto;
-                    background: rgba(0, 0, 0, 0.25);
+                    background: rgba(0, 0, 0, 0.5);
                     color: rgba(255, 255, 255, 0.7);
                     border: none;
                     padding: 0;
@@ -267,22 +267,21 @@ export default class GameWindow {
                     fill: currentColor;
                 }
                 .mobile-btn:active {
-                    background: rgba(255, 255, 255, 0.3);
+                    background: transparent;
                     color: #fff;
                 }
                 .joystick-zone {
                     position: absolute;
-                    bottom: 30px;
+                    bottom: 45px;
                     width: 130px;
                     height: 130px;
-                    background: rgba(255, 255, 255, 0.08);
-                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    background: transparent;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
                     border-radius: 50%;
                     pointer-events: auto;
                     touch-action: none;
                 }
                 #joystick-move-zone { left: 30px; }
-                #joystick-look-zone { right: 30px; }
 
                 .joystick-knob {
                     position: absolute;
@@ -311,26 +310,32 @@ export default class GameWindow {
                     height: 42px;
                 }
 
-                #mobile-actions {
+                .texture-btn {
                     position: absolute;
-                    bottom: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    display: flex;
-                    gap: 12px;
+                    width: 48px;
+                    height: 48px;
+                    pointer-events: auto;
+                    touch-action: none;
+                    border: none;
+                    padding: 0;
+                    background: none;
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    image-rendering: pixelated;
+                    cursor: pointer;
+                    z-index: 10;
                 }
-                .action-btn {
-                    width: 42px;
-                    height: 42px;
-                    border-radius: 50%;
-                }
+                #mbtn-shift { right: 3.5vw; top: 39.70vh; }
+                #mbtn-space { right: 3.5vw; top: 52.11vh; }
+                #mbtn-e { right: 3.5vw; top: 27.30vh; }
 
                 #mobile-fullscreen {
                     position: fixed;
                     top: 15px;
                     left: 15px;
-                    width: 38px;
-                    height: 38px;
+                    width: 42px;
+                    height: 42px;
                     z-index: 10000;
                 }
 
@@ -338,25 +343,34 @@ export default class GameWindow {
                     position: fixed;
                     top: 15px;
                     right: 15px;
-                    width: 38px;
-                    height: 38px;
+                    width: 42px;
+                    height: 42px;
                     z-index: 10000;
                     display: none;
                 }
+
             `;
             document.head.appendChild(style);
         }
 
-        // 2. Inject Overlay & GUI Close Elements with SVG Icons
+        // 2. Inject Fullscreen Button
+        let fsBtn = document.getElementById('mobile-fullscreen');
+        if (!fsBtn) {
+            fsBtn = document.createElement('button');
+            fsBtn.id = 'mobile-fullscreen';
+            fsBtn.className = 'mobile-btn';
+            fsBtn.innerHTML = `
+                <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            `;
+            document.body.appendChild(fsBtn);
+        }
+
+        // 3. Inject Overlay & GUI Close Elements with SVG Icons
         let overlay = document.getElementById('mobile-controls-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'mobile-controls-overlay';
             overlay.innerHTML = `
-                <button class="mobile-btn" id="mobile-fullscreen">
-                    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-                </button>
-
                 <div id="joystick-move-zone" class="joystick-zone">
                     <div id="joystick-move-knob" class="joystick-knob"></div>
                 </div>
@@ -364,24 +378,13 @@ export default class GameWindow {
                     <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
                 </button>
 
-                <div id="joystick-look-zone" class="joystick-zone">
-                    <div id="joystick-look-knob" class="joystick-knob"></div>
-                </div>
                 <button class="mobile-btn arrow-btn" id="mbtn-next">
                     <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
                 </button>
 
-                <div id="mobile-actions">
-                    <button class="mobile-btn action-btn" id="mbtn-shift">
-                        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
-                    </button>
-                    <button class="mobile-btn action-btn" id="mbtn-space">
-                        <svg viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
-                    </button>
-                    <button class="mobile-btn action-btn" id="mbtn-e">
-                        <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
-                    </button>
-                </div>
+                <button class="texture-btn" id="mbtn-shift"></button>
+                <button class="texture-btn" id="mbtn-space"></button>
+                <button class="texture-btn" id="mbtn-e"></button>
             `;
             document.body.appendChild(overlay);
         }
@@ -399,18 +402,15 @@ export default class GameWindow {
         this.guiCloseBtn = guiCloseBtn;
 
         // Fullscreen Button Handler
-        const fsBtn = document.getElementById('mobile-fullscreen');
-        if (fsBtn) {
-            fsBtn.addEventListener('touchstart', e => {
-                e.preventDefault();
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().catch(() => {});
-                } else {
-                    document.exitFullscreen().catch(() => {});
-                }
-                this.updateWindowSize();
-            }, { passive: false });
-        }
+        fsBtn.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+            this.updateWindowSize();
+        }, { passive: false });
 
         // Close GUI Button Handler
         guiCloseBtn.addEventListener('touchstart', e => {
@@ -420,6 +420,32 @@ export default class GameWindow {
                 currentScreen.keyTyped("Escape", "Escape");
             }
         }, { passive: false });
+
+        // Texture Buttons Setup
+        const textureBtns = [
+            { id: 'mbtn-shift', normal: 'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA4UlEQVR4AeyUSw6EIBBEe+Z2bj2CW+/kEdhyC8KeY7BgOZMiwTAGQsMoxgST0rb51LNMeNPN1w4wz/Onp8J3ewAYL8tCvbSuK8ETEB4AhVKKjDFd5JyDpdcO4N9uuD0XQEpJQf8E15QAjGPT43s8VqqrAXJmuf6pACWT0ngKhp0Ad3PuvADDAqjdtGY+CyDQXvFkAUzTRLFSIPE46tScVI8FkFp4Vm8AjARGAiOBkUBTAjjrj2o9mpsAWs1S6wbATwLWWuqh+Fd4ACHES2tNupO2bSN4AsQDoEDjCuX2hCf0BQAA//9rZTcnAAAABklEQVQDALBXlVClvjJqAAAAAElFTkSuQmCC', hover: 'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA80lEQVR4AeyUMQoCMRBFR69l5QFsFhsvoEewtPYInsBGcgStrKxsxMpCBCu1sBEb5Q9k0bBxJwNmCWThL5tsZv7L3yVtavgqAYqieMWU3TcDwLgzGFMs9YYTgicgGAAP++2GnrdTFF3vD1iySgAeNXBLE2C1mJErbXhpJqDdbVVdTiAnkBPICaSRgOTcl6xJ9yTs9kdV8N65kPXif0DaVLrO0osBUFDXvO49ergKAkCxz8Q3j5pfCgZAM9fMHWONVCoANIepFcZaqQG0hm5dBvhK4HA8Uwx9fgYGMMa0LrslxdJ6PiV4AoQB8ICJf8jXE57QGwAA//9zXGhDAAAABklEQVQDAEcglVDvsWKhAAAAAElFTkSuQmCC' },
+            { id: 'mbtn-space', normal: 'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA4UlEQVR4AeyUSw6EIBBEe+Z2bj2CW+/kEdhyC8KeY7BgOZMiwTAGQsMoxgST0rb51LNMeNPN1w4wz/Onp8J3ewAYL8tCvbSuK8ETEB4AhVKKjDFd5JyDpdcO4N9uuD0XQEpJQf8E15QAjGPT43s8VqqrAXJmuf6pACWT0ngKhp0Ad3PuvADDAqjdtGY+CyDQXvFkAUzTRLFSIPE46tScVI8FkFp4Vm8AjARGAiOBkUBTAjjrj2o9mpsAWs1S6wbATwLWWuqh+Fd4ACHES2tNupO2bSN4AsQDoEDjCuX2hCf0BQAA//9rZTcnAAAABklEQVQDALBXlVClvjJqAAAAAElFTkSuQmCC', hover: 'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA90lEQVR4AeyUPwrCMBTGn17LyQO4BBcvoEdwdPYInsBFcgSdnJxcxMlBBCd1cBEX5QukxJKQl9imFFL42teXP9+vXyFdavgqAIQQn5TS360AYNwbTSmVBuMZwRMQCgDFcb+j9+OSRPfnC5ZKBYB6a+DWXoDNakFa/wQXlQCMTdPyuznmq4MBXGaufqUAPhPfuA2GnQB3c+48DcMCCN00ZD4LQNPW8WQB9IcTMmUDMcdR2+bYeiwA28KqehkgJ5ATyAnkBKISwFlfVuzRHAUQa2ZblwF+Ejidr5RC5q9QAFLKzu2wplTaLucET4AoABRo1CHXnvCEvgAAAP//+LFDzgAAAAZJREFUAwAS/JVQl/FRZQAAAABJRU5ErkJggg==' },
+            { id: 'mbtn-e', normal: 'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABeElEQVR4AeyUO46DMBBAZ7fOEdKkS5k+cABajkDLbTgILSegRZRIFHRcgXJXD2kihzVgHMI2ifTi8W/mYRJ/yz9/HgJxHP8ciT73KEDh2+0mSZIcQpqmQk0kRgECyLJM2ra1whz4zpv7hmGg3MiTwDhy8JezQBRFAkVRCKgnMTAHOu7aOgu4Jty6brMATwld1wkQw9bCun6zgG7cq/UWaJpG4FURqwBHC5qcGLS/1vKjhLV1zFsFmDiKj4D1BC6XiwDvEYjBfC2n00nAHNP4er0KaH+ptQosbdh7zirAUwMXDBCDWfx8PguYY2VZCvR9L0AM5pppbBWYLnpn3yrAuwUtTAzap+USAuJXsAr4Jrzf72JjKZ9VIAxDAd1IDNrfs7UK7FlgLddHwPsE+FfA2hGvzXsLrCV2nfcW4BYE10Jz67wF5hJuHf8jwJ3vArcguKydrjElnwSCIJAjqKrq4TAK5Hn+Vde11AdCTSxGAQIG3sFcTmrCLwAAAP//ofn5cAAAAAZJREFUAwBMvr9QoFa8cgAAAABJRU5ErkJggg==', hover: 'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABj0lEQVR4AeyUvUrEQBCAR+t0VkLANoidaGMhWoiNFsHmsNdHsBKfQ3wAG0mvhWItFoJIHkBipRY2YqN8gTn24ibZ7OX2mgt87OzfzJfN3c7LlJ+hQJqmvyHR9y4FKLywvC0bg5Mg7B2dCTWRKAUI4PriVH4+X60wB77z5r6Pr2/RZ0RAB0O2zgJbB8cCd1fnAipJDMyBjru2zgKuCbuu6yzAW8Lb870AMXQtrOs7C+jGvlpvgTzPBcYVsQpwtKDJiUH7bS0/Smhbx7xVgIlQzASsJ7C4sinAdwRiMD9LFEUC5pjGSZIIaL+ptQo0beh7zirAWwMXDBCDWTyOYwFz7PHmUqAoCgFiMNdUY6tAddEk+1YBvi1oYWLQPi2XEBCPg1XAN+HqzkBsNOWzCqztHgroRmLQfp+tVaDPAm25ZgLeJ8C/AtqOuG3eW6Atseu8twC3ILgWqlvnLVCXsOv4PwHufBe4BcFlbXWNKTkisLS+LyHInx6GDqVAlmVz7y+3EhJqYlEKEDAwCepyUhP+AAAA//86Mu/QAAAABklEQVQDADdFv1Cl+QfeAAAAAElFTkSuQmCC' },
+        ];
+
+        for (const btn of textureBtns) {
+            const el = document.getElementById(btn.id);
+            if (!el) continue;
+            const normalUrl = 'data:image/png;base64,' + btn.normal;
+            const hoverUrl = 'data:image/png;base64,' + btn.hover;
+
+            const setNormal = () => el.style.backgroundImage = 'url(' + normalUrl + ')';
+            const setHover = () => el.style.backgroundImage = 'url(' + hoverUrl + ')';
+
+            setNormal();
+
+            el.addEventListener('touchstart', setHover, { passive: true });
+            el.addEventListener('touchend', setNormal, { passive: true });
+            el.addEventListener('touchcancel', setNormal, { passive: true });
+            el.addEventListener('mousedown', setHover, { passive: true });
+            el.addEventListener('mouseup', setNormal, { passive: true });
+            el.addEventListener('mouseleave', setNormal, { passive: true });
+        }
 
         // 3. Setup Joysticks Logic
         const setupJoystick = (zoneId, knobId, onMove, onRelease) => {
@@ -495,34 +521,14 @@ export default class GameWindow {
             Keyboard.setState("KeyD", false);
         });
 
-        // Right Joystick -> Look Rotation Loop
-        let lookVectorX = 0;
-        let lookVectorY = 0;
-
-        setupJoystick('joystick-look-zone', 'joystick-look-knob', (normX, normY) => {
-            lookVectorX = normX;
-            lookVectorY = normY;
-        }, () => {
-            lookVectorX = 0;
-            lookVectorY = 0;
-        });
-
-        // Continuous Look & Mobile State Update Loop
+        // Mobile State Update Loop
         setInterval(() => {
-            if (this.minecraft.currentScreen === null && (lookVectorX !== 0 || lookVectorY !== 0)) {
-                this.mouseMotionX += lookVectorX * 12;
-                this.mouseMotionY += -lookVectorY * 12;
-            }
             this.updateMobileUIState();
         }, 16);
 
-        // 4. Minecraft PE Place / Break System + GUI Pass-Through
-        let peTouchId = null;
-        let peStartX = 0;
-        let peStartY = 0;
-        let peStartTime = 0;
-        let peBreakInterval = null;
-        let isBreaking = false;
+        // 4. Camera Drag + Place/Break System + GUI Pass-Through
+        let activeTouch = null;
+        let breakInterval = null;
 
         this.registerListener(window, 'touchstart', event => {
             this.initialSoundEngine();
@@ -532,9 +538,11 @@ export default class GameWindow {
                     let touch = event.changedTouches[i];
                     if (touch.target.closest('#mobile-gui-close, #mobile-fullscreen')) continue;
 
+                    this.mouseX = touch.clientX / this.scaleFactor;
+                    this.mouseY = touch.clientY / this.scaleFactor;
                     this.minecraft.currentScreen.mouseClicked(
-                        touch.clientX / this.scaleFactor,
-                        touch.clientY / this.scaleFactor,
+                        this.mouseX,
+                        this.mouseY,
                         0
                     );
                 }
@@ -545,19 +553,23 @@ export default class GameWindow {
                 let touch = event.changedTouches[i];
                 if (touch.target.closest('#mobile-controls-overlay, #mobile-gui-close, #mobile-fullscreen')) continue;
 
-                if (peTouchId === null) {
-                    peTouchId = touch.identifier;
-                    peStartX = touch.clientX;
-                    peStartY = touch.clientY;
-                    peStartTime = Date.now();
-                    isBreaking = false;
+                if (activeTouch === null) {
+                    activeTouch = {
+                        id: touch.identifier,
+                        startX: touch.clientX,
+                        startY: touch.clientY,
+                        lastX: touch.clientX,
+                        lastY: touch.clientY,
+                        startTime: Date.now(),
+                        isBreaking: false,
+                        isDragging: false
+                    };
+                    this.mouseButtons[0] = true;
 
-                    if (peBreakInterval) clearInterval(peBreakInterval);
-
-                    peBreakInterval = setInterval(() => {
-                        if (peTouchId !== null && (Date.now() - peStartTime) >= 200) {
-                            isBreaking = true;
-                            this.minecraft.onMouseClicked(0); // Break block
+                    breakInterval = setInterval(() => {
+                        if (activeTouch && (Date.now() - activeTouch.startTime) >= 300) {
+                            activeTouch.isBreaking = true;
+                            this.minecraft.onMouseClicked(0);
                         }
                     }, 180);
                 }
@@ -568,9 +580,11 @@ export default class GameWindow {
             if (this.minecraft.currentScreen !== null) {
                 for (let i = 0; i < event.changedTouches.length; i++) {
                     let touch = event.changedTouches[i];
+                    this.mouseX = touch.clientX / this.scaleFactor;
+                    this.mouseY = touch.clientY / this.scaleFactor;
                     this.minecraft.currentScreen.mouseDragged(
-                        touch.clientX / this.scaleFactor,
-                        touch.clientY / this.scaleFactor,
+                        this.mouseX,
+                        this.mouseY,
                         0
                     );
                 }
@@ -579,11 +593,19 @@ export default class GameWindow {
 
             for (let i = 0; i < event.changedTouches.length; i++) {
                 let touch = event.changedTouches[i];
-                if (touch.identifier === peTouchId) {
-                    let dist = Math.hypot(touch.clientX - peStartX, touch.clientY - peStartY);
-                    if (dist > 15) {
-                        if (peBreakInterval) clearInterval(peBreakInterval);
-                        peTouchId = null;
+                if (activeTouch && touch.identifier === activeTouch.id) {
+                    let dx = touch.clientX - activeTouch.lastX;
+                    let dy = touch.clientY - activeTouch.lastY;
+                    activeTouch.lastX = touch.clientX;
+                    activeTouch.lastY = touch.clientY;
+
+                    let totalDist = Math.hypot(touch.clientX - activeTouch.startX, touch.clientY - activeTouch.startY);
+                    if (totalDist > 15) {
+                        if (!activeTouch.isDragging) {
+                            activeTouch.isDragging = true;
+                        }
+                        this.mouseMotionX += dx * 3.2;
+                        this.mouseMotionY += -dy * 3.2;
                     }
                 }
             }
@@ -604,15 +626,14 @@ export default class GameWindow {
 
             for (let i = 0; i < event.changedTouches.length; i++) {
                 let touch = event.changedTouches[i];
-                if (touch.identifier === peTouchId) {
-                    if (peBreakInterval) clearInterval(peBreakInterval);
-
-                    if (!isBreaking && (Date.now() - peStartTime) < 200) {
-                        this.minecraft.onMouseClicked(2); // Place block
+                if (activeTouch && touch.identifier === activeTouch.id) {
+                    clearInterval(breakInterval);
+                    this.mouseButtons[0] = false;
+                    if (!activeTouch.isDragging && !activeTouch.isBreaking && (Date.now() - activeTouch.startTime) < 300) {
+                        this.minecraft.onMouseClicked(2);
                     }
 
-                    peTouchId = null;
-                    isBreaking = false;
+                    activeTouch = null;
                 }
             }
         }, false);
