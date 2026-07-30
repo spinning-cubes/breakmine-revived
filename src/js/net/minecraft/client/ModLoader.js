@@ -5,10 +5,14 @@ import { BlockRegistry } from "./world/block/BlockRegistry.js";
  * ModLoader — discovers, installs, and registers mods.
  *
  * Supported mod layout (inside a ZIP or folder):
- *   ModData.js          — metadata (static NAME, ID, AUTHOR, VERSION)
- *   ModLoad.js          — lifecycle hook (static onLoad(world))
+ *   ModData.js           — metadata (static NAME, ID, AUTHOR, VERSION)
+ *   ModLoad.js           — lifecycle hook (static onLoad(world))
  *   blocks/*.js          — block classes (extend Block)
  *   items/*.js           — item classes (extend Item / ItemGeneric / ItemEdible / ItemTool)
+ *   crafting/*.js        — crafting recipe classes
+ *   smelting/*.js        — smelting recipe classes
+ *   gui/*.js             — GUI screen classes (extend GuiScreen / GuiContainer)
+ *   gui_textures/*.png   — GUI background textures (accessible via 'gui/&lt;modId&gt;/&lt;name&gt;')
  *   textures/*.png       — 16×16 block/item textures
  *
  * Block naming convention:
@@ -18,6 +22,9 @@ import { BlockRegistry } from "./world/block/BlockRegistry.js";
  * Item naming convention:
  *   ItemTestItem          →  strip "Item"   →  TestItem          →  test_item
  *   Final namespaced ID:  <modId>:test_item
+ *
+ * GUI classes loaded from gui/ are automatically available in block/item eval
+ * sandboxes so blocks can `new GuiMyScreen(...)` in onMouseButton.
  */
 export default class ModLoader {
     /**
@@ -110,6 +117,14 @@ export default class ModLoader {
                 const src = await entry.async('string');
                 const filename = path.split('/').pop();
                 await this.filesystem.saveFile(src, `mods/${modId}/smelting/${filename}`);
+            } else if (path.startsWith('gui/') && path.endsWith('.js')) {
+                const src = await entry.async('string');
+                const filename = path.split('/').pop();
+                await this.filesystem.saveFile(src, `mods/${modId}/gui/${filename}`);
+            } else if (path.startsWith('gui_textures/') && path.endsWith('.png')) {
+                const b64 = await entry.async('base64');
+                const filename = path.split('/').pop();
+                await this.filesystem.saveBinaryFile(b64, `mods/${modId}/gui_textures/${filename}.b64`);
             }
         }
 
@@ -294,6 +309,8 @@ export default class ModLoader {
             blockClasses: new Map(),
             itemIds: [],
             itemClasses: new Map(),
+            guiClasses: new Map(),
+            guiTextureNames: [],
             textureNames: []
         };
 
@@ -318,6 +335,14 @@ export default class ModLoader {
             .filter(f => f.startsWith('smelting/') && f.endsWith('.js'))
             .map(f => f.replace(/^smelting\//, ''));
 
+        const guiFiles = relFiles
+            .filter(f => f.startsWith('gui/') && f.endsWith('.js'))
+            .map(f => f.replace(/^gui\//, ''));
+
+        entry.guiTextureNames = relFiles
+            .filter(f => f.startsWith('gui_textures/') && f.endsWith('.png.b64'))
+            .map(f => f.replace(/^gui_textures\//, '').replace(/\.png\.b64$/, ''));
+
         entry.textureNames = relFiles
             .filter(f => f.startsWith('textures/') && f.endsWith('.png.b64'))
             .map(f => f.replace(/^textures\//, '').replace(/\.png\.b64$/, ''));
@@ -325,22 +350,28 @@ export default class ModLoader {
         // 3. Register mod textures into the TextureAtlas
         await this._registerModTextures(modId, entry);
 
-        // 4. Load and register block classes
+        // 4. Register GUI textures into minecraft.resources
+        await this._registerModGuiTextures(modId, entry);
+
+        // 5. Load and register GUI classes (before blocks so blocks can reference them)
+        await this._registerModGuis(modId, entry, guiFiles);
+
+        // 6. Load and register block classes (may reference GUI classes)
         await this._registerModBlocks(modId, entry, blockFiles);
 
-        // 5. Load and register item classes
+        // 7. Load and register item classes
         await this._registerModItems(modId, entry, itemFiles);
 
-        // 6. Register crafting recipes
+        // 8. Register crafting recipes
         await this._registerModCrafting(modId, entry, craftingFiles);
 
-        // 7. Register smelting recipes
+        // 9. Register smelting recipes
         await this._registerModSmelting(modId, entry, smeltingFiles);
 
-        // 8. Call ModLoad.onLoad if present
+        // 10. Call ModLoad.onLoad if present
         await this._callModLoad(modId, entry);
 
-        // 9. Store
+        // 11. Store
         this.mods.set(modId, entry);
 
         console.log(`[ModLoader] Loaded mod '${entry.name}' — ${entry.blockIds.length} block(s), ${entry.itemIds.length} item(s), ${entry.textureNames.length} texture(s)`);
@@ -377,12 +408,20 @@ export default class ModLoader {
 
         const BoundingBoxClass = await this._getBoundingBox();
 
+        const EnumBlockFaceClass = await this._getEnumBlockFace();
+
+        // Build deps: base block deps + any GUI classes from this mod
+        const blockDeps = { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass, EnumBlockFace: EnumBlockFaceClass };
+        for (const [className, cls] of entry.guiClasses) {
+            blockDeps[className] = cls;
+        }
+
         for (const filename of blockFiles) {
             try {
                 const src = await this.filesystem.loadFile(`mods/${modId}/blocks/${filename}`);
                 if (!src) continue;
 
-                const blockClass = this._evalClass(src, { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass });
+                const blockClass = this._evalClass(src, blockDeps);
                 if (!blockClass) continue;
 
                 const className = blockClass.name || filename.replace('.js', '');
@@ -586,6 +625,98 @@ export default class ModLoader {
     }
 
     /* ------------------------------------------------------------------
+     *  Internal — register GUI textures into minecraft.resources
+     * ------------------------------------------------------------------ */
+
+    async _registerModGuiTextures(modId, entry) {
+        for (const texName of entry.guiTextureNames) {
+            try {
+                const b64Path = `mods/${modId}/gui_textures/${texName}.png.b64`;
+                const b64data = await this.filesystem.loadBinaryFile(b64Path);
+                if (!b64data) continue;
+
+                const img = await new Promise((resolve, reject) => {
+                    const blob = new Blob([b64data], { type: 'image/png' });
+                    const url = URL.createObjectURL(blob);
+                    const image = new Image();
+                    image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
+                    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`Failed to decode GUI texture: ${texName}`)); };
+                    image.src = url;
+                });
+
+                const resourceKey = `gui/${modId}/${texName}`;
+                this.minecraft.resources[resourceKey] = img;
+                console.log(`[ModLoader]   Registered GUI texture '${resourceKey}'`);
+            } catch (err) {
+                console.warn(`[ModLoader] Failed to register GUI texture '${texName}' for mod '${modId}':`, err);
+            }
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     *  Internal — dynamically import GUI base classes for mod sandboxing
+     * ------------------------------------------------------------------ */
+
+    async _getGuiDeps() {
+        try {
+            const [GuiScreen, GuiContainer, GuiBase, ContainerCls, SlotCls, InventoryBasic, ItemStack, GuiButton] = await Promise.all([
+                import('./gui/GuiScreen.js').then(m => m.default),
+                import('./gui/screens/GuiContainer.js').then(m => m.default),
+                import('./gui/Gui.js').then(m => m.default),
+                import('./inventory/Container.js').then(m => m.default),
+                import('./inventory/Slot.js').then(m => m.default),
+                import('./inventory/inventory/InventoryBasic.js').then(m => m.default),
+                import('./item/ItemStack.js').then(m => m.default),
+                import('./gui/widgets/GuiButton.js').then(m => m.default),
+            ]);
+
+            const BlockClass = await this._getBlockClass();
+            const BoundingBoxClass = await this._getBoundingBox();
+
+            return {
+                GuiScreen,
+                GuiContainer,
+                Gui: GuiBase,
+                Container: ContainerCls,
+                Slot: SlotCls,
+                InventoryBasic,
+                ItemStack,
+                GuiButton,
+                Block: BlockClass,
+                BlockRegistry,
+                BoundingBox: BoundingBoxClass,
+            };
+        } catch (e) {
+            console.error('[ModLoader] Could not import GUI classes:', e);
+            return { GuiScreen: class EmptyScreen {} };
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     *  Internal — load GUI JS files and store class constructors
+     * ------------------------------------------------------------------ */
+
+    async _registerModGuis(modId, entry, guiFiles) {
+        const guiDeps = await this._getGuiDeps();
+
+        for (const filename of guiFiles) {
+            try {
+                const src = await this.filesystem.loadFile(`mods/${modId}/gui/${filename}`);
+                if (!src) continue;
+
+                const guiClass = this._evalClass(src, guiDeps);
+                if (!guiClass) continue;
+
+                const className = guiClass.name || filename.replace('.js', '');
+                entry.guiClasses.set(className, guiClass);
+                console.log(`[ModLoader]   Loaded GUI '${className}' from ${filename}`);
+            } catch (err) {
+                console.error(`[ModLoader] Failed to load GUI '${filename}' from mod '${modId}':`, err);
+            }
+        }
+    }
+
+    /* ------------------------------------------------------------------
      *  Internal — call ModLoad.onLoad if present
      * ------------------------------------------------------------------ */
 
@@ -783,6 +914,18 @@ export default class ModLoader {
         }
     }
 
+    async _getEnumBlockFace() {
+        if (this._enumBlockFaceClass) return this._enumBlockFaceClass;
+        try {
+            const mod = await import('../util/EnumBlockFace.js');
+            this._enumBlockFaceClass = mod.default;
+            return this._enumBlockFaceClass;
+        } catch (e) {
+            console.error('[ModLoader] Could not import EnumBlockFace class:', e);
+            return class EmptyFace {};
+        }
+    }
+
     /**
      * Dynamically import item base classes for mod sandboxing.
      */
@@ -867,5 +1010,7 @@ export default class ModLoader {
  * @property {Map<string, Function>} blockClasses
  * @property {string[]} itemIds
  * @property {Map<string, Function>} itemClasses
+ * @property {Map<string, Function>} guiClasses
+ * @property {string[]} guiTextureNames
  * @property {string[]} textureNames
  */

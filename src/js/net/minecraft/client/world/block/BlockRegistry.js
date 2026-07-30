@@ -9,6 +9,7 @@ import BlockTorch from "./type/BlockTorch.js";
 import Sound from "./sound/Sound.js";
 import Block from "./Block.js";
 import BlockWood from "./type/BlockWood.js";
+import BlockStair from "./type/BlockStair.js";
 import BlockBedrock from "./type/BlockBedrock.js";
 import BlockGlass from "./type/BlockGlass.js";
 import SoundGlass from "./sound/SoundGlass.js";
@@ -207,6 +208,15 @@ export class BlockRegistry {
         BlockRegistry.ACACIA_SLAB = new BlockSlab(75, 0, "acacia_planks", "Acacia Slab", Block.sounds.wood);
         BlockRegistry.MOSSY_COBBLESTONE_SLAB = new BlockSlab(76, 0, "mossy_cobblestone", "Mossy Cobblestone Slab", Block.sounds.stone);
         BlockRegistry.BRICK_SLAB = new BlockSlab(77, 0, "brick", "Brick Slab", Block.sounds.stone);
+        
+        BlockRegistry.OAK_STAIRS = new BlockStair(150, 0, 5, "Oak");
+        BlockRegistry.SPRUCE_STAIRS = new BlockStair(151, 0, 58, "Spruce");
+        BlockRegistry.BIRCH_STAIRS = new BlockStair(152, 0, 61, "Birch");
+        BlockRegistry.JUNGLE_STAIRS = new BlockStair(153, 0, 64, "Jungle");
+        BlockRegistry.ACACIA_STAIRS = new BlockStair(154, 0, 67, "Acacia");
+        BlockRegistry.COBBLESTONE_STAIRS = new BlockStair(155, 0, 4, "Cobblestone");
+        BlockRegistry.MOSSY_COBBLESTONE_STAIRS = new BlockStair(156, 0, 6, "Mossy Cobblestone");
+        BlockRegistry.BRICK_STAIRS = new BlockStair(157, 0, 33, "Brick");
 
         BlockRegistry.BEANS = new BlockBeans(78, 0);
         BlockRegistry.MOLDY_BEANS = new BlockMoldyBeans(79, 0);
