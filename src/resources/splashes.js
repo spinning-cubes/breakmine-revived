@@ -15,6 +15,7 @@ SpinningCubes was here!
 Blaise was here!
 Dinny was here!
 Chlodog was here!
+stryck was here!
 Cool!
 Modern!
 Runs on a TV!
