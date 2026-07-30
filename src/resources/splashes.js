@@ -7,6 +7,10 @@ AlexMinecrafter was here!
 Hollow was here!
 Soup was here!
 Martwixgame was here!
+Duh Beast was here!
+yrfooh was here!
+Raptor4 was here!
+TheCommandBox was here!
 SpinningCubes was here!
 Blaise was here!
 Dinny was here!
@@ -27,7 +31,8 @@ Dorfleetus!
 Déjà vu!
 Made by SpinningCubes!
 RUNNNNNNNNNNNNNNNNNNNNNN!!!
-4 + 4 = 44!`.split('\n');
+4 + 4 = 44!
+Breakmine.com!`.split('\n');
 
     static generateSplash() {
         return this.SPLASHES[Math.floor(Math.random() * this.SPLASHES.length)];
