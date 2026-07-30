@@ -23,7 +23,8 @@ const { isSpectator } = require('./players');
 const config = require('./config');
 const Logger = require('./logger');
 
-const Filter = require('bad-words');
+const badWordsModule = require('bad-words');
+const Filter = badWordsModule.Filter || badWordsModule;
 const filter = new Filter();
 
 let log = Logger;
@@ -457,35 +458,51 @@ function handleBlockPlacement(player, buffer, offset) {
             }
         }
 
-        // Use the actual held item ID, default to stone if invalid
-        const blockId = heldItemId > 0 ? heldItemId : 1;
+        // Use held item ID
+        let blockId = heldItemId > 0 ? heldItemId : 1;
+
+        // Custom Stair Block IDs registered in BlockRegistry:
+        // 150: Oak, 151: Spruce, 152: Birch, 153: Jungle, 154: Acacia,
+        // 155: Cobblestone, 156: Mossy Cobblestone, 157: Brick
+        const isStair = [150, 151, 152, 153, 154, 155, 156, 157].includes(blockId);
 
         // Calculate metadata based on block type and placement direction
         let metadata = 0;
+
         if (blockId === 50) { // Torch
-            // Torch metadata: 1=East, 2=West, 3=South, 4=North, 5=Up
-            // Direction: 0=-Y(bottom), 1=+Y(top), 2=-Z(north), 3=+Z(south), 4=-X(west), 5=+X(east)
-            if (direction === 1) metadata = 5; // Top -> Up
-            else if (direction === 2) metadata = 4; // North face -> North torch
-            else if (direction === 3) metadata = 3; // South face -> South torch
-            else if (direction === 4) metadata = 2; // West face -> West torch
-            else if (direction === 5) metadata = 1; // East face -> East torch
-            else metadata = 5; // Default to up for invalid directions
-        } else if (blockId === 17 || blockId === 59 || blockId === 62 || blockId === 65 || blockId === 68) { // Logs (oak, spruce, birch, jungle, acacia)
-            // Log metadata: 0=upright, 1=east-west, 2=north-south
-            // Direction: 0=-Y(bottom), 1=+Y(top), 2=-Z(north), 3=+Z(south), 4=-X(west), 5=+X(east)
-            if (direction === 4 || direction === 5) metadata = 1; // East-west faces
-            else if (direction === 2 || direction === 3) metadata = 2; // North-south faces
-            else metadata = 0; // Default upright for top/bottom faces
+            if (direction === 1) metadata = 5;
+            else if (direction === 2) metadata = 4;
+            else if (direction === 3) metadata = 3;
+            else if (direction === 4) metadata = 2;
+            else if (direction === 5) metadata = 1;
+            else metadata = 5;
+        } else if (blockId === 17 || blockId === 59 || blockId === 62 || blockId === 65 || blockId === 68) { // Logs
+            if (direction === 4 || direction === 5) metadata = 1;
+            else if (direction === 2 || direction === 3) metadata = 2;
+            else metadata = 0;
         } else if (blockId >= 70 && blockId <= 77) { // Slabs
-            // Slab metadata: 0=bottom, 1=top
-            // Direction 0 (BOTTOM face) = placed on underside → top slab
             if (direction === 0) metadata = 1;
             else metadata = 0;
         } else if (blockId === 32 || blockId === 34) { // Chest and Furnace
-            // Facing metadata: 2=N, 3=S, 4=W, 5=E — front faces player
-            let dirIndex = Math.floor((player.yaw * 4 / 360) + 0.5) & 3;
+            let yaw = player.yaw ?? player.rotationYaw ?? 0;
+            let dirIndex = Math.floor((yaw * 4 / 360) + 0.5) & 3;
             metadata = [2, 5, 3, 4][dirIndex];
+        } else if (isStair) { // Custom Stair Rotation
+            let yaw = player.yaw ?? player.rotationYaw ?? 0;
+            let dirIndex = Math.floor((yaw * 4 / 360) + 0.5) & 3;
+            // Map dirIndex (0: South, 1: West, 2: North, 3: East) to BlockStair constants (3: NORTH, 0: EAST, 2: SOUTH, 1: WEST)
+            metadata = [2, 1, 3, 0][dirIndex];
+            // Upside-down stair if placed against bottom face of overhead block
+            if (direction === 0) metadata |= 4;
+        } else if (blockId === 121) { // BlockRegistry.SIGN
+            let yaw = player.yaw ?? player.rotationYaw ?? 0;
+            let dirIndex = Math.floor((yaw * 4 / 360) + 0.5) & 3;
+            // 0: South, 2: North -> X-axis rotation (data = 1); 1: West, 3: East -> Z-axis rotation (data = 0)
+            if (dirIndex === 0 || dirIndex === 2) {
+                metadata = 1;
+            } else {
+                metadata = 0;
+            }
         }
 
         addWorldChange(placeX, placeY, placeZ, blockId, metadata);
