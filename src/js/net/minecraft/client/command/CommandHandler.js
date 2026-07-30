@@ -6,6 +6,7 @@ import UtilCommand from "./command/UtilCommand.js";
 import SetBlockCommand from "./command/SetBlockCommand.js"
 import PlaceCommand from "./command/PlaceCommand.js"
 import HealCommand from "./command/HealCommand.js"
+import GiveCommand from "./command/GiveCommand.js"
 
 export default class CommandHandler {
 
@@ -21,6 +22,7 @@ export default class CommandHandler {
         this.commands.push(new SetBlockCommand());
         this.commands.push(new PlaceCommand());
         this.commands.push(new HealCommand());
+        this.commands.push(new GiveCommand());
     }
 
     handleMessage(message) {

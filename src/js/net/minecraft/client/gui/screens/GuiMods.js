@@ -2,7 +2,7 @@ import GuiScreen from "../GuiScreen.js";
 import GuiButton from "../widgets/GuiButton.js";
 import GuiModSlotContainer from "../widgets/GuiModSlotContainer.js";
 import GuiModSlot from "../widgets/GuiModSlot.js";
-import FileSystem from "../../fs/Filesystem.js";
+import GuiYesNo from "./GuiYesNo.js";
 
 export default class GuiMods extends GuiScreen {
 
@@ -56,13 +56,13 @@ export default class GuiMods extends GuiScreen {
         this.buttonDelete = new GuiButton(this.minecraft, "Delete", this.width / 2 - 155, this.height - 28, 150, 20, async () => {
             if (this.selectedIndex < 0 || this.selectedIndex >= this.mods.length) return;
             const mod = this.mods[this.selectedIndex];
-            if (confirm(`Delete mod "${mod.name}" by ${mod.author}?`)) {
+            this.minecraft.displayScreen(new GuiYesNo(this, `Delete mod "${mod.name}" by ${mod.author}?`, "This action cannot be undone!", "Delete", "Cancel", async () => {
                 await this.minecraft.modLoader.uninstallMod(mod.id);
                 await this.refreshModList();
                 this.rebuildSlotList();
                 this.selectedIndex = -1;
                 this.updateButtonStates();
-            }
+            }));
         });
 
         this.buttonList.push(this.buttonUpload);

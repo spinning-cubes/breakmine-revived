@@ -101,9 +101,22 @@ export class BlockRegistry {
         return this.registry.get(normalized) || this.registry.get(key);
     }
 
+    static unregister(identifier) {
+        const fullKey = this.normalizeKey(identifier);
+        const block = this.registry.get(fullKey);
+        if (block) {
+            this.registry.delete(fullKey);
+            this.registry.delete(block.name);
+            if (block.id !== undefined) this.idMap.delete(block.id);
+            this.idMap.delete(block.hashId);
+        }
+    }
+
     static registerBlockClass(id, name, blockClass) {
+        if (!blockClass) return null;
         const block = new blockClass(id, 0);
-        return this.register(name, block);
+        block.id = BlockRegistry.hashString(id);
+        return this.register(id, block);
     }
 
     static create() {
@@ -239,6 +252,9 @@ export class BlockRegistry {
                 BlockRegistry.register(nameKey, val);
             }
         }
+
+        BlockRegistry.registry.set("oak_planks", BlockRegistry.WOOD);
+        BlockRegistry.registry.set("breakmine:oak_planks", BlockRegistry.WOOD);
 
         const originalGetById = Block.getById;
         Block.getById = function(typeId) {

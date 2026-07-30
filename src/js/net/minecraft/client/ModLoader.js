@@ -1,16 +1,23 @@
 import FileSystem from "./fs/Filesystem.js";
+import { BlockRegistry } from "./world/block/BlockRegistry.js";
 
 /**
  * ModLoader — discovers, installs, and registers mods.
  *
  * Supported mod layout (inside a ZIP or folder):
  *   ModData.js          — metadata (static NAME, ID, AUTHOR, VERSION)
+ *   ModLoad.js          — lifecycle hook (static onLoad(world))
  *   blocks/*.js          — block classes (extend Block)
+ *   items/*.js           — item classes (extend Item / ItemGeneric / ItemEdible / ItemTool)
  *   textures/*.png       — 16×16 block/item textures
  *
  * Block naming convention:
  *   BlockUnbreakableBlock  →  strip "Block"  →  UnbreakableBlock  →  unbreakable_block
  *   Final namespaced ID:  <modId>:unbreakable_block
+ *
+ * Item naming convention:
+ *   ItemTestItem          →  strip "Item"   →  TestItem          →  test_item
+ *   Final namespaced ID:  <modId>:test_item
  */
 export default class ModLoader {
     /**
@@ -33,7 +40,6 @@ export default class ModLoader {
      * Call this once during game startup, after BlockRegistry.create().
      */
     async loadAllMods() {
-        // Load enabled set from persistent settings
         this._loadEnabledSet();
 
         const modIds = await this.getInstalledModIds();
@@ -77,27 +83,29 @@ export default class ModLoader {
         // --- 3. Store mod metadata ---
         await this.filesystem.saveFile(JSON.stringify(modData), `mods/${modId}/ModData.json`);
 
-        // --- 4. Extract block JS files ---
+        // --- 4. Extract files from ZIP ---
         for (const [path, entry] of Object.entries(zip.files)) {
             if (entry.dir) continue;
-            if (path.startsWith('blocks/') && path.endsWith('.js')) {
+
+            if (path === 'ModLoad.js') {
+                const src = await entry.async('string');
+                await this.filesystem.saveFile(src, `mods/${modId}/ModLoad.js`);
+            } else if (path.startsWith('blocks/') && path.endsWith('.js')) {
                 const src = await entry.async('string');
                 const filename = path.split('/').pop();
                 await this.filesystem.saveFile(src, `mods/${modId}/blocks/${filename}`);
-            }
-        }
-
-        // --- 5. Extract textures as base64 ---
-        for (const [path, entry] of Object.entries(zip.files)) {
-            if (entry.dir) continue;
-            if (path.startsWith('textures/') && path.endsWith('.png')) {
+            } else if (path.startsWith('items/') && path.endsWith('.js')) {
+                const src = await entry.async('string');
+                const filename = path.split('/').pop();
+                await this.filesystem.saveFile(src, `mods/${modId}/items/${filename}`);
+            } else if (path.startsWith('textures/') && path.endsWith('.png')) {
                 const b64 = await entry.async('base64');
                 const filename = path.split('/').pop();
                 await this.filesystem.saveBinaryFile(b64, `mods/${modId}/textures/${filename}.b64`);
             }
         }
 
-        // --- 6. Enable & load ---
+        // --- 5. Enable & load ---
         this.enabledMods.add(modId);
         this._saveEnabledSet();
         await this._loadMod(modId);
@@ -135,20 +143,20 @@ export default class ModLoader {
      * @param {string} modId
      */
     async uninstallMod(modId) {
-        // Remove from enabled set
         this.enabledMods.delete(modId);
         this._saveEnabledSet();
 
-        // Unregister blocks
         const entry = this.mods.get(modId);
         if (entry) {
             for (const blockId of entry.blockIds) {
-                this.minecraft.registerBlockClass(blockId, null, null); // unregister
+                BlockRegistry.unregister(blockId);
+            }
+            for (const itemId of entry.itemIds) {
+                BlockRegistry.unregister(itemId);
             }
             this.mods.delete(modId);
         }
 
-        // Delete stored files
         const files = await this.filesystem.listDir(`mods/${modId}/`);
         for (const f of files) {
             await this.filesystem.deleteFile(f);
@@ -168,12 +176,6 @@ export default class ModLoader {
             }
         } else {
             this.enabledMods.delete(modId);
-            const entry = this.mods.get(modId);
-            if (entry) {
-                for (const blockId of entry.blockIds) {
-                    // Mark as disabled — blocks stay registered but are not usable
-                }
-            }
         }
         this._saveEnabledSet();
     }
@@ -211,7 +213,6 @@ export default class ModLoader {
         const allFiles = await this.filesystem.listDir('mods/');
         const modIdSet = new Set();
         for (const f of allFiles) {
-            // Files look like: mods/<modId>/ModData.json
             const match = f.match(/^mods\/([^/]+)\/ModData\.json$/);
             if (match) modIdSet.add(match[1]);
         }
@@ -282,33 +283,45 @@ export default class ModLoader {
             author: modData.AUTHOR || 'Unknown',
             version: modData.VERSION || '0.0.0',
             blockIds: [],
-            blockClasses: new Map(),  // blockId → blockClass
-            textureNames: []         // texture filenames (without .png)
+            blockClasses: new Map(),
+            itemIds: [],
+            itemClasses: new Map(),
+            textureNames: []
         };
 
-        // 2. Discover block JS files
+        // 2. Discover files
         const allFiles = await this.filesystem.listDir(`mods/${modId}/`);
         const modPrefix = `mods/${modId}/`;
         const relFiles = allFiles.map(f => f.startsWith(modPrefix) ? f.slice(modPrefix.length) : f);
+
         const blockFiles = relFiles
             .filter(f => f.startsWith('blocks/') && f.endsWith('.js'))
             .map(f => f.replace(/^blocks\//, ''));
 
-        // 3. Discover texture files
+        const itemFiles = relFiles
+            .filter(f => f.startsWith('items/') && f.endsWith('.js'))
+            .map(f => f.replace(/^items\//, ''));
+
         entry.textureNames = relFiles
             .filter(f => f.startsWith('textures/') && f.endsWith('.png.b64'))
             .map(f => f.replace(/^textures\//, '').replace(/\.png\.b64$/, ''));
 
-        // 4. Register mod textures into the TextureAtlas
+        // 3. Register mod textures into the TextureAtlas
         await this._registerModTextures(modId, entry);
 
-        // 5. Load and register block classes
+        // 4. Load and register block classes
         await this._registerModBlocks(modId, entry, blockFiles);
 
-        // 6. Store
+        // 5. Load and register item classes
+        await this._registerModItems(modId, entry, itemFiles);
+
+        // 6. Call ModLoad.onLoad if present
+        await this._callModLoad(modId, entry);
+
+        // 7. Store
         this.mods.set(modId, entry);
 
-        console.log(`[ModLoader] Loaded mod '${entry.name}' — ${entry.blockIds.length} block(s), ${entry.textureNames.length} texture(s)`);
+        console.log(`[ModLoader] Loaded mod '${entry.name}' — ${entry.blockIds.length} block(s), ${entry.itemIds.length} item(s), ${entry.textureNames.length} texture(s)`);
     }
 
     /* ------------------------------------------------------------------
@@ -326,7 +339,6 @@ export default class ModLoader {
             try {
                 const img = await this.loadModTexture(modId, texName);
                 const namespacedKey = `${modId}:${texName}`;
-                // Use the atlas's dynamic registration method
                 atlas.registerModTexture(namespacedKey, img);
             } catch (err) {
                 console.warn(`[ModLoader] Failed to register texture '${texName}' for mod '${modId}':`, err);
@@ -339,26 +351,25 @@ export default class ModLoader {
      * ------------------------------------------------------------------ */
 
     async _registerModBlocks(modId, entry, blockFiles) {
-        // Get the Block base class for sandboxing
         const BlockClass = await this._getBlockClass();
+
+        const BoundingBoxClass = await this._getBoundingBox();
 
         for (const filename of blockFiles) {
             try {
                 const src = await this.filesystem.loadFile(`mods/${modId}/blocks/${filename}`);
                 if (!src) continue;
 
-                const blockClass = this._evalBlockClass(src, BlockClass);
+                const blockClass = this._evalClass(src, { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass });
                 if (!blockClass) continue;
 
-                // Derive block ID from class name
                 const className = blockClass.name || filename.replace('.js', '');
                 const blockId = ModLoader.classToBlockId(className);
                 const namespacedId = `${modId}:${blockId}`;
 
-                // Register with BlockRegistry via Minecraft's exposed method
                 const registered = this.minecraft.registerBlockClass(
                     namespacedId,
-                    blockId,  // display name
+                    blockId,
                     blockClass
                 );
 
@@ -375,24 +386,91 @@ export default class ModLoader {
     }
 
     /* ------------------------------------------------------------------
-     *  Internal — eval a block class from source string
+     *  Internal — load item JS files, eval classes, register with BlockRegistry
+     * ------------------------------------------------------------------ */
+
+    async _registerModItems(modId, entry, itemFiles) {
+        const itemClasses = await this._getItemClasses();
+
+        for (const filename of itemFiles) {
+            try {
+                const src = await this.filesystem.loadFile(`mods/${modId}/items/${filename}`);
+                if (!src) continue;
+
+                const itemClass = this._evalClass(src, itemClasses);
+                if (!itemClass) continue;
+
+                const className = itemClass.name || filename.replace('.js', '');
+                const itemId = ModLoader.classToItemId(className);
+                const namespacedId = `${modId}:${itemId}`;
+
+                const registered = this.minecraft.registerBlockClass(
+                    namespacedId,
+                    itemId,
+                    itemClass
+                );
+
+                if (registered) {
+                    registered.mod = entry.name;
+                    entry.itemIds.push(namespacedId);
+                    entry.itemClasses.set(namespacedId, itemClass);
+                    console.log(`[ModLoader]   Registered item '${namespacedId}' from ${filename}`);
+                }
+            } catch (err) {
+                console.error(`[ModLoader] Failed to load item '${filename}' from mod '${modId}':`, err);
+            }
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     *  Internal — call ModLoad.onLoad if present
+     * ------------------------------------------------------------------ */
+
+    async _callModLoad(modId, entry) {
+        try {
+            const src = await this.filesystem.loadFile(`mods/${modId}/ModLoad.js`);
+            if (!src) return;
+
+            let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
+            transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
+
+            const wrapped = `
+                return (function() {
+                    "use strict";
+                    ${transformed}
+                    if (typeof ModLoad !== 'undefined' && ModLoad.onLoad) {
+                        return ModLoad;
+                    }
+                    return null;
+                })
+            `;
+
+            const factory = new Function(wrapped)();
+            const modLoadClass = factory();
+            if (modLoadClass && typeof modLoadClass.onLoad === 'function') {
+                modLoadClass.onLoad(this.minecraft.world);
+                console.log(`[ModLoader]   Called ModLoad.onLoad for '${modId}'`);
+            }
+        } catch (err) {
+            console.warn(`[ModLoader] Failed to load ModLoad.js for '${modId}':`, err);
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     *  Internal — eval a class from source string with provided dependencies
      * ------------------------------------------------------------------ */
 
     /**
-     * Evaluate a block class source string and return the constructor.
-     * We rewrite the `import Block from ...` to use the real Block class.
+     * Evaluate a class source string and return the constructor.
+     * Strips all imports and provides the named classes from the deps map.
+     *
+     * @param {string} source  — JavaScript source with `export default class`
+     * @param {Object<string, Function>} deps  — map of variable names to actual classes
+     * @returns {Function|null}
      */
-    _evalBlockClass(source, BlockClass) {
-        // Rewrite: import Block from "../Block.js"  (or any path)
-        //   → const Block = __Block__;
+    _evalClass(source, deps) {
+        // Strip all imports
         let transformed = source.replace(
-            /import\s+Block\s+from\s+["'][^"']*["']\s*;?/g,
-            ''
-        );
-
-        // Also handle: import Anything from "..." that isn't Block
-        // Strip all imports since they won't resolve in sandbox
-        transformed = transformed.replace(
             /import\s+.*?from\s+["'][^"']*["']\s*;?/g,
             ''
         );
@@ -400,11 +478,15 @@ export default class ModLoader {
         // Remove `export default` so we can capture the class
         transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
 
-        // Wrap in a function that receives Block as a parameter
+        // Build variable assignments from provided classes
+        const assignments = Object.keys(deps).map(name =>
+            `const ${name} = __deps__["${name}"];`
+        ).join('\n');
+
         const wrapped = `
-            return (function(__Block__) {
+            return (function(__deps__) {
                 "use strict";
-                const Block = __Block__;
+                ${assignments}
                 ${transformed}
                 return ${this._extractClassName(source)} || null;
             })
@@ -412,9 +494,9 @@ export default class ModLoader {
 
         try {
             const factory = new Function(wrapped)();
-            return factory(BlockClass);
+            return factory(deps);
         } catch (err) {
-            console.error('[ModLoader] Block eval error:', err);
+            console.error('[ModLoader] Class eval error:', err);
             return null;
         }
     }
@@ -434,7 +516,6 @@ export default class ModLoader {
     async _readModDataFromZip(zip) {
         let modDataSrc = null;
 
-        // Try ModData.js first
         for (const [path, entry] of Object.entries(zip.files)) {
             if (path === 'ModData.js' || path.endsWith('/ModData.js')) {
                 modDataSrc = await entry.async('string');
@@ -453,15 +534,11 @@ export default class ModLoader {
      * Parse ModData.js source and extract static properties.
      */
     _parseModDataSource(source) {
-        // Remove import/export noise
         let cleaned = source.replace(/export\s+default\s+class\s+\w+\s*\{/, '{');
         cleaned = cleaned.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
         cleaned = cleaned.replace(/\}\s*;?\s*$/, '}');
-
-        // Replace static properties with a plain object
         cleaned = cleaned.replace(/static\s+(\w+)\s*=/g, '$1 =');
 
-        // Wrap and eval
         const wrapped = `return (function() { ${cleaned} return { NAME, ID, AUTHOR, VERSION }; })()`;
         try {
             return new Function(wrapped)();
@@ -481,11 +558,21 @@ export default class ModLoader {
      */
     static classToBlockId(className) {
         let name = className;
-        // Strip leading 'Block' prefix
         if (name.startsWith('Block')) {
             name = name.substring(5);
         }
-        // CamelCase / PascalCase → snake_case
+        return name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+    }
+
+    /**
+     * Convert an Item class name to a snake_case item ID.
+     * ItemTestItem → TestItem → test_item
+     */
+    static classToItemId(className) {
+        let name = className;
+        if (name.startsWith('Item')) {
+            name = name.substring(4);
+        }
         return name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
     }
 
@@ -494,20 +581,68 @@ export default class ModLoader {
      */
     async _getBlockClass() {
         if (this._blockBaseClass) return this._blockBaseClass;
-        // Block is already imported in Minecraft.js and exposed globally for mod use
         if (window.__ModBlockClass__) {
             this._blockBaseClass = window.__ModBlockClass__;
+            if (!this._boundingBoxClass) {
+                try {
+                    const bbMod = await import('../util/BoundingBox.js');
+                    this._boundingBoxClass = bbMod.default;
+                } catch (e) {}
+            }
             return this._blockBaseClass;
         }
-        // Fallback: dynamic import
         try {
-            const mod = await import('./world/block/Block.js');
+            const [mod, bbMod] = await Promise.all([
+                import('./world/block/Block.js'),
+                import('../util/BoundingBox.js')
+            ]);
             this._blockBaseClass = mod.default;
+            this._boundingBoxClass = bbMod.default;
             window.__ModBlockClass__ = this._blockBaseClass;
             return this._blockBaseClass;
         } catch (e) {
             console.error('[ModLoader] Could not import Block class:', e);
             return class EmptyBlock {};
+        }
+    }
+
+    async _getBoundingBox() {
+        if (this._boundingBoxClass) return this._boundingBoxClass;
+        await this._getBlockClass();
+        if (this._boundingBoxClass) return this._boundingBoxClass;
+        try {
+            const bbMod = await import('../util/BoundingBox.js');
+            this._boundingBoxClass = bbMod.default;
+            return this._boundingBoxClass;
+        } catch (e) {
+            console.error('[ModLoader] Could not import BoundingBox class:', e);
+            return class EmptyBoundingBox {};
+        }
+    }
+
+    /**
+     * Dynamically import item base classes for mod sandboxing.
+     */
+    async _getItemClasses() {
+        const BlockClass = await this._getBlockClass();
+        const BoundingBoxClass = await this._getBoundingBox();
+        try {
+            const itemMod = await import('./world/block/Item.js');
+            const genericMod = await import('./world/block/type/ItemGeneric.js');
+            const edibleMod = await import('./world/block/ItemEdible.js');
+            const toolMod = await import('./world/block/type/ItemTool.js');
+            return {
+                Block: BlockClass,
+                BlockRegistry,
+                BoundingBox: BoundingBoxClass,
+                Item: itemMod.default,
+                ItemGeneric: genericMod.default,
+                ItemEdible: edibleMod.default,
+                ItemTool: toolMod.default
+            };
+        } catch (e) {
+            console.error('[ModLoader] Could not import Item classes:', e);
+            return { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass, Item: class EmptyItem extends BlockClass {} };
         }
     }
 
@@ -567,5 +702,7 @@ export default class ModLoader {
  * @property {string} version
  * @property {string[]} blockIds
  * @property {Map<string, Function>} blockClasses
+ * @property {string[]} itemIds
+ * @property {Map<string, Function>} itemClasses
  * @property {string[]} textureNames
  */

@@ -70,6 +70,10 @@ export default class Block {
         return null;
     }
 
+    getModel() {
+        return null;
+    }
+
     getId() {
         return this.id;
     }

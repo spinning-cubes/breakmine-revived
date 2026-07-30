@@ -218,7 +218,7 @@ export default class Minecraft {
         async function checkVersion() {
             try {
                 // Append cache-busting query parameter to get the freshest response
-                const response = await fetch(`${TARGET_URL}?_=${Date.now()}`, { cache: 'no-cache' });
+                const response = await fetch(`${TARGET_URL}`, { cache: 'no-cache' });
                 if (!response.ok) {
                     console.warn(`Version check failed: HTTP ${response.status}`);
                     return;
