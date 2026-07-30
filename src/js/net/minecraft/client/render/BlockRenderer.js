@@ -33,6 +33,16 @@ export default class BlockRenderer {
             return;
         }
 
+        if (block) {
+            // Pass 'this' (the BlockRenderer / WorldRenderer instance) to onRender
+            const customRenderHandled = block.onRender(world, x, y, z, this);
+
+            // If onRender returns true, skip standard block rendering
+            if (customRenderHandled) {
+                return; 
+            }
+        }
+
         switch (block.getRenderType()) {
             case BlockRenderType.BLOCK:
                 this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
@@ -525,6 +535,15 @@ export default class BlockRenderer {
         this.tessellator.setColor(1, 1, 1);
 
         // Render block by type
+        if (block) {
+            // Pass 'this' (the BlockRenderer / WorldRenderer instance) to onRender
+            const customRenderHandled = block.onRender(false, 0, 0, 0, this);
+
+            // If onRender returns true, skip standard block rendering
+            if (customRenderHandled) {
+                return; 
+            }
+        }
         if (!block.path && block.multipart !== true) {
             switch (block.getRenderType()) {
                 case BlockRenderType.BLOCK:

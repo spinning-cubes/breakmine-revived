@@ -1,5 +1,8 @@
+import CraftingRegistry from "./crafting/CraftingRegistry.js";
 import FileSystem from "./fs/Filesystem.js";
+import EnumCreativeInventoryTab from "./gui/EnumCreativeInventoryTab.js";
 import { BlockRegistry } from "./world/block/BlockRegistry.js";
+import * as THREE from "../../../../../libraries/three.module.js";
 
 /**
  * ModLoader — discovers, installs, and registers mods.
@@ -50,18 +53,18 @@ export default class ModLoader {
         this._loadEnabledSet();
 
         const modIds = await this.getInstalledModIds();
-        console.log(`[ModLoader] Found ${modIds.length} installed mod(s)`);
+        console.log(`[Patchwork] Found ${modIds.length} installed mod(s)`);
 
         for (const modId of modIds) {
             if (!this.enabledMods.has(modId)) continue;
             try {
                 await this._loadMod(modId);
             } catch (err) {
-                console.error(`[ModLoader] Failed to load mod '${modId}':`, err);
+                console.error(`[Patchwork] Failed to load mod '${modId}':`, err);
             }
         }
 
-        console.log(`[ModLoader] ${this.mods.size} mod(s) loaded successfully`);
+        console.log(`[Patchwork] ${this.mods.size} mod(s) loaded successfully`);
     }
 
     /**
@@ -85,7 +88,7 @@ export default class ModLoader {
             throw new Error(`A mod with ID '${modId}' is already loaded.`);
         }
 
-        console.log(`[ModLoader] Installing mod '${modData.NAME}' (${modId}) v${modData.VERSION}`);
+        console.log(`[Patchwork] Installing mod '${modData.NAME}' (${modId}) v${modData.VERSION}`);
 
         // --- 3. Store mod metadata ---
         await this.filesystem.saveFile(JSON.stringify(modData), `mods/${modId}/ModData.json`);
@@ -142,7 +145,7 @@ export default class ModLoader {
      * @param {object} fileMap — { relativePath: stringContent | ArrayBuffer }
      */
     async loadModFromFolder(modId, fileMap) {
-        console.log(`[ModLoader] Loading mod from folder: ${modId}`);
+        console.log(`[Patchwork] Loading mod from folder: ${modId}`);
 
         // Store all files
         for (const [path, content] of Object.entries(fileMap)) {
@@ -185,7 +188,7 @@ export default class ModLoader {
             await this.filesystem.deleteFile(f);
         }
 
-        console.log(`[ModLoader] Uninstalled mod '${modId}'`);
+        console.log(`[Patchwork] Uninstalled mod '${modId}'`);
     }
 
     /**
@@ -223,7 +226,7 @@ export default class ModLoader {
                     enabled: this.enabledMods.has(modId)
                 });
             } catch (e) {
-                console.warn(`[ModLoader] Could not read metadata for '${modId}':`, e);
+                console.warn(`[Patchwork] Could not read metadata for '${modId}':`, e);
             }
         }
         return result;
@@ -262,7 +265,7 @@ export default class ModLoader {
         const textureName = namespacedKey.substring(colonIndex + 1);
         const entry = this.mods.get(modId);
         if (!entry) {
-            console.warn(`[ModLoader] Unknown mod '${modId}' for texture '${namespacedKey}'`);
+            console.warn(`[Patchwork] Unknown mod '${modId}' for texture '${namespacedKey}'`);
             return null;
         }
         return { modId, textureName };
@@ -374,7 +377,7 @@ export default class ModLoader {
         // 11. Store
         this.mods.set(modId, entry);
 
-        console.log(`[ModLoader] Loaded mod '${entry.name}' — ${entry.blockIds.length} block(s), ${entry.itemIds.length} item(s), ${entry.textureNames.length} texture(s)`);
+        console.log(`[Patchwork] Loaded mod '${entry.name}' — ${entry.blockIds.length} block(s), ${entry.itemIds.length} item(s), ${entry.textureNames.length} texture(s)`);
     }
 
     /* ------------------------------------------------------------------
@@ -384,7 +387,7 @@ export default class ModLoader {
     async _registerModTextures(modId, entry) {
         const atlas = this.minecraft.worldRenderer?.textureAtlas;
         if (!atlas) {
-            console.warn('[ModLoader] TextureAtlas not ready, skipping texture registration');
+            console.warn('[Patchwork] TextureAtlas not ready, skipping texture registration');
             return;
         }
 
@@ -394,7 +397,7 @@ export default class ModLoader {
                 const namespacedKey = `${modId}:${texName}`;
                 atlas.registerModTexture(namespacedKey, img);
             } catch (err) {
-                console.warn(`[ModLoader] Failed to register texture '${texName}' for mod '${modId}':`, err);
+                console.warn(`[Patchwork] Failed to register texture '${texName}' for mod '${modId}':`, err);
             }
         }
     }
@@ -410,8 +413,10 @@ export default class ModLoader {
 
         const EnumBlockFaceClass = await this._getEnumBlockFace();
 
+        const EnumCreativeInventoryTabClass = await this._getEnumCreativeInventoryTab();
+
         // Build deps: base block deps + any GUI classes from this mod
-        const blockDeps = { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass, EnumBlockFace: EnumBlockFaceClass };
+        const blockDeps = { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass, EnumBlockFace: EnumBlockFaceClass, EnumCreativeInventoryTab: EnumCreativeInventoryTabClass, THREE };
         for (const [className, cls] of entry.guiClasses) {
             blockDeps[className] = cls;
         }
@@ -436,12 +441,13 @@ export default class ModLoader {
 
                 if (registered) {
                     registered.mod = entry.name;
+                    registered.inventoryTab = EnumCreativeInventoryTab.MATERIALS;
                     entry.blockIds.push(namespacedId);
                     entry.blockClasses.set(namespacedId, blockClass);
-                    console.log(`[ModLoader]   Registered block '${namespacedId}' from ${filename}`);
+                    console.log(`[Patchwork] Registered block '${namespacedId}' from ${filename}`);
                 }
             } catch (err) {
-                console.error(`[ModLoader] Failed to load block '${filename}' from mod '${modId}':`, err);
+                console.error(`[Patchwork] Failed to load block '${filename}' from mod '${modId}':`, err);
             }
         }
     }
@@ -473,12 +479,13 @@ export default class ModLoader {
 
                 if (registered) {
                     registered.mod = entry.name;
+                    registered.inventoryTab = EnumCreativeInventoryTab.MATERIALS;
                     entry.itemIds.push(namespacedId);
                     entry.itemClasses.set(namespacedId, itemClass);
-                    console.log(`[ModLoader]   Registered item '${namespacedId}' from ${filename}`);
+                    console.log(`[Patchwork]   Registered item '${namespacedId}' from ${filename}`);
                 }
             } catch (err) {
-                console.error(`[ModLoader] Failed to load item '${filename}' from mod '${modId}':`, err);
+                console.error(`[Patchwork] Failed to load item '${filename}' from mod '${modId}':`, err);
             }
         }
     }
@@ -509,7 +516,7 @@ export default class ModLoader {
 
                 const resultBlock = BlockRegistry.get(namespacedId);
                 if (!resultBlock) {
-                    console.warn(`[ModLoader] Crafting recipe '${filename}' target block '${namespacedId}' not found, skipping`);
+                    console.warn(`[Patchwork] Crafting recipe '${filename}' target block '${namespacedId}' not found, skipping`);
                     continue;
                 }
                 const resultTypeId = resultBlock.id;
@@ -533,7 +540,7 @@ export default class ModLoader {
                 const shapeless = recipeClass.shapeless === true;
 
                 if (ingredients.length === 0) {
-                    console.warn(`[ModLoader] Crafting recipe '${filename}' has no ingredients, skipping`);
+                    console.warn(`[Patchwork] Crafting recipe '${filename}' has no ingredients, skipping`);
                     continue;
                 }
 
@@ -553,9 +560,9 @@ export default class ModLoader {
                     CraftingRegistry.registerShapedRecipe(resultTypeId, resultCount, width, height, ingredients);
                 }
 
-                console.log(`[ModLoader]   Registered crafting recipe for '${namespacedId}' from ${filename}`);
+                console.log(`[Patchwork] Registered crafting recipe for '${namespacedId}' from ${filename}`);
             } catch (err) {
-                console.error(`[ModLoader] Failed to load crafting recipe '${filename}' from mod '${modId}':`, err);
+                console.error(`[Patchwork] Failed to load crafting recipe '${filename}' from mod '${modId}':`, err);
             }
         }
     }
@@ -590,7 +597,7 @@ export default class ModLoader {
 
                     const resultBlock = BlockRegistry.get(namespacedId);
                     if (!resultBlock) {
-                        console.warn(`[ModLoader] Smelting recipe '${filename}' target block '${namespacedId}' not found, skipping`);
+                        console.warn(`[Patchwork] Smelting recipe '${filename}' target block '${namespacedId}' not found, skipping`);
                         continue;
                     }
                     const resultTypeId = resultBlock.id;
@@ -613,14 +620,14 @@ export default class ModLoader {
                     const resultCount = recipeClass.amount_output || 1;
                     if (inputId) {
                         SmeltingRegistry.registerRecipe(new SmeltingRecipe(inputId, resultTypeId, resultCount));
-                        console.log(`[ModLoader]   Registered smelting recipe for '${namespacedId}' from ${filename}`);
+                        console.log(`[Patchwork]   Registered smelting recipe for '${namespacedId}' from ${filename}`);
                     }
                 } catch (err) {
-                    console.error(`[ModLoader] Failed to load smelting recipe '${filename}' from mod '${modId}':`, err);
+                    console.error(`[Patchwork] Failed to load smelting recipe '${filename}' from mod '${modId}':`, err);
                 }
             }
         } catch (err) {
-            console.error(`[ModLoader] Could not import SmeltingRecipe/SmeltingRegistry for mod '${modId}':`, err);
+            console.error(`[Patchwork] Could not import SmeltingRecipe/SmeltingRegistry for mod '${modId}':`, err);
         }
     }
 
@@ -646,9 +653,9 @@ export default class ModLoader {
 
                 const resourceKey = `gui/${modId}/${texName}`;
                 this.minecraft.resources[resourceKey] = img;
-                console.log(`[ModLoader]   Registered GUI texture '${resourceKey}'`);
+                console.log(`[Patchwork]   Registered GUI texture '${resourceKey}'`);
             } catch (err) {
-                console.warn(`[ModLoader] Failed to register GUI texture '${texName}' for mod '${modId}':`, err);
+                console.warn(`[Patchwork] Failed to register GUI texture '${texName}' for mod '${modId}':`, err);
             }
         }
     }
@@ -672,6 +679,7 @@ export default class ModLoader {
 
             const BlockClass = await this._getBlockClass();
             const BoundingBoxClass = await this._getBoundingBox();
+            const EnumCreativeInventoryTabClass = await this._getEnumCreativeInventoryTab();
 
             return {
                 GuiScreen,
@@ -685,9 +693,10 @@ export default class ModLoader {
                 Block: BlockClass,
                 BlockRegistry,
                 BoundingBox: BoundingBoxClass,
+                EnumCreativeInventoryTab: EnumCreativeInventoryTabClass,
             };
         } catch (e) {
-            console.error('[ModLoader] Could not import GUI classes:', e);
+            console.error('[Patchwork] Could not import GUI classes:', e);
             return { GuiScreen: class EmptyScreen {} };
         }
     }
@@ -709,9 +718,9 @@ export default class ModLoader {
 
                 const className = guiClass.name || filename.replace('.js', '');
                 entry.guiClasses.set(className, guiClass);
-                console.log(`[ModLoader]   Loaded GUI '${className}' from ${filename}`);
+                console.log(`[Patchwork] Loaded GUI '${className}' from ${filename}`);
             } catch (err) {
-                console.error(`[ModLoader] Failed to load GUI '${filename}' from mod '${modId}':`, err);
+                console.error(`[Patchwork] Failed to load GUI '${filename}' from mod '${modId}':`, err);
             }
         }
     }
@@ -743,10 +752,10 @@ export default class ModLoader {
             const modLoadClass = factory();
             if (modLoadClass && typeof modLoadClass.onLoad === 'function') {
                 modLoadClass.onLoad(this.minecraft.world);
-                console.log(`[ModLoader]   Called ModLoad.onLoad for '${modId}'`);
+                console.log(`[Patchwork]   Called ModLoad.onLoad for '${modId}'`);
             }
         } catch (err) {
-            console.warn(`[ModLoader] Failed to load ModLoad.js for '${modId}':`, err);
+            console.warn(`[Patchwork] Failed to load ModLoad.js for '${modId}':`, err);
         }
     }
 
@@ -790,7 +799,7 @@ export default class ModLoader {
             const factory = new Function(wrapped)();
             return factory(deps);
         } catch (err) {
-            console.error('[ModLoader] Class eval error:', err);
+            console.error('[Patchwork] Class eval error:', err);
             return null;
         }
     }
@@ -837,7 +846,7 @@ export default class ModLoader {
         try {
             return new Function(wrapped)();
         } catch (err) {
-            console.error('[ModLoader] ModData parse error:', err);
+            console.error('[Patchwork] ModData parse error:', err);
             return { NAME: 'Unknown', ID: 'unknown', AUTHOR: 'Unknown', VERSION: '0.0.0' };
         }
     }
@@ -895,7 +904,7 @@ export default class ModLoader {
             window.__ModBlockClass__ = this._blockBaseClass;
             return this._blockBaseClass;
         } catch (e) {
-            console.error('[ModLoader] Could not import Block class:', e);
+            console.error('[Patchwork] Could not import Block class:', e);
             return class EmptyBlock {};
         }
     }
@@ -909,7 +918,7 @@ export default class ModLoader {
             this._boundingBoxClass = bbMod.default;
             return this._boundingBoxClass;
         } catch (e) {
-            console.error('[ModLoader] Could not import BoundingBox class:', e);
+            console.error('[Patchwork] Could not import BoundingBox class:', e);
             return class EmptyBoundingBox {};
         }
     }
@@ -921,8 +930,20 @@ export default class ModLoader {
             this._enumBlockFaceClass = mod.default;
             return this._enumBlockFaceClass;
         } catch (e) {
-            console.error('[ModLoader] Could not import EnumBlockFace class:', e);
+            console.error('[Patchwork] Could not import EnumBlockFace class:', e);
             return class EmptyFace {};
+        }
+    }
+
+    async _getEnumCreativeInventoryTab() {
+        if (this._enumCreativeInventoryTabClass) return this._enumCreativeInventoryTabClass;
+        try {
+            const mod = await import('./gui/EnumCreativeInventoryTab.js');
+            this._enumCreativeInventoryTabClass = mod.default;
+            return this._enumCreativeInventoryTabClass;
+        } catch (e) {
+            console.error('[Patchwork] Could not import EnumCreativeInventoryTab class:', e);
+            return class EmptyEnumCreativeInventoryTab {};
         }
     }
 
@@ -932,6 +953,7 @@ export default class ModLoader {
     async _getItemClasses() {
         const BlockClass = await this._getBlockClass();
         const BoundingBoxClass = await this._getBoundingBox();
+        const EnumCreativeInventoryTabClass = await this._getEnumCreativeInventoryTab();
         try {
             const itemMod = await import('./world/block/Item.js');
             const genericMod = await import('./world/block/type/ItemGeneric.js');
@@ -944,10 +966,12 @@ export default class ModLoader {
                 Item: itemMod.default,
                 ItemGeneric: genericMod.default,
                 ItemEdible: edibleMod.default,
-                ItemTool: toolMod.default
+                ItemTool: toolMod.default,
+                EnumCreativeInventoryTab: EnumCreativeInventoryTabClass,
+                THREE
             };
         } catch (e) {
-            console.error('[ModLoader] Could not import Item classes:', e);
+            console.error('[Patchwork] Could not import Item classes:', e);
             return { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass, Item: class EmptyItem extends BlockClass {} };
         }
     }
@@ -995,7 +1019,7 @@ export default class ModLoader {
         try {
             localStorage.setItem('breakmine_enabled_mods', JSON.stringify([...this.enabledMods]));
         } catch (e) {
-            console.warn('[ModLoader] Could not save enabled mods:', e);
+            console.warn('[Patchwork] Could not save enabled mods:', e);
         }
     }
 }

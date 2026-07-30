@@ -40,6 +40,10 @@ export default class Block {
         this.mod = "Breakmine";
     }
 
+    onRender(world, x, y, z, blockRenderer) {
+        return false;
+    }
+
     isReplaceable(world, x, y, z) {
         return false;
     }
