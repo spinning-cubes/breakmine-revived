@@ -44,6 +44,10 @@ export default class GuiContainerCreative extends GuiContainer {
     }
 
     mouseClicked(mouseX, mouseY, button) {
+        if (button === 0 && this.handleTabClick(mouseX, mouseY)) {
+            return;
+        }
+
         super.mouseClicked(mouseX, mouseY, button);
         if (true) {
             const barX = this.x + 176;
@@ -63,6 +67,44 @@ export default class GuiContainerCreative extends GuiContainer {
     mouseReleased(mouseX, mouseY, button) {
         super.mouseReleased(mouseX, mouseY, button);
         this.isScrolling = false;
+    }
+
+    /**
+     * Get the x position of a creative tab (1–7).
+     */
+    getTabX(tabId) {
+        let tabX = this.x;
+        if (tabId >= 2 && tabId <= 5) {
+            tabX += 26 * (tabId - 1);
+        } else if (tabId === 6) {
+            tabX += 143;
+        } else if (tabId === 7) {
+            tabX += 143 + 26;
+        }
+        return tabX;
+    }
+
+    /**
+     * Handle a click on one of the creative tabs. Returns true if the click
+     * hit a tab (which was then selected).
+     */
+    handleTabClick(mouseX, mouseY) {
+        const tabY = this.y + this.inventoryHeight - 4;
+        if (mouseY < tabY || mouseY >= tabY + 32) return false;
+        if (mouseX < this.x || mouseX >= this.x + this.inventoryWidth) return false;
+
+        for (let tabId = 1; tabId <= 7; tabId++) {
+            const tabX = this.getTabX(tabId);
+            if (mouseX >= tabX && mouseX < tabX + 26) {
+                if (this.selectedTabIndex !== tabId) {
+                    this.selectedTabIndex = tabId;
+                    this.updateTabItems();
+                }
+                return true;
+            }
+        }
+
+        return false;
     }
 
     mouseDragged(mouseX, mouseY, button) {
@@ -224,14 +266,7 @@ export default class GuiContainerCreative extends GuiContainer {
             const block = Block.getById(tab.icon);
             if (!block) continue;
 
-            let tabX = this.x;
-            if (tabId >= 2 && tabId <= 5) {
-                tabX += 26 * (tabId - 1);
-            } else if (tabId === 6) {
-                tabX += 143;
-            } else if (tabId === 7) {
-                tabX += 143 + 26;
-            }
+            const tabX = this.getTabX(tabId);
 
             const tabY = this.y + this.inventoryHeight - 4;
             
