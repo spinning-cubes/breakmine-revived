@@ -44,6 +44,25 @@ export default class ChunkSection {
     render() {
 
     }
+    
+    isFaceSolid(side) {
+        for (let a = 0; a < 16; a++) {
+            for (let b = 0; b < 16; b++) {
+                let x = a, y = b, z = 0;
+
+                if (side === 'north') { x = a; y = b; z = 0; }
+                else if (side === 'south') { x = a; y = b; z = 15; }
+                else if (side === 'west')  { x = 0; y = a; z = b; }
+                else if (side === 'east')  { x = 15; y = a; z = b; }
+                else if (side === 'down')  { x = a; y = 0; z = b; }
+                else if (side === 'up')    { x = a; y = 15; z = b; }
+
+                const block = this.getBlockAt(x, y, z);
+                if (!block || (block && Block.getById(block)?.isTranslucent())) return false;
+            }
+        }
+        return true;
+    }
 
     rebuild(renderer) {
         this.isModified = false;
@@ -52,6 +71,29 @@ export default class ChunkSection {
 
         let ambientOcclusion = this.world.minecraft.settings.ambientOcclusion;
         let tessellator = renderer.blockRenderer.tessellator;
+
+        // Convert section origin to world block coordinates
+        const wx = this.x << 4;
+        const wy = this.y << 4;
+        const wz = this.z << 4;
+
+        // Fetch adjacent sections using world block offsets
+        const north = this.world.getChunkAtBlock(wx, wy, wz - 1);
+        const south = this.world.getChunkAtBlock(wx, wy, wz + 16);
+        const east  = this.world.getChunkAtBlock(wx + 16, wy, wz);
+        const west  = this.world.getChunkAtBlock(wx - 1, wy, wz);
+        const up    = this.world.getChunkAtBlock(wx, wy + 16, wz);
+        const down  = this.world.getChunkAtBlock(wx, wy - 1, wz);
+
+        if (north && south && east && west && up && down &&
+            north.isFaceSolid('south') &&
+            south.isFaceSolid('north') &&
+            east.isFaceSolid('west')   &&
+            west.isFaceSolid('east')   &&
+            up.isFaceSolid('down')     &&
+            down.isFaceSolid('up')) {
+            return;
+        }
 
         // Get camera position for translucent sorting
         let cameraPos = null;

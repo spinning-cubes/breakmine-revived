@@ -33,6 +33,7 @@ Déjà vu!
 Made by SpinningCubes!
 RUNNNNNNNNNNNNNNNNNNNNNN!!!
 4 + 4 = 44!
+1 + 1 = 10!
 Breakmine.com!`.split('\n');
 
     static generateSplash() {

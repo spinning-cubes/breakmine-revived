@@ -1,7 +1,7 @@
 export default class ModData {
-    static NAME = "Sphere";
+    static NAME = "Eyes";
 
-    static ID = "sphere";
+    static ID = "eyes";
 
     static AUTHOR = "SpinningCubes";
     
