@@ -176,19 +176,21 @@ export default class SoundManager {
         this.clickAudio.play();
     }
 
-    playSoundMono(name, volume = 1.0, pitch = 1.0) {
+    playSoundMono(name, volume = 1.0, pitch = 1.0, dontUseRandom = false) {
         let path = name.replace(".", "/");
         
-        // Try random numbered variant (1-5)
-        let randomVariant = Math.floor(Math.random() * 5) + 1;
-        try {
-            let audio = new Audio('src/resources/sound/' + path + randomVariant + '.ogg');
-            audio.volume = volume;
-            audio.playbackRate = pitch;
-            audio.play();
-            return;
-        } catch (e) {
-            // Fallback to unnumbered file
+        if (!dontUseRandom) {
+            // Try random numbered variant (1-5)
+            let randomVariant = Math.floor(Math.random() * 5) + 1;
+            try {
+                let audio = new Audio('src/resources/sound/' + path + randomVariant + '.ogg');
+                audio.volume = volume;
+                audio.playbackRate = pitch;
+                audio.play();
+                return;
+            } catch (e) {
+                // Fallback to unnumbered file
+            }
         }
         
         // Fallback to unnumbered file

@@ -44,10 +44,11 @@ export default class BlockRenderer {
         }
 
         switch (block.getRenderType()) {
-            case BlockRenderType.BLOCK:
+            case BlockRenderType.ITEM:
+            case (block?.renderAsItemInInventory === true && !world):
                 this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
                 break;
-            case BlockRenderType.ITEM:
+            case BlockRenderType.BLOCK:
                 this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
                 break;
             case BlockRenderType.TORCH:
@@ -546,6 +547,9 @@ export default class BlockRenderer {
         }
         if (!block.path && block.multipart !== true) {
             switch (block.getRenderType()) {
+                case (block?.renderAsItemInInventory === true):
+                    this.renderGuiItem(block);
+                    break;
                 case BlockRenderType.BLOCK:
                     let boundingBox = block.getBoundingBox(null, 0, 0, 0);
                     this.renderFace(null, block, boundingBox, EnumBlockFace.TOP, false, 0, 0, 0);

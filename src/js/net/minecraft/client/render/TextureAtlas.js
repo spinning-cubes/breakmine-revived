@@ -275,7 +275,9 @@ export default class TextureAtlas {
             "sapphire_block.png",
             "wire.png",
             "stonebrick.png",
-            "dark_stonebrick.png"
+            "dark_stonebrick.png",
+            "oak_door_top.png",
+            "oak_door_bottom.png"
         ];
 
         const toolTextureNames = [];
@@ -300,6 +302,7 @@ export default class TextureAtlas {
             "water_bucket.png",
             "lava_bucket.png",
             "oak_sign.png",
+            "oak_door.png",
             ...toolTextureNames
         ];
 

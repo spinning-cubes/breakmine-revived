@@ -47,6 +47,8 @@ import BlockMoldyBeans from "./type/BlockMoldyBeans.js";
 import BlockWire from "./type/BlockWire.js";
 import ItemBucketLava from "./type/ItemBucketLava.js";
 import BlockSign from "./type/BlockSign.js";
+import BlockDoor from "./type/BlockDoor.js";
+import ItemDoorPlacer from "./type/ItemDoorPlacer.js";
 
 export class BlockRegistry {
 
@@ -149,6 +151,9 @@ export class BlockRegistry {
         BlockRegistry.OAK_STAIRS = new BlockStair(150, 0, 5, "Oak");
         BlockRegistry.WOOD_SLAB = new BlockSlab(71, 0, "oak_planks", "Oak Slab", Block.sounds.wood);
         BlockRegistry.FENCE = new BlockFence(36, 0, "oak", 5);
+        BlockRegistry.OAK_DOOR = new BlockDoor(160, 0);
+        BlockRegistry.OAK_DOOR_TOP = new BlockDoor(161, 0);
+        BlockRegistry.ITEM_OAK_DOOR_PLACER = new ItemDoorPlacer(162, 0, "Oak Door")
 
         // Spruce
         BlockRegistry.SPRUCE_LOG = new BlockLog(59, 0, "spruce", "Spruce Log");
