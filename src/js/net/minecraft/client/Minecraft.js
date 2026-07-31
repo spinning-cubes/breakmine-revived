@@ -7,6 +7,7 @@ import ScreenRenderer from "./render/gui/ScreenRenderer.js";
 import ItemRenderer from "./render/gui/ItemRenderer.js";
 import IngameOverlay from "./gui/overlay/IngameOverlay.js";
 import SoundManager from "./sound/SoundManager.js";
+import Sound from "./sound/Sound.js";
 import MusicManager from "./sound/MusicManager.js";
 import Block from "./world/block/Block.js";
 import ItemTool from "./world/block/type/ItemTool.js";
@@ -159,6 +160,9 @@ export default class Minecraft {
         // Create sound manager
         this.soundManager = new SoundManager();
         this.musicManager = new MusicManager();
+
+        // Wire up the Patchwork Sound API
+        Sound.init(this);
 
         // Create filesystem for texture packs
         this.filesystem = new FileSystem('TexturePackDB', 'texture_packs');

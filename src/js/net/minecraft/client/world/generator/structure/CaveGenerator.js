@@ -8,6 +8,11 @@ export default class CaveGenerator extends Generator {
         super(world, seed);
 
         this.chunkRange = 16;
+        this.STONE_ID = BlockRegistry.STONE.getId();
+        this.DIRT_ID = BlockRegistry.DIRT.getId();
+        this.GRASS_ID = BlockRegistry.GRASS.getId();
+        this.WATER_ID = BlockRegistry.WATER.getId();
+        this.LAVA_ID = BlockRegistry.LAVA.getId();
     }
 
     generateInChunk(originChunkX, originChunkZ, primer) {
@@ -197,7 +202,7 @@ export default class CaveGenerator extends Generator {
                         let typeId = primer.get(x, y, z)
 
                         // Check if we have water in here
-                        if (typeId === BlockRegistry.WATER.getId() || typeId === BlockRegistry.WATER.getId()) { // TODO one of them WATER MOVING
+                        if (typeId === this.WATER_ID || typeId === this.WATER_ID) { // TODO one of them WATER MOVING
                             isWaterCave = true;
                         }
 
@@ -231,23 +236,23 @@ export default class CaveGenerator extends Generator {
                             let typeId = primer.get(x, totalY, z)
 
                             // We found grass
-                            if (typeId === BlockRegistry.GRASS.getId()) {
+                            if (typeId === this.GRASS_ID) {
                                 hasGrass = true;
                             }
 
                             // Check if we can create a cave here
-                            if (typeId === BlockRegistry.STONE.getId() || typeId === BlockRegistry.DIRT.getId() || typeId === BlockRegistry.GRASS.getId()) {
+                            if (typeId === this.STONE_ID || typeId === this.DIRT_ID || typeId === this.GRASS_ID) {
 
                                 if (y < 10) {
                                     // Lava cave
-                                    primer.set(x, totalY, z, BlockRegistry.LAVA.getId());
+                                    primer.set(x, totalY, z, this.LAVA_ID);
                                 } else {
                                     // Normal cave
                                     primer.set(x, totalY, z, 0);
 
                                     // Grow grass if we have dirt in here
-                                    if (hasGrass && primer.get(x, totalY - 1, z) === BlockRegistry.DIRT.getId()) {
-                                        primer.set(x, totalY - 1, z, BlockRegistry.GRASS.getId());
+                                    if (hasGrass && primer.get(x, totalY - 1, z) === this.DIRT_ID) {
+                                        primer.set(x, totalY - 1, z, this.GRASS_ID);
                                     }
                                 }
                             }

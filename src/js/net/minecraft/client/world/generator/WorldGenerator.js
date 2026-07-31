@@ -240,7 +240,9 @@ export default class WorldGenerator extends Generator {
                                     typeId = this.STONE_ID;
                                 }
 
-                                primer.set(blockX, worldY, baseZ + z, typeId);
+                                if (typeId !== AIR_ID) {
+                                    primer.set(blockX, worldY, baseZ + z, typeId);
+                                }
                                 stoneNoise += diffNoiseX;
                             }
 
@@ -290,12 +292,20 @@ export default class WorldGenerator extends Generator {
                 let topLayerTypeId = this.GRASS_ID;
                 let innerLayerTypeId = this.DIRT_ID;
 
+                // For y in [5,255] the bedrock threshold (nextInt(6)-1, max 4) can never
+                // match, so those 251 nextInt(6) calls only advance the RNG. Advance the
+                // LCG in closed form instead of burning 251 draws per column.
+                this.random.skip(251);
+
                 for (let y = 255; y >= 0; y--) {
                     // Execute PRNG in exact sequence to preserve seed alignment
-                    let bedrockThreshold = (this.random.nextInt(6)) - 1;
-                    if (y <= bedrockThreshold || y === 0) {
-                        primer.set(x, y, z, this.BEDROCK_ID);
-                        continue;
+                    let bedrockThreshold = -1;
+                    if (y < 5) {
+                        bedrockThreshold = (this.random.nextInt(6)) - 1;
+                        if (y <= bedrockThreshold || y === 0) {
+                            primer.set(x, y, z, this.BEDROCK_ID);
+                            continue;
+                        }
                     }
 
                     let typeIdAt = primer.get(x, y, z);

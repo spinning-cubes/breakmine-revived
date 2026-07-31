@@ -2,6 +2,7 @@ import CraftingRegistry from "./crafting/CraftingRegistry.js";
 import FileSystem from "./fs/Filesystem.js";
 import EnumCreativeInventoryTab from "./gui/EnumCreativeInventoryTab.js";
 import { BlockRegistry } from "./world/block/BlockRegistry.js";
+import Sound from "./sound/Sound.js";
 import * as THREE from "../../../../../libraries/three.module.js";
 
 /**
@@ -17,7 +18,11 @@ import * as THREE from "../../../../../libraries/three.module.js";
  *   gui/*.js             — GUI screen classes (extend GuiScreen / GuiContainer)
  *   gui_textures/*.png   — GUI background textures (accessible via 'gui/&lt;modId&gt;/&lt;name&gt;')
  *   textures/*.png       — 16×16 block/item textures
+ *   sounds/*.ogg         — custom sounds (playable via Sound.play('&lt;modId&gt;:&lt;name&gt;.ogg', volume))
  *
+ * Modding API exposed to block/item/GUI code:
+ *   Block, BlockRegistry, BoundingBox, EnumBlockFace, EnumCreativeInventoryTab,
+ *   THREE, Sound
  * Block naming convention:
  *   BlockUnbreakableBlock  →  strip "Block"  →  UnbreakableBlock  →  unbreakable_block
  *   Final namespaced ID:  <modId>:unbreakable_block
@@ -128,6 +133,10 @@ export default class ModLoader {
                 const b64 = await entry.async('base64');
                 const filename = path.split('/').pop();
                 await this.filesystem.saveBinaryFile(b64, `mods/${modId}/gui_textures/${filename}.b64`);
+            } else if (path.startsWith('sounds/') && path.endsWith('.ogg')) {
+                const b64 = await entry.async('base64');
+                const filename = path.split('/').pop();
+                await this.filesystem.saveBinaryFile(b64, `mods/${modId}/sounds/${filename}.b64`);
             }
         }
 
@@ -288,7 +297,8 @@ export default class ModLoader {
             itemClasses: new Map(),
             guiClasses: new Map(),
             guiTextureNames: [],
-            textureNames: []
+            textureNames: [],
+            soundNames: []
         };
 
         // 2. Discover files
@@ -324,6 +334,10 @@ export default class ModLoader {
             .filter(f => f.startsWith('textures/') && f.endsWith('.png.b64'))
             .map(f => f.replace(/^textures\//, '').replace(/\.png\.b64$/, ''));
 
+        entry.soundNames = relFiles
+            .filter(f => f.startsWith('sounds/') && f.endsWith('.ogg.b64'))
+            .map(f => f.replace(/^sounds\//, '').replace(/\.ogg\.b64$/, ''));
+
         // 3. Register mod textures into the TextureAtlas
         await this._registerModTextures(modId, entry);
 
@@ -351,7 +365,7 @@ export default class ModLoader {
         // 11. Store
         this.mods.set(modId, entry);
 
-        console.log(`[Patchwork] Loaded mod '${entry.name}' — ${entry.blockIds.length} block(s), ${entry.itemIds.length} item(s), ${entry.textureNames.length} texture(s)`);
+        console.log(`[Patchwork] Loaded mod '${entry.name}' — ${entry.blockIds.length} block(s), ${entry.itemIds.length} item(s), ${entry.textureNames.length} texture(s), ${entry.soundNames.length} sound(s)`);
     }
 
     /* ------------------------------------------------------------------
@@ -390,7 +404,7 @@ export default class ModLoader {
         const EnumCreativeInventoryTabClass = await this._getEnumCreativeInventoryTab();
 
         // Build deps: base block deps + any GUI classes from this mod
-        const blockDeps = { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass, EnumBlockFace: EnumBlockFaceClass, EnumCreativeInventoryTab: EnumCreativeInventoryTabClass, THREE };
+        const blockDeps = { Block: BlockClass, BlockRegistry, BoundingBox: BoundingBoxClass, EnumBlockFace: EnumBlockFaceClass, EnumCreativeInventoryTab: EnumCreativeInventoryTabClass, THREE, Sound };
         for (const [className, cls] of entry.guiClasses) {
             blockDeps[className] = cls;
         }
@@ -668,6 +682,7 @@ export default class ModLoader {
                 BlockRegistry,
                 BoundingBox: BoundingBoxClass,
                 EnumCreativeInventoryTab: EnumCreativeInventoryTabClass,
+                Sound,
             };
         } catch (e) {
             console.error('[Patchwork] Could not import GUI classes:', e);
@@ -712,8 +727,9 @@ export default class ModLoader {
             transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
 
             const wrapped = `
-                return (function() {
+                return (function(__deps__) {
                     "use strict";
+                    const Sound = __deps__["Sound"];
                     ${transformed}
                     if (typeof ModLoad !== 'undefined' && ModLoad.onLoad) {
                         return ModLoad;
@@ -723,7 +739,7 @@ export default class ModLoader {
             `;
 
             const factory = new Function(wrapped)();
-            const modLoadClass = factory();
+            const modLoadClass = factory({ Sound });
             if (modLoadClass && typeof modLoadClass.onLoad === 'function') {
                 modLoadClass.onLoad(this.minecraft.world);
                 console.log(`[Patchwork]   Called ModLoad.onLoad for '${modId}'`);
@@ -942,7 +958,8 @@ export default class ModLoader {
                 ItemEdible: edibleMod.default,
                 ItemTool: toolMod.default,
                 EnumCreativeInventoryTab: EnumCreativeInventoryTabClass,
-                THREE
+                THREE,
+                Sound
             };
         } catch (e) {
             console.error('[Patchwork] Could not import Item classes:', e);
@@ -1070,4 +1087,5 @@ export default class ModLoader {
  * @property {Map<string, Function>} guiClasses
  * @property {string[]} guiTextureNames
  * @property {string[]} textureNames
+ * @property {string[]} soundNames
  */
