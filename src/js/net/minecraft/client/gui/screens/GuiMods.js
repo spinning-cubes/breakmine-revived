@@ -26,7 +26,10 @@ export default class GuiMods extends GuiScreen {
         this.modSlotContainer.slotList = this.mods.map((data, index) =>
             new GuiModSlot(
                 data, 5, 0, this.width - 10, 36,
-                () => { this.modSlotContainer.setSelected(index); },
+                () => { 
+                    this.modSlotContainer.setSelected(index); 
+                    this.setSelectedWorld(index); // Sync selectedIndex in GuiMods
+                },
                 this.minecraft
             )
         );
@@ -36,6 +39,13 @@ export default class GuiMods extends GuiScreen {
         super.init();
 
         await this.refreshModList();
+
+        // Ensure mod.enabled defaults to true if missing from the modloader startup response
+        this.mods.forEach(mod => {
+            if (mod.enabled === undefined || mod.enabled === null) {
+                mod.enabled = true;
+            }
+        });
 
         this.modSlotContainer = new GuiModSlotContainer(this, this.mods);
         this.rebuildSlotList();

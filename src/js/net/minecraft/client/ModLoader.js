@@ -207,32 +207,6 @@ export default class ModLoader {
     }
 
     /**
-     * Get metadata for all installed mods.
-     * @returns {Promise<Array<{id:string, name:string, author:string, version:string, enabled:boolean}>>}
-     */
-    async getInstalledMods() {
-        const modIds = await this.getInstalledModIds();
-        const result = [];
-        for (const modId of modIds) {
-            try {
-                const raw = await this.filesystem.loadFile(`mods/${modId}/ModData.json`);
-                if (!raw) continue;
-                const meta = JSON.parse(raw);
-                result.push({
-                    id: meta.ID || modId,
-                    name: meta.NAME || 'Unknown',
-                    author: meta.AUTHOR || 'Unknown',
-                    version: meta.VERSION || '0.0.0',
-                    enabled: this.enabledMods.has(modId)
-                });
-            } catch (e) {
-                console.warn(`[Patchwork] Could not read metadata for '${modId}':`, e);
-            }
-        }
-        return result;
-    }
-
-    /**
      * Return list of mod IDs that have a ModData.json stored.
      */
     async getInstalledModIds() {
@@ -1002,13 +976,72 @@ export default class ModLoader {
     /* ------------------------------------------------------------------
      *  Internal — persistence of enabled set
      * ------------------------------------------------------------------ */
+/**
+     * Load all installed mods from IndexedDB and register their content.
+     * Call this once during game startup, after BlockRegistry.create().
+     */
+    async loadAllMods() {
+        await this._loadEnabledSet();
 
-    _loadEnabledSet() {
+        const modIds = await this.getInstalledModIds();
+        console.log(`[Patchwork] Found ${modIds.length} installed mod(s)`);
+
+        for (const modId of modIds) {
+            if (!this.enabledMods.has(modId)) continue;
+            try {
+                await this._loadMod(modId);
+            } catch (err) {
+                console.error(`[Patchwork] Failed to load mod '${modId}':`, err);
+            }
+        }
+
+        console.log(`[Patchwork] ${this.mods.size} mod(s) loaded successfully`);
+    }
+
+    /**
+     * Get metadata for all installed mods.
+     * @returns {Promise<Array<{id:string, name:string, author:string, version:string, enabled:boolean}>>}
+     */
+    async getInstalledMods() {
+        await this._loadEnabledSet(); // Ensure set is populated before querying status
+        const modIds = await this.getInstalledModIds();
+        const result = [];
+        for (const modId of modIds) {
+            try {
+                const raw = await this.filesystem.loadFile(`mods/${modId}/ModData.json`);
+                if (!raw) continue;
+                const meta = JSON.parse(raw);
+                const actualId = meta.ID || modId;
+                
+                result.push({
+                    id: actualId,
+                    name: meta.NAME || 'Unknown',
+                    author: meta.AUTHOR || 'Unknown',
+                    version: meta.VERSION || '0.0.0',
+                    enabled: this.enabledMods.has(actualId) || this.enabledMods.has(modId)
+                });
+            } catch (e) {
+                console.warn(`[Patchwork] Could not read metadata for '${modId}':`, e);
+            }
+        }
+        return result;
+    }
+
+    /* ------------------------------------------------------------------
+     *  Internal — persistence of enabled set
+     * ------------------------------------------------------------------ */
+
+    async _loadEnabledSet() {
         try {
             const stored = localStorage.getItem('breakmine_enabled_mods');
-            if (stored) {
+            if (stored !== null) {
                 const arr = JSON.parse(stored);
                 this.enabledMods = new Set(arr);
+            } else {
+                // First boot ever: treat all installed mods as enabled by default
+                const modIds = await this.getInstalledModIds();
+                this.enabledMods = new Set(modIds);
+                this._saveEnabledSet();
             }
         } catch (e) {
             this.enabledMods = new Set();
