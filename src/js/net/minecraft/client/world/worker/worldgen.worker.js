@@ -407,7 +407,7 @@ function serializeChunk(chunk) {
     return { x: chunk.x, z: chunk.z, sectionMask, sections, heightMap };
 }
 
-function generateChunks(chunkCoords, seedData, worldType) {
+function generateChunks(chunkCoords, seedData, worldType, onProgress) {
     const seed = Long.fromBits(seedData.low, seedData.high);
     const world = new WorldStub();
     const generator = worldType === "flat"
@@ -431,30 +431,53 @@ function generateChunks(chunkCoords, seedData, worldType) {
         }
     }
 
-    // 1. Generate base terrain for populated chunks and their 1-ring neighbors
+    // Collect base-terrain chunks (populated chunks + their 1-ring neighbors), deduped
+    const generateKeys = new Set();
+    const toGenerate = [];
     for (const [px, pz] of populateCoords) {
         for (let dx = -1; dx <= 1; dx++) {
             for (let dz = -1; dz <= 1; dz++) {
                 const tx = px + dx;
                 const tz = pz + dz;
-                if (!world.chunkExists(tx, tz)) {
-                    const chunk = generator.newChunk(world, tx, tz, ChunkStub);
-                    world.addChunk(chunk);
+                const key = `${tx},${tz}`;
+                if (!generateKeys.has(key)) {
+                    generateKeys.add(key);
+                    toGenerate.push([tx, tz]);
                 }
             }
         }
     }
 
+    const totalWork = toGenerate.length + populateCoords.length + chunkCoords.length;
+    let workDone = 0;
+    const reportProgress = () => {
+        if (onProgress) onProgress(workDone, totalWork);
+    };
+
+    // 1. Generate base terrain for populated chunks and their 1-ring neighbors
+    for (const [tx, tz] of toGenerate) {
+        const chunk = generator.newChunk(world, tx, tz, ChunkStub);
+        world.addChunk(chunk);
+        workDone++;
+        reportProgress();
+    }
+
     // 2. Populate target chunks AND neighbors so cross-chunk structures (trees) spill correctly
     for (const [px, pz] of populateCoords) {
         generator.populateChunk(px, pz);
+        workDone++;
+        reportProgress();
     }
 
     // 3. Serialize and return requested chunks
     const requested = [];
     for (const [cx, cz] of chunkCoords) {
         const chunk = world.getChunkAt(cx, cz);
-        if (chunk) requested.push(serializeChunk(chunk));
+        if (chunk) {
+            requested.push(serializeChunk(chunk));
+            workDone++;
+            reportProgress();
+        }
     }
     return requested;
 }
@@ -470,12 +493,14 @@ self.onmessage = function(e) {
         }
 
         if (msg.type === "generateBatch") {
-            const { coords, seed, worldType } = msg;
-            const results = generateChunks(coords, seed, worldType);
-            self.postMessage({ type: "batchGenerated", results });
+            const { coords, seed, worldType, batchId } = msg;
+            const results = generateChunks(coords, seed, worldType, (done, total) => {
+                self.postMessage({ type: "batchProgress", batchId, done, total });
+            });
+            self.postMessage({ type: "batchGenerated", batchId, results });
         }
     } catch (err) {
         console.error("Worker generation error:", err);
-        self.postMessage({ type: msg.type === "generateBatch" ? "batchGenerated" : "chunkGenerated", results: [] });
+        self.postMessage({ type: msg.type === "generateBatch" ? "batchGenerated" : "chunkGenerated", batchId: msg.batchId, results: [] });
     }
 };

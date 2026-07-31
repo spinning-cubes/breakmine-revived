@@ -14,6 +14,8 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
         this.seedData = { low: seed.low, high: seed.high };
         this.worldType = worldType;
         this.pendingChunks = new Map();
+        this.pendingBatchProgress = new Map();
+        this._nextBatchId = 0;
 
         const workerUrl = new URL("../worker/worldgen.worker.js", import.meta.url);
         this.worker = new Worker(workerUrl, { type: "module" });
@@ -25,6 +27,12 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
     }
 
     _onWorkerMessage(data) {
+        if (data.type === "batchProgress") {
+            const callback = this.pendingBatchProgress.get(data.batchId);
+            if (callback) callback(data.done, data.total);
+            return;
+        }
+
         if (data.type === "chunkGenerated" || data.type === "batchGenerated") {
             const results = data.results;
             for (const result of results) {
@@ -199,7 +207,7 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
         return chunk;
     }
 
-    async loadChunksBatchAsync(chunkCoords) {
+    async loadChunksBatchAsync(chunkCoords, onProgress) {
         const unloadedCoords = [];
         for (const [x, z] of chunkCoords) {
             const index = x + (z << 16);
@@ -212,9 +220,12 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
             return chunkCoords.map(([x, z]) => this.chunks.get(x + (z << 16))).filter(Boolean);
         }
 
+        const batchId = this._nextBatchId++;
+        if (onProgress) this.pendingBatchProgress.set(batchId, onProgress);
+
         const batchPromise = new Promise((resolve) => {
             const handler = (e) => {
-                if (e.data.type === "batchGenerated") {
+                if (e.data.type === "batchGenerated" && e.data.batchId === batchId) {
                     this.worker.removeEventListener("message", handler);
                     resolve();
                 }
@@ -233,10 +244,12 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
                 coords: unloadedCoords,
                 seed: this.seedData,
                 worldType: this.worldType,
+                batchId,
             });
         });
 
         await batchPromise;
+        this.pendingBatchProgress.delete(batchId);
 
         return chunkCoords.map(([x, z]) => this.chunks.get(x + (z << 16))).filter(Boolean);
     }

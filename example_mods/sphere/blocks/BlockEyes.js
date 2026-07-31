@@ -61,10 +61,10 @@ function updateEyeRotation(mesh, target) {
     mesh.lookAt(px, py + 1.62, pz);
 }
 
-export default class BlockSphere extends Block {
+export default class BlockEyes extends Block {
     constructor(id, textureSlotId) {
         super(id, textureSlotId);
-        this.description = "Sphere";
+        this.description = "Eyes";
         this.hardness = 3.5;
         this.noFaceCull = true;
         this.activeMeshes = new Map();

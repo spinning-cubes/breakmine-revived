@@ -513,7 +513,13 @@ export default class Minecraft {
         const BATCH_SIZE = 16;
         for (let i = 0; i < coords.length; i += BATCH_SIZE) {
             const batch = coords.slice(i, i + BATCH_SIZE);
-            await provider.loadChunksBatchAsync(batch);
+            await provider.loadChunksBatchAsync(batch, (done, total) => {
+                if (this.loadingScreen !== null) {
+                    const batchFraction = total > 0 ? done / total : 1;
+                    const progress = Math.min(1, (i + batch.length * batchFraction) / coords.length);
+                    this.loadingScreen.setProgress(progress);
+                }
+            });
 
             if (this.loadingScreen !== null) {
                 const progress = Math.min(1, (i + batch.length) / coords.length);

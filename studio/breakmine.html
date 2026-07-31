@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Breakmine Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #030303; color: #fff; margin: 0; }
+
+    /* ── Carousel ── */
+    .carousel-track {
+      display: flex;
+      transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .carousel-slide {
+      min-width: 100%;
+      position: relative;
+    }
+    .carousel-slide img {
+      width: 100%;
+      height: 480px;
+      object-fit: cover;
+      border-radius: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .carousel-slide img { height: 280px; border-radius: 1rem; }
+    }
+
+    /* ── Dots ── */
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.25);
+      border: none; cursor: pointer;
+      transition: all 300ms;
+    }
+    .dot.active {
+      background: #16a34a;
+      width: 28px;
+    }
+
+    /* ── Buttons ── */
+    .arrow-btn {
+      width: 44px; height: 44px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 300ms;
+    }
+    .arrow-btn:hover {
+      border-color: rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.08);
+    }
+
+    /* ── Shimmer border on download cards ── */
+    .download-card {
+      position: relative;
+      border-radius: 1rem;
+      overflow: hidden;
+    }
+    .download-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 1rem;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(255,255,255,0), rgba(255,255,255,0.15), rgba(255,255,255,0));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    /* ── Fade-in animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp .8s ease-out both; }
+    .fade-up-d1 { animation-delay: .1s; }
+    .fade-up-d2 { animation-delay: .25s; }
+    .fade-up-d3 { animation-delay: .4s; }
+
+    /* ── Background glow ── */
+    .glow {
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Progress bar inside carousel ── */
+    .progress-bar {
+      height: 3px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #22c55e;
+      border-radius: 9999px;
+      transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  </style>
+</head>
+<body class="font-jakarta antialiased overflow-x-hidden">
+
+  <!-- ═══════════════════ HEADER ═══════════════════ -->
+  <header class="fixed top-0 inset-x-0 z-50 h-16 flex items-center justify-between px-6 md:px-10" style="background:rgba(3,3,3,0.7);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,0.05);">
+    <!-- Logo -->
+    <a href="#" class="flex items-center gap-2.5 group">
+      <div class="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+        <i data-lucide="pickaxe" class="w-4 h-4 text-white"></i>
+      </div>
+      <span class="text-base font-semibold tracking-tight">Breakmine Studio</span>
+    </a>
+    <!-- Nav -->
+    <nav class="hidden md:flex items-center gap-8 text-sm text-neutral-400">
+      <a href="#gallery" class="hover:text-white transition-colors duration-150">Gallery</a>
+      <a href="#about" class="hover:text-white transition-colors duration-150">About</a>
+      <a href="#downloads" class="hover:text-white transition-colors duration-150">Downloads</a>
+    </nav>
+    <!-- CTA -->
+    <a href="#downloads" class="hidden sm:inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-full bg-green-600 hover:bg-green-500 transition-all duration-300 hover:scale-105 hover:shadow-[0_10px_15px_rgba(22,163,74,0.25)]">
+      <i data-lucide="download" class="w-4 h-4"></i>
+      Get Started
+    </a>
+  </header>
+
+  <!-- ═══════════════════ HERO / CAROUSEL ═══════════════════ -->
+  <section id="gallery" class="relative pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
+    <!-- Background glow -->
+    <div class="glow -top-40 left-1/2 -translate-x-1/2" style="background:rgba(34,197,94,0.06);"></div>
+
+    <!-- Title -->
+    <div class="text-center mb-10 relative z-10 fade-up">
+      <h1 class="text-4xl md:text-6xl lg:text-7xl font-normal tracking-tight leading-[1.1]">Breakmine Studio</h1>
+    </div>
+
+    <!-- Carousel Wrapper -->
+    <div class="relative z-10 fade-up fade-up-d1">
+      <!-- Slides -->
+      <div class="overflow-hidden rounded-3xl md:rounded-[1.5rem]" id="carouselViewport">
+        <div class="carousel-track" id="carouselTrack">
+          <div class="carousel-slide"><img src="img1.png" alt="Screenshot 1" /></div>
+          <div class="carousel-slide"><img src="img2.png" alt="Screenshot 2" /></div>
+          <div class="carousel-slide"><img src="img3.png" alt="Screenshot 3" /></div>
+          <div class="carousel-slide"><img src="img4.png" alt="Screenshot 4" /></div>
+          <div class="carousel-slide"><img src="img5.png" alt="Screenshot 5" /></div>
+        </div>
+      </div>
+
+      <!-- Arrows -->
+      <button class="arrow-btn absolute top-1/2 -translate-y-1/2 left-3 md:left-5" id="prevBtn" aria-label="Previous">
+        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+      </button>
+      <button class="arrow-btn absolute top-1/2 -translate-y-1/2 right-3 md:right-5" id="nextBtn" aria-label="Next">
+        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Progress bar -->
+      <div class="progress-bar mt-4 mx-3 md:mx-5">
+        <div class="progress-fill" id="progressFill" style="width:20%"></div>
+      </div>
+
+      <!-- Dots + Counter -->
+      <div class="flex items-center justify-center gap-3 mt-4">
+        <button class="dot active" data-index="0"></button>
+        <button class="dot" data-index="1"></button>
+        <button class="dot" data-index="2"></button>
+        <button class="dot" data-index="3"></button>
+        <button class="dot" data-index="4"></button>
+        <span class="ml-4 text-xs text-neutral-500 font-mono" id="slideCounter">1 / 5</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ ABOUT / DESCRIPTION ═══════════════════ -->
+  <section id="about" class="relative py-24 px-6 md:px-10 max-w-6xl mx-auto">
+    <div class="glow top-0 right-0" style="background:rgba(34,197,94,0.04);"></div>
+
+    <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center relative z-10">
+      <!-- Text -->
+      <div class="fade-up">
+        <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-green-500 mb-4">About the Project</p>
+        <h2 class="text-3xl md:text-5xl font-normal tracking-tight leading-[1.15] mb-6">
+          Built by Programmers,<br/>Made for <i>Anyone</i>.
+        </h2>
+        <p class="text-neutral-400 text-lg leading-relaxed mb-6">
+          Breakmine Studio is a modding toolkit designed for anyone to create Breakmine mods, no programming required.
+        </p>
+        <p class="text-neutral-500 leading-relaxed mb-8">
+          Whether you're prototyping a new block, adding custom furniture, or assembling enitre mods; Breakmine Studio gives you a streamlined environment so you can focus on making something remarkably cool.
+        </p>
+      </div>
+
+      <!-- Stats cards -->
+      <div class="grid grid-cols-2 gap-4 fade-up fade-up-d2">
+        <div class="download-card bg-[#111111] p-6 flex flex-col justify-between min-h-[160px]">
+          <i data-lucide="users" class="w-6 h-6 text-green-500"></i>
+          <div>
+            <p class="text-2xl font-semibold">Community</p>
+            <p class="text-xs text-neutral-500 mt-1">If you have a problem, there's always someone to help.</p>
+          </div>
+        </div>
+        <div class="download-card bg-[#111111] p-6 flex flex-col justify-between min-h-[160px]">
+          <i data-lucide="download" class="w-6 h-6 text-green-500"></i>
+          <div>
+            <p class="text-2xl font-semibold">Free Forever</p>
+            <p class="text-xs text-neutral-500 mt-1">No money required.</p>
+          </div>
+        </div>
+        <div class="download-card bg-[#111111] p-6 flex flex-col justify-between min-h-[160px]">
+          <i data-lucide="puzzle" class="w-6 h-6 text-green-500"></i>
+          <div>
+            <p class="text-2xl font-semibold">Test In-game</p>
+            <p class="text-xs text-neutral-500 mt-1">Play your mods in the game without leaving Studio.</p>
+          </div>
+        </div>
+        <div class="download-card bg-[#111111] p-6 flex flex-col justify-between min-h-[160px]">
+          <i data-lucide="star" class="w-6 h-6 text-green-500"></i>
+          <div>
+            <p class="text-2xl font-semibold">Easy to Use</p>
+            <p class="text-xs text-neutral-500 mt-1">No coding required</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ DOWNLOADS ═══════════════════ -->
+  <section id="downloads" class="relative py-24 px-6 md:px-10 max-w-6xl mx-auto">
+    <div class="glow bottom-0 left-1/4" style="background:rgba(34,197,94,0.04);"></div>
+
+    <div class="text-center mb-14 relative z-10 fade-up">
+      <h2 class="text-3xl md:text-5xl font-normal tracking-tight leading-[1.15] mb-4">Get Breakmine Studio<br>(NOT AVAILIBLE YET)</h2>
+      <p class="text-neutral-500 max-w-xl mx-auto">Choose your platform below.</p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10 fade-up fade-up-d2">
+
+      <!-- Windows -->
+      <div class="download-card bg-[#111111] p-8 flex flex-col justify-between min-h-[240px] group hover:bg-[#161616] transition-colors duration-300">
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-5">
+            <i data-lucide="monitor" class="w-6 h-6 text-green-500"></i>
+          </div>
+          <h3 class="text-lg font-semibold mb-1">Windows</h3>
+          <p class="text-sm text-neutral-500 leading-relaxed">Windows 10 / 11 (64-bit). Installer package, ~180 MB.</p>
+        </div>
+        <button onclick="showToast('Windows download started!')" class="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium border border-white/10 hover:border-green-500/50 hover:bg-green-600/10 hover:text-green-400 transition-all duration-300">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Download .exe
+        </button>
+      </div>
+
+      <!-- macOS -->
+      <div class="download-card bg-[#111111] p-8 flex flex-col justify-between min-h-[240px] group hover:bg-[#161616] transition-colors duration-300">
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-5">
+            <i data-lucide="laptop" class="w-6 h-6 text-green-500"></i>
+          </div>
+          <h3 class="text-lg font-semibold mb-1">macOS</h3>
+          <p class="text-sm text-neutral-500 leading-relaxed">macOS 12+ (Apple Silicon & Intel). DMG archive, ~195 MB.</p>
+        </div>
+        <button onclick="showToast('macOS download started!')" class="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium border border-white/10 hover:border-green-500/50 hover:bg-green-600/10 hover:text-green-400 transition-all duration-300">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Download .dmg
+        </button>
+      </div>
+
+      <!-- Linux -->
+      <div class="download-card bg-[#111111] p-8 flex flex-col justify-between min-h-[240px] group hover:bg-[#161616] transition-colors duration-300">
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-5">
+            <i data-lucide="terminal" class="w-6 h-6 text-green-500"></i>
+          </div>
+          <h3 class="text-lg font-semibold mb-1">Linux</h3>
+          <p class="text-sm text-neutral-500 leading-relaxed">Ubuntu 20.04+ / Flatpak. AppImage bundle, ~170 MB.</p>
+        </div>
+        <button onclick="showToast('Linux download started!')" class="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium border border-white/10 hover:border-green-500/50 hover:bg-green-600/10 hover:text-green-400 transition-all duration-300">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Download .AppImage
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Extra info row -->
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-neutral-600 relative z-10 fade-up fade-up-d3">
+      <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> No malware. Don't belive it? Look at the code.</span>
+      <span class="flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Auto-updates included</span>
+      <span class="flex items-center gap-1.5"><i data-lucide="unlock" class="w-3.5 h-3.5"></i> Free Forever</span>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ FOOTER ═══════════════════ -->
+  <footer class="border-t border-white/5 py-10 px-6 md:px-10">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded-md bg-green-600 flex items-center justify-center">
+          <i data-lucide="pickaxe" class="w-3 h-3 text-white"></i>
+        </div>
+        <span class="text-sm font-medium text-neutral-400">Breakmine Studio by Oflap Studio &copy; and SpinningCubes</span>
+      </div>
+      <p class="text-xs text-neutral-600">&copy; 2026</p>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════ TOAST ═══════════════════ -->
+  <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl text-sm font-medium flex items-center gap-2 opacity-0 translate-y-4 pointer-events-none transition-all duration-500" style="background:rgba(22,163,74,0.15);border:1px solid rgba(34,197,94,0.3);backdrop-filter:blur(12px);color:#22c55e;">
+    <i data-lucide="check-circle" class="w-4 h-4"></i>
+    <span id="toastMsg"></span>
+  </div>
+
+  <!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+  <script>
+    // ── Init Lucide icons ──
+    lucide.createIcons();
+
+    // ── Carousel logic ──
+    const track = document.getElementById('carouselTrack');
+    const dots = document.querySelectorAll('.dot');
+    const counter = document.getElementById('slideCounter');
+    const progressFill = document.getElementById('progressFill');
+    const totalSlides = 5;
+    let current = 0;
+    let autoplayTimer;
+
+    function goTo(index) {
+      if (index < 0) index = totalSlides - 1;
+      if (index >= totalSlides) index = 0;
+      current = index;
+      track.style.transform = `translateX(-${current * 100}%)`;
+      dots.forEach((d, i) => d.classList.toggle('active', i === current));
+      counter.textContent = `${current + 1} / ${totalSlides}`;
+      progressFill.style.width = `${((current + 1) / totalSlides) * 100}%`;
+      resetAutoplay();
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => goTo(current + 1));
+    dots.forEach(d => d.addEventListener('click', () => goTo(+d.dataset.index)));
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') goTo(current - 1);
+      if (e.key === 'ArrowRight') goTo(current + 1);
+    });
+
+    // Touch / swipe support
+    let touchStartX = 0;
+    const viewport = document.getElementById('carouselViewport');
+    viewport.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+    viewport.addEventListener('touchend', (e) => {
+      const diff = touchStartX - e.changedTouches[0].screenX;
+      if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
+    }, { passive: true });
+
+    // Autoplay
+    function resetAutoplay() {
+      clearInterval(autoplayTimer);
+      autoplayTimer = setInterval(() => goTo(current + 1), 5000);
+    }
+    resetAutoplay();
+
+    // ── Toast ──
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 3000);
+    }
+
+    // ── Intersection Observer for fade-up ──
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.style.animationPlayState = 'running';
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.fade-up').forEach(el => {
+      el.style.animationPlayState = 'paused';
+      observer.observe(el);
+    });
+
+    // ── Smooth scroll for anchor links ──
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  </script>
+</body>
+</html>
