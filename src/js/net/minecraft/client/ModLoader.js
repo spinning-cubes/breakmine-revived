@@ -23,6 +23,10 @@ import * as THREE from "../../../../../libraries/three.module.js";
  * Modding API exposed to block/item/GUI code:
  *   Block, BlockRegistry, BoundingBox, EnumBlockFace, EnumCreativeInventoryTab,
  *   THREE, Sound
+ * Relative imports that point to other files inside the mod are resolved
+ * automatically (e.g. `import Helper from "./Helper.js"` in blocks/BlockFoo.js
+ * loads blocks/Helper.js). Imports of game classes (e.g. `../Block.js`) are
+ * provided via the sandbox deps. Circular imports are allowed and cached.
  * Block naming convention:
  *   BlockUnbreakableBlock  →  strip "Block"  →  UnbreakableBlock  →  unbreakable_block
  *   Final namespaced ID:  <modId>:unbreakable_block
@@ -44,6 +48,7 @@ export default class ModLoader {
         this.enabledMods = new Set();   // modIds that are active
         this.filesystem = new FileSystem('ModDB', 'mods');
         this._blockBaseClass = null;    // cached Block class for eval sandbox
+        this._modModuleCache = new Map(); // 'modId/filePath' → evaluated exports
     }
 
     /* ------------------------------------------------------------------
@@ -190,6 +195,10 @@ export default class ModLoader {
                 BlockRegistry.unregister(itemId);
             }
             this.mods.delete(modId);
+        }
+
+        for (const key of this._modModuleCache.keys()) {
+            if (key.startsWith(`${modId}/`)) this._modModuleCache.delete(key);
         }
 
         const files = await this.filesystem.listDir(`mods/${modId}/`);
@@ -414,7 +423,7 @@ export default class ModLoader {
                 const src = await this.filesystem.loadFile(`mods/${modId}/blocks/${filename}`);
                 if (!src) continue;
 
-                const blockClass = this._evalClass(src, blockDeps);
+                const blockClass = await this._evalClass(src, blockDeps, modId, `blocks/${filename}`);
                 if (!blockClass) continue;
 
                 const className = blockClass.name || filename.replace('.js', '');
@@ -452,7 +461,7 @@ export default class ModLoader {
                 const src = await this.filesystem.loadFile(`mods/${modId}/items/${filename}`);
                 if (!src) continue;
 
-                const itemClass = this._evalClass(src, itemClasses);
+                const itemClass = await this._evalClass(src, itemClasses, modId, `items/${filename}`);
                 if (!itemClass) continue;
 
                 const className = itemClass.name || filename.replace('.js', '');
@@ -488,6 +497,10 @@ export default class ModLoader {
                 const src = await this.filesystem.loadFile(`mods/${modId}/crafting/${filename}`);
                 if (!src) continue;
 
+                const filePath = `crafting/${filename}`;
+                const recipeDeps = {};
+                await this._resolveModImports(src, recipeDeps, modId, filePath, new Set([filePath]));
+
                 let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
                 transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
 
@@ -509,9 +522,14 @@ export default class ModLoader {
                 }
                 const resultTypeId = resultBlock.id;
 
+                const recipeAssignments = Object.keys(recipeDeps).map(name =>
+                    `const ${name} = __deps__["${name}"];`
+                ).join('\n');
+
                 const wrapped = `
-                    return (function() {
+                    return (function(__deps__) {
                         "use strict";
+                        ${recipeAssignments}
                         ${transformed}
                         if (typeof ${className} !== 'undefined') {
                             return ${className};
@@ -520,7 +538,7 @@ export default class ModLoader {
                     })
                 `;
                 const factory = new Function(wrapped)();
-                const recipeClass = factory();
+                const recipeClass = factory(recipeDeps);
                 if (!recipeClass) continue;
 
                 const resultCount = recipeClass.amount_output || 1;
@@ -569,6 +587,10 @@ export default class ModLoader {
                     const src = await this.filesystem.loadFile(`mods/${modId}/smelting/${filename}`);
                     if (!src) continue;
 
+                    const filePath = `smelting/${filename}`;
+                    const recipeDeps = {};
+                    await this._resolveModImports(src, recipeDeps, modId, filePath, new Set([filePath]));
+
                     let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
                     transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
 
@@ -590,9 +612,14 @@ export default class ModLoader {
                     }
                     const resultTypeId = resultBlock.id;
 
+                    const recipeAssignments = Object.keys(recipeDeps).map(name =>
+                        `const ${name} = __deps__["${name}"];`
+                    ).join('\n');
+
                     const wrapped = `
-                        return (function() {
+                        return (function(__deps__) {
                             "use strict";
+                            ${recipeAssignments}
                             ${transformed}
                             if (typeof ${className} !== 'undefined') {
                                 return ${className};
@@ -601,7 +628,7 @@ export default class ModLoader {
                         })
                     `;
                     const factory = new Function(wrapped)();
-                    const recipeClass = factory();
+                    const recipeClass = factory(recipeDeps);
                     if (!recipeClass) continue;
 
                     const inputId = recipeClass.input || 0;
@@ -702,7 +729,7 @@ export default class ModLoader {
                 const src = await this.filesystem.loadFile(`mods/${modId}/gui/${filename}`);
                 if (!src) continue;
 
-                const guiClass = this._evalClass(src, guiDeps);
+                const guiClass = await this._evalClass(src, guiDeps, modId, `gui/${filename}`);
                 if (!guiClass) continue;
 
                 const className = guiClass.name || filename.replace('.js', '');
@@ -723,13 +750,20 @@ export default class ModLoader {
             const src = await this.filesystem.loadFile(`mods/${modId}/ModLoad.js`);
             if (!src) return;
 
+            const modDeps = { Sound };
+            await this._resolveModImports(src, modDeps, modId, 'ModLoad.js', new Set(['ModLoad.js']));
+
             let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
             transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
+
+            const modLoadAssignments = Object.keys(modDeps).map(name =>
+                `const ${name} = __deps__["${name}"];`
+            ).join('\n');
 
             const wrapped = `
                 return (function(__deps__) {
                     "use strict";
-                    const Sound = __deps__["Sound"];
+                    ${modLoadAssignments}
                     ${transformed}
                     if (typeof ModLoad !== 'undefined' && ModLoad.onLoad) {
                         return ModLoad;
@@ -739,7 +773,7 @@ export default class ModLoader {
             `;
 
             const factory = new Function(wrapped)();
-            const modLoadClass = factory({ Sound });
+            const modLoadClass = factory(modDeps);
             if (modLoadClass && typeof modLoadClass.onLoad === 'function') {
                 modLoadClass.onLoad(this.minecraft.world);
                 console.log(`[Patchwork]   Called ModLoad.onLoad for '${modId}'`);
@@ -756,12 +790,22 @@ export default class ModLoader {
     /**
      * Evaluate a class source string and return the constructor.
      * Strips all imports and provides the named classes from the deps map.
+     * Relative imports that resolve to other files in the same mod are loaded
+     * and evaluated automatically, and their exports are injected into deps.
      *
      * @param {string} source  — JavaScript source with `export default class`
      * @param {Object<string, Function>} deps  — map of variable names to actual classes
+     * @param {string|null} modId  — id of the mod the file belongs to (for same-mod imports)
+     * @param {string|null} filePath  — mod-relative path of the file (e.g. 'blocks/BlockFoo.js')
      * @returns {Function|null}
      */
-    _evalClass(source, deps) {
+    async _evalClass(source, deps, modId = null, filePath = null) {
+        const localDeps = { ...deps };
+
+        if (modId && filePath) {
+            await this._resolveModImports(source, localDeps, modId, filePath, new Set([filePath]));
+        }
+
         // Strip all imports
         let transformed = source.replace(
             /import\s+.*?from\s+["'][^"']*["']\s*;?/g,
@@ -772,7 +816,7 @@ export default class ModLoader {
         transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
 
         // Build variable assignments from provided classes
-        const assignments = Object.keys(deps).map(name =>
+        const assignments = Object.keys(localDeps).map(name =>
             `const ${name} = __deps__["${name}"];`
         ).join('\n');
 
@@ -787,7 +831,7 @@ export default class ModLoader {
 
         try {
             const factory = new Function(wrapped)();
-            return factory(deps);
+            return factory(localDeps);
         } catch (err) {
             console.error('[Patchwork] Class eval error:', err);
             return null;
@@ -800,6 +844,233 @@ export default class ModLoader {
     _extractClassName(source) {
         const match = source.match(/export\s+default\s+class\s+(\w+)/);
         return match ? match[1] : null;
+    }
+
+    /* ------------------------------------------------------------------
+     *  Internal — same-mod imports
+     * ------------------------------------------------------------------ */
+
+    /**
+     * Parse import statements from a source string.
+     * Handles default, named and namespace imports.
+     *
+     * @param {string} source
+     * @returns {Array<{specifier: string, defaultName: string|null, namedNames: string[], namespace: string|null}>}
+     */
+    _parseImports(source) {
+        const imports = [];
+        const re = /import\s+([\s\S]*?)\s+from\s+["']([^"']+)["']\s*;?/g;
+        let match;
+        while ((match = re.exec(source)) !== null) {
+            const clause = match[1].trim();
+            const specifier = match[2];
+            const imp = { specifier, defaultName: null, namedNames: [], namespace: null };
+
+            const nsMatch = clause.match(/^\*\s+as\s+(\w+)$/);
+            if (nsMatch) {
+                imp.namespace = nsMatch[1];
+                imports.push(imp);
+                continue;
+            }
+
+            let rest = clause;
+            const braceMatch = clause.match(/\{([^}]*)\}/);
+            if (braceMatch) {
+                for (const name of braceMatch[1].split(',')) {
+                    const trimmed = name.trim();
+                    if (trimmed) imp.namedNames.push(trimmed.split(/\s+as\s+/).pop());
+                }
+                rest = clause.replace(/\{([^}]*)\}/, '').trim();
+            }
+
+            rest = rest.replace(/,$/, '').trim();
+            if (rest) imp.defaultName = rest;
+            imports.push(imp);
+        }
+        return imports;
+    }
+
+    /**
+     * Resolve a relative import specifier against the importing file's
+     * mod-relative path. Returns a normalized mod-relative path, or null if
+     * the specifier would escape the mod directory (game code, provided via deps).
+     *
+     * @param {string} fromPath  — mod-relative path of the importing file
+     * @param {string} specifier — relative import path from the source
+     * @returns {string|null}
+     */
+    _resolveImportPath(fromPath, specifier) {
+        const base = fromPath.split('/');
+        base.pop();
+
+        for (const part of specifier.split('/')) {
+            if (part === '.' || part === '') continue;
+            if (part === '..') {
+                if (base.length === 0) return null;
+                base.pop();
+            } else {
+                base.push(part);
+            }
+        }
+
+        if (base.length === 0) return null;
+        return base.join('/');
+    }
+
+    /**
+     * Resolve all same-mod imports in a source string, loading and evaluating
+     * the imported mod files and injecting their exports into the deps map.
+     * Imports that point outside the mod (game classes) are left for deps.
+     *
+     * @param {string} source
+     * @param {Object<string, Function>} deps  — mutated in place
+     * @param {string} modId
+     * @param {string} filePath  — mod-relative path of the importing file
+     * @param {Set<string>} stack  — files currently being processed (cycle detection)
+     */
+    async _resolveModImports(source, deps, modId, filePath, stack) {
+        for (const imp of this._parseImports(source)) {
+            if (!imp.specifier) continue;
+
+            // Bare specifiers (e.g. `import Explosive from "Explosive.js"`) are
+            // treated as files in the importing file's own directory.
+            const specifier = imp.specifier.startsWith('.')
+                ? imp.specifier
+                : `./${imp.specifier}`;
+
+            const resolved = this._resolveImportPath(filePath, specifier);
+            if (!resolved) continue;
+
+            const exportsObj = await this._loadModModule(modId, resolved, deps, stack);
+            if (!exportsObj) continue;
+
+            if (imp.namespace) {
+                deps[imp.namespace] = exportsObj;
+            } else {
+                if (imp.defaultName) deps[imp.defaultName] = exportsObj.__default;
+                for (const name of imp.namedNames) {
+                    if (exportsObj[name] !== undefined) deps[name] = exportsObj[name];
+                }
+            }
+        }
+    }
+
+    /**
+     * Load and evaluate a module file from the same mod, resolving its own
+     * imports recursively. Results are cached per mod file.
+     *
+     * @param {string} modId
+     * @param {string} filePath  — mod-relative path of the module file
+     * @param {Object<string, Function>} deps
+     * @param {Set<string>} stack
+     * @returns {Promise<Object|null>}  exports object: { __default, ...named }
+     */
+    async _loadModModule(modId, filePath, deps, stack) {
+        const cacheKey = `${modId}/${filePath}`;
+        if (this._modModuleCache.has(cacheKey)) return this._modModuleCache.get(cacheKey);
+        if (stack.has(filePath)) return null;
+
+        stack.add(filePath);
+        let result = null;
+        try {
+            const src = await this.filesystem.loadFile(`mods/${modId}/${filePath}`);
+            if (src) {
+                result = await this._evalModModule(src, deps, modId, filePath, stack);
+            }
+        } catch (err) {
+            console.error(`[Patchwork] Failed to load mod module '${filePath}' from mod '${modId}':`, err);
+        }
+        stack.delete(filePath);
+
+        if (result) this._modModuleCache.set(cacheKey, result);
+        return result;
+    }
+
+    /**
+     * Evaluate a mod module file (with exports) in a sandbox with deps.
+     *
+     * @param {string} source
+     * @param {Object<string, Function>} deps
+     * @param {string} modId
+     * @param {string} filePath
+     * @param {Set<string>} stack
+     * @returns {Promise<Object|null>}  exports object: { __default, ...named }
+     */
+    async _evalModModule(source, deps, modId, filePath, stack) {
+        const modDeps = { ...deps };
+        await this._resolveModImports(source, modDeps, modId, filePath, stack);
+
+        const { transformed, defaultName, namedNames } = this._transformModuleExports(source);
+
+        const assignments = Object.keys(modDeps).map(name =>
+            `const ${name} = __deps__["${name}"];`
+        ).join('\n');
+
+        const namedProps = namedNames.map(n => `"${n}": ${n}`).join(',');
+        const wrapped = `
+            return (function(__deps__) {
+                "use strict";
+                ${assignments}
+                ${transformed}
+                return {
+                    __default: ${defaultName ? defaultName : 'null'}${namedProps ? ',' + namedProps : ''}
+                };
+            })
+        `;
+
+        try {
+            const factory = new Function(wrapped)();
+            return factory(modDeps);
+        } catch (err) {
+            console.error(`[Patchwork] Mod module eval error ('${filePath}'):`, err);
+            return null;
+        }
+    }
+
+    /**
+     * Transform a module source so it can run in a plain function scope,
+     * capturing default and named exports.
+     *
+     * @param {string} source
+     * @returns {{transformed: string, defaultName: string|null, namedNames: string[]}}
+     */
+    _transformModuleExports(source) {
+        let transformed = source.replace(
+            /import\s+[\s\S]*?from\s+["'][^"']*["']\s*;?/g,
+            ''
+        );
+        transformed = transformed.replace(/import\s+["'][^"']*["']\s*;?/g, '');
+
+        let defaultName = null;
+        const namedNames = [];
+
+        transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, (m, name) => {
+            defaultName = name;
+            return `class ${name}`;
+        });
+        transformed = transformed.replace(/export\s+default\s+function\s+(\w+)/, (m, name) => {
+            defaultName = name;
+            return `function ${name}`;
+        });
+        transformed = transformed.replace(/export\s+default\s+(?!class\s|function\s)([\s\S]+?);/g, (m, expr) => {
+            defaultName = '__mod_default';
+            return `var __mod_default = ${expr};`;
+        });
+
+        transformed = transformed.replace(/export\s+class\s+(\w+)/g, (m, name) => {
+            namedNames.push(name);
+            return `class ${name}`;
+        });
+        transformed = transformed.replace(/export\s+function\s+(\w+)/g, (m, name) => {
+            namedNames.push(name);
+            return `function ${name}`;
+        });
+        transformed = transformed.replace(/export\s+(const|let|var)\s+(\w+)/g, (m, keyword, name) => {
+            namedNames.push(name);
+            return `${keyword} ${name}`;
+        });
+
+        return { transformed, defaultName, namedNames };
     }
 
     /* ------------------------------------------------------------------

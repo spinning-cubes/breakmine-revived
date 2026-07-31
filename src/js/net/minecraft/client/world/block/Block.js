@@ -66,7 +66,7 @@ export default class Block {
     }
 
     getDescription() {
-        return this.description;
+        return this.description ?? "Unnamed Block";
     }
 
     getDrop(world, x, y, z) {
