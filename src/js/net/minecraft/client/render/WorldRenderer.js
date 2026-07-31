@@ -204,6 +204,17 @@ export default class WorldRenderer {
         // Load all enabled mods (registers blocks + textures into the atlas)
         if (this.minecraft.modLoader) {
             await this.minecraft.modLoader.loadAllMods();
+
+            // Temporary dev mod from URL (?dev-mod=http://localhost:8080/mod.zip),
+            // held in memory only — never stored.
+            const devModUrl = new URLSearchParams(window.location.search).get('dev-mod');
+            if (devModUrl) {
+                try {
+                    await this.minecraft.modLoader.loadDevModFromUrl(devModUrl);
+                } catch (err) {
+                    console.error(`[Patchwork] Failed to load dev mod from '${devModUrl}':`, err);
+                }
+            }
             
             // Rebind renderers so the GPU sees new mod textures
             if (this.blockRenderer) {

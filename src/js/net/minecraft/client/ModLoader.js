@@ -47,6 +47,7 @@ export default class ModLoader {
         this.mods = new Map();          // modId → ModEntry
         this.enabledMods = new Set();   // modIds that are active
         this.filesystem = new FileSystem('ModDB', 'mods');
+        this._devModFilesystems = new Map(); // modId → MemoryFilesystem (temporary dev mods, never persisted)
         this._blockBaseClass = null;    // cached Block class for eval sandbox
         this._modModuleCache = new Map(); // 'modId/filePath' → evaluated exports
     }
@@ -151,6 +152,71 @@ export default class ModLoader {
         await this._loadMod(modId);
 
         return modId;
+    }
+
+    /**
+     * Temporarily load a mod from a ZIP file served over HTTP (dev mode).
+     * Triggered by a `?dev-mod=<url>` query parameter. The mod is held in
+     * memory only — nothing is written to the filesystem, so it is gone on
+     * the next page load.
+     * @param {string} url  — e.g. 'http://localhost:8080/mod.zip'
+     * @returns {Promise<string>} the modId
+     */
+    async loadDevModFromUrl(url) {
+        console.log(`[Patchwork] Loading dev mod from URL: ${url}`);
+
+        const JSZip = await this._ensureJSZip();
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch dev mod (${response.status} ${response.statusText}): ${url}`);
+        }
+        const zipData = await response.arrayBuffer();
+        const zip = await JSZip.loadAsync(zipData);
+
+        // 1. Read ModData ---
+        const modData = await this._readModDataFromZip(zip);
+        const modId = modData.ID;
+        if (!modId || typeof modId !== 'string') {
+            throw new Error('ModData.js must export a class with a static ID property.');
+        }
+        if (this.mods.has(modId)) {
+            throw new Error(`A mod with ID '${modId}' is already loaded.`);
+        }
+
+        // 2. Extract all files into an in-memory map (mirrors the persisted
+        //    layout from installModFromZip, but never saved to disk).
+        const fileMap = new Map();
+        fileMap.set(`mods/${modId}/ModData.json`, JSON.stringify(modData));
+
+        for (const [path, entry] of Object.entries(zip.files)) {
+            if (entry.dir) continue;
+            if (path === 'ModData.js') continue;
+
+            if (path.endsWith('.png') || path.endsWith('.ogg')) {
+                fileMap.set(`mods/${modId}/${path}.b64`, await entry.async('base64'));
+            } else {
+                fileMap.set(`mods/${modId}/${path}`, await entry.async('string'));
+            }
+        }
+
+        // 3. Load using an in-memory-only source ---
+        const fs = new MemoryFilesystem(fileMap);
+        this._devModFilesystems.set(modId, fs);
+
+        console.log(`[Patchwork] Installing dev mod '${modData.NAME}' (${modId}) v${modData.VERSION} in memory`);
+        await this._loadMod(modId, fs);
+        return modId;
+    }
+
+    /**
+     * Get the in-memory filesystem backing a temporarily-loaded dev mod, or
+     * null if it is not a dev mod.
+     * @param {string} modId
+     * @returns {MemoryFilesystem|null}
+     */
+    getDevModFilesystem(modId) {
+        return this._devModFilesystems.get(modId) || null;
     }
 
     /**
@@ -267,11 +333,12 @@ export default class ModLoader {
      * Load a mod's texture as an HTMLImageElement from IndexedDB.
      * @param {string} modId
      * @param {string} textureName  e.g. 'unbreakable_block'
+     * @param {object} fs  — filesystem to read from (defaults to persisted store)
      * @returns {Promise<HTMLImageElement>}
      */
-    async loadModTexture(modId, textureName) {
+    async loadModTexture(modId, textureName, fs = this.filesystem) {
         const b64Path = `mods/${modId}/textures/${textureName}.png.b64`;
-        const b64data = await this.filesystem.loadBinaryFile(b64Path);
+        const b64data = await fs.loadBinaryFile(b64Path);
         if (!b64data) {
             throw new Error(`Mod texture not found: ${b64Path}`);
         }
@@ -289,9 +356,9 @@ export default class ModLoader {
      *  Internal — load a single mod from IndexedDB
      * ------------------------------------------------------------------ */
 
-    async _loadMod(modId) {
+    async _loadMod(modId, fs = this.filesystem) {
         // 1. Read metadata
-        const raw = await this.filesystem.loadFile(`mods/${modId}/ModData.json`);
+        const raw = await fs.loadFile(`mods/${modId}/ModData.json`);
         if (!raw) throw new Error(`ModData.json not found for mod '${modId}'`);
         const modData = JSON.parse(raw);
 
@@ -311,7 +378,7 @@ export default class ModLoader {
         };
 
         // 2. Discover files
-        const allFiles = await this.filesystem.listDir(`mods/${modId}/`);
+        const allFiles = await fs.listDir(`mods/${modId}/`);
         const modPrefix = `mods/${modId}/`;
         const relFiles = allFiles.map(f => f.startsWith(modPrefix) ? f.slice(modPrefix.length) : f);
 
@@ -348,28 +415,28 @@ export default class ModLoader {
             .map(f => f.replace(/^sounds\//, '').replace(/\.ogg\.b64$/, ''));
 
         // 3. Register mod textures into the TextureAtlas
-        await this._registerModTextures(modId, entry);
+        await this._registerModTextures(modId, entry, fs);
 
         // 4. Register GUI textures into minecraft.resources
-        await this._registerModGuiTextures(modId, entry);
+        await this._registerModGuiTextures(modId, entry, fs);
 
         // 5. Load and register GUI classes (before blocks so blocks can reference them)
-        await this._registerModGuis(modId, entry, guiFiles);
+        await this._registerModGuis(modId, entry, guiFiles, fs);
 
         // 6. Load and register block classes (may reference GUI classes)
-        await this._registerModBlocks(modId, entry, blockFiles);
+        await this._registerModBlocks(modId, entry, blockFiles, fs);
 
         // 7. Load and register item classes
-        await this._registerModItems(modId, entry, itemFiles);
+        await this._registerModItems(modId, entry, itemFiles, fs);
 
         // 8. Register crafting recipes
-        await this._registerModCrafting(modId, entry, craftingFiles);
+        await this._registerModCrafting(modId, entry, craftingFiles, fs);
 
         // 9. Register smelting recipes
-        await this._registerModSmelting(modId, entry, smeltingFiles);
+        await this._registerModSmelting(modId, entry, smeltingFiles, fs);
 
         // 10. Call ModLoad.onLoad if present
-        await this._callModLoad(modId, entry);
+        await this._callModLoad(modId, entry, fs);
 
         // 11. Store
         this.mods.set(modId, entry);
@@ -381,7 +448,7 @@ export default class ModLoader {
      *  Internal — register mod textures into TextureAtlas
      * ------------------------------------------------------------------ */
 
-    async _registerModTextures(modId, entry) {
+    async _registerModTextures(modId, entry, fs = this.filesystem) {
         const atlas = this.minecraft.worldRenderer?.textureAtlas;
         if (!atlas) {
             console.warn('[Patchwork] TextureAtlas not ready, skipping texture registration');
@@ -390,7 +457,7 @@ export default class ModLoader {
 
         for (const texName of entry.textureNames) {
             try {
-                const img = await this.loadModTexture(modId, texName);
+                const img = await this.loadModTexture(modId, texName, fs);
                 const namespacedKey = `${modId}:${texName}`;
                 atlas.registerModTexture(namespacedKey, img);
             } catch (err) {
@@ -403,7 +470,7 @@ export default class ModLoader {
      *  Internal — load block JS files, eval classes, register with BlockRegistry
      * ------------------------------------------------------------------ */
 
-    async _registerModBlocks(modId, entry, blockFiles) {
+    async _registerModBlocks(modId, entry, blockFiles, fs = this.filesystem) {
         const BlockClass = await this._getBlockClass();
 
         const BoundingBoxClass = await this._getBoundingBox();
@@ -420,10 +487,10 @@ export default class ModLoader {
 
         for (const filename of blockFiles) {
             try {
-                const src = await this.filesystem.loadFile(`mods/${modId}/blocks/${filename}`);
+                const src = await fs.loadFile(`mods/${modId}/blocks/${filename}`);
                 if (!src) continue;
 
-                const blockClass = await this._evalClass(src, blockDeps, modId, `blocks/${filename}`);
+                const blockClass = await this._evalClass(src, blockDeps, modId, `blocks/${filename}`, fs);
                 if (!blockClass) continue;
 
                 const className = blockClass.name || filename.replace('.js', '');
@@ -453,15 +520,15 @@ export default class ModLoader {
      *  Internal — load item JS files, eval classes, register with BlockRegistry
      * ------------------------------------------------------------------ */
 
-    async _registerModItems(modId, entry, itemFiles) {
+    async _registerModItems(modId, entry, itemFiles, fs = this.filesystem) {
         const itemClasses = await this._getItemClasses();
 
         for (const filename of itemFiles) {
             try {
-                const src = await this.filesystem.loadFile(`mods/${modId}/items/${filename}`);
+                const src = await fs.loadFile(`mods/${modId}/items/${filename}`);
                 if (!src) continue;
 
-                const itemClass = await this._evalClass(src, itemClasses, modId, `items/${filename}`);
+                const itemClass = await this._evalClass(src, itemClasses, modId, `items/${filename}`, fs);
                 if (!itemClass) continue;
 
                 const className = itemClass.name || filename.replace('.js', '');
@@ -491,15 +558,15 @@ export default class ModLoader {
      *  Internal — register crafting recipes
      * ------------------------------------------------------------------ */
 
-    async _registerModCrafting(modId, entry, craftingFiles) {
+    async _registerModCrafting(modId, entry, craftingFiles, fs = this.filesystem) {
         for (const filename of craftingFiles) {
             try {
-                const src = await this.filesystem.loadFile(`mods/${modId}/crafting/${filename}`);
+                const src = await fs.loadFile(`mods/${modId}/crafting/${filename}`);
                 if (!src) continue;
 
                 const filePath = `crafting/${filename}`;
                 const recipeDeps = {};
-                await this._resolveModImports(src, recipeDeps, modId, filePath, new Set([filePath]));
+                await this._resolveModImports(src, recipeDeps, modId, filePath, new Set([filePath]), fs);
 
                 let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
                 transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
@@ -577,19 +644,19 @@ export default class ModLoader {
      *  Internal — register smelting recipes
      * ------------------------------------------------------------------ */
 
-    async _registerModSmelting(modId, entry, smeltingFiles) {
+    async _registerModSmelting(modId, entry, smeltingFiles, fs = this.filesystem) {
         try {
             const { default: SmeltingRecipe } = await import('./smelting/SmeltingRecipe.js');
             const { SmeltingRegistry } = await import('./smelting/SmeltingRegistry.js');
 
             for (const filename of smeltingFiles) {
                 try {
-                    const src = await this.filesystem.loadFile(`mods/${modId}/smelting/${filename}`);
+                    const src = await fs.loadFile(`mods/${modId}/smelting/${filename}`);
                     if (!src) continue;
 
                     const filePath = `smelting/${filename}`;
                     const recipeDeps = {};
-                    await this._resolveModImports(src, recipeDeps, modId, filePath, new Set([filePath]));
+                    await this._resolveModImports(src, recipeDeps, modId, filePath, new Set([filePath]), fs);
 
                     let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
                     transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
@@ -650,11 +717,11 @@ export default class ModLoader {
      *  Internal — register GUI textures into minecraft.resources
      * ------------------------------------------------------------------ */
 
-    async _registerModGuiTextures(modId, entry) {
+    async _registerModGuiTextures(modId, entry, fs = this.filesystem) {
         for (const texName of entry.guiTextureNames) {
             try {
                 const b64Path = `mods/${modId}/gui_textures/${texName}.png.b64`;
-                const b64data = await this.filesystem.loadBinaryFile(b64Path);
+                const b64data = await fs.loadBinaryFile(b64Path);
                 if (!b64data) continue;
 
                 const img = await new Promise((resolve, reject) => {
@@ -721,15 +788,15 @@ export default class ModLoader {
      *  Internal — load GUI JS files and store class constructors
      * ------------------------------------------------------------------ */
 
-    async _registerModGuis(modId, entry, guiFiles) {
+    async _registerModGuis(modId, entry, guiFiles, fs = this.filesystem) {
         const guiDeps = await this._getGuiDeps();
 
         for (const filename of guiFiles) {
             try {
-                const src = await this.filesystem.loadFile(`mods/${modId}/gui/${filename}`);
+                const src = await fs.loadFile(`mods/${modId}/gui/${filename}`);
                 if (!src) continue;
 
-                const guiClass = await this._evalClass(src, guiDeps, modId, `gui/${filename}`);
+                const guiClass = await this._evalClass(src, guiDeps, modId, `gui/${filename}`, fs);
                 if (!guiClass) continue;
 
                 const className = guiClass.name || filename.replace('.js', '');
@@ -745,13 +812,13 @@ export default class ModLoader {
      *  Internal — call ModLoad.onLoad if present
      * ------------------------------------------------------------------ */
 
-    async _callModLoad(modId, entry) {
+    async _callModLoad(modId, entry, fs = this.filesystem) {
         try {
-            const src = await this.filesystem.loadFile(`mods/${modId}/ModLoad.js`);
+            const src = await fs.loadFile(`mods/${modId}/ModLoad.js`);
             if (!src) return;
 
             const modDeps = { Sound };
-            await this._resolveModImports(src, modDeps, modId, 'ModLoad.js', new Set(['ModLoad.js']));
+            await this._resolveModImports(src, modDeps, modId, 'ModLoad.js', new Set(['ModLoad.js']), fs);
 
             let transformed = src.replace(/import\s+.*?from\s+["'][^"']*["']\s*;?/g, '');
             transformed = transformed.replace(/export\s+default\s+class\s+(\w+)/, 'class $1');
@@ -797,13 +864,14 @@ export default class ModLoader {
      * @param {Object<string, Function>} deps  — map of variable names to actual classes
      * @param {string|null} modId  — id of the mod the file belongs to (for same-mod imports)
      * @param {string|null} filePath  — mod-relative path of the file (e.g. 'blocks/BlockFoo.js')
+     * @param {object} fs  — filesystem to read from
      * @returns {Function|null}
      */
-    async _evalClass(source, deps, modId = null, filePath = null) {
+    async _evalClass(source, deps, modId = null, filePath = null, fs = this.filesystem) {
         const localDeps = { ...deps };
 
         if (modId && filePath) {
-            await this._resolveModImports(source, localDeps, modId, filePath, new Set([filePath]));
+            await this._resolveModImports(source, localDeps, modId, filePath, new Set([filePath]), fs);
         }
 
         // Strip all imports
@@ -927,8 +995,9 @@ export default class ModLoader {
      * @param {string} modId
      * @param {string} filePath  — mod-relative path of the importing file
      * @param {Set<string>} stack  — files currently being processed (cycle detection)
+     * @param {object} fs  — filesystem to read from
      */
-    async _resolveModImports(source, deps, modId, filePath, stack) {
+    async _resolveModImports(source, deps, modId, filePath, stack, fs = this.filesystem) {
         for (const imp of this._parseImports(source)) {
             if (!imp.specifier) continue;
 
@@ -941,7 +1010,7 @@ export default class ModLoader {
             const resolved = this._resolveImportPath(filePath, specifier);
             if (!resolved) continue;
 
-            const exportsObj = await this._loadModModule(modId, resolved, deps, stack);
+            const exportsObj = await this._loadModModule(modId, resolved, deps, stack, fs);
             if (!exportsObj) continue;
 
             if (imp.namespace) {
@@ -963,9 +1032,10 @@ export default class ModLoader {
      * @param {string} filePath  — mod-relative path of the module file
      * @param {Object<string, Function>} deps
      * @param {Set<string>} stack
+     * @param {object} fs  — filesystem to read from
      * @returns {Promise<Object|null>}  exports object: { __default, ...named }
      */
-    async _loadModModule(modId, filePath, deps, stack) {
+    async _loadModModule(modId, filePath, deps, stack, fs = this.filesystem) {
         const cacheKey = `${modId}/${filePath}`;
         if (this._modModuleCache.has(cacheKey)) return this._modModuleCache.get(cacheKey);
         if (stack.has(filePath)) return null;
@@ -973,9 +1043,9 @@ export default class ModLoader {
         stack.add(filePath);
         let result = null;
         try {
-            const src = await this.filesystem.loadFile(`mods/${modId}/${filePath}`);
+            const src = await fs.loadFile(`mods/${modId}/${filePath}`);
             if (src) {
-                result = await this._evalModModule(src, deps, modId, filePath, stack);
+                result = await this._evalModModule(src, deps, modId, filePath, stack, fs);
             }
         } catch (err) {
             console.error(`[Patchwork] Failed to load mod module '${filePath}' from mod '${modId}':`, err);
@@ -994,11 +1064,12 @@ export default class ModLoader {
      * @param {string} modId
      * @param {string} filePath
      * @param {Set<string>} stack
+     * @param {object} fs  — filesystem to read from
      * @returns {Promise<Object|null>}  exports object: { __default, ...named }
      */
-    async _evalModModule(source, deps, modId, filePath, stack) {
+    async _evalModModule(source, deps, modId, filePath, stack, fs = this.filesystem) {
         const modDeps = { ...deps };
-        await this._resolveModImports(source, modDeps, modId, filePath, stack);
+        await this._resolveModImports(source, modDeps, modId, filePath, stack, fs);
 
         const { transformed, defaultName, namedNames } = this._transformModuleExports(source);
 
@@ -1342,6 +1413,44 @@ export default class ModLoader {
         } catch (e) {
             console.warn('[Patchwork] Could not save enabled mods:', e);
         }
+    }
+}
+
+/**
+ * In-memory filesystem backing temporarily-loaded dev mods. Implements the
+ * subset of FileSystem used by the mod loading pipeline (loadFile,
+ * loadBinaryFile, listDir) and never persists anything.
+ */
+class MemoryFilesystem {
+    constructor(fileMap) {
+        this.fileMap = fileMap; // Map<path, string | Uint8Array>
+    }
+
+    async loadFile(filename) {
+        const value = this.fileMap.get(filename);
+        return typeof value === 'string' ? value : null;
+    }
+
+    async loadBinaryFile(filename) {
+        const value = this.fileMap.get(filename);
+        if (value instanceof Uint8Array) return value;
+        if (typeof value === 'string') {
+            try {
+                const bin = atob(value);
+                const u8 = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+                return u8;
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    async listDir(dir = '') {
+        let prefix = dir.trim();
+        if (prefix.length > 0 && !prefix.endsWith('/')) prefix += '/';
+        return [...this.fileMap.keys()].filter(f => f.startsWith(prefix));
     }
 }
 
