@@ -139,7 +139,7 @@ export default class Block {
         return this.getColor(world, x, y, z, this.getParticleTextureFace());
     }
 
-    getLightValue() {
+    getLightValue(world, x, y, z) {
         return 0;
     }
 

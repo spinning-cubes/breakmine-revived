@@ -49,6 +49,10 @@ import ItemBucketLava from "./type/ItemBucketLava.js";
 import BlockSign from "./type/BlockSign.js";
 import BlockDoor from "./type/BlockDoor.js";
 import ItemDoorPlacer from "./type/ItemDoorPlacer.js";
+import BlockBluestoneDust from "./type/BlockBluestoneDust.js";
+import BlockBluestoneLamp from "./type/BlockBluestoneLamp.js";
+import BlockBluestoneBlock from "./type/BlockBlustoneBlock.js";
+import BlockBluestonePusher from "./type/BlockBluestonePusher.js";
 
 export class BlockRegistry {
 
@@ -275,6 +279,11 @@ export class BlockRegistry {
         BlockRegistry.ITEM_BUCKET_EMPTY = new ItemBucketEmpty(118, 'bucket', 'Empty Bucket');
         BlockRegistry.ITEM_BUCKET_WATER = new ItemBucketWater(119, 'water_bucket', 'Water Bucket');
         BlockRegistry.ITEM_BUCKET_LAVA = new ItemBucketLava(120, 'lava_bucket', 'Lava Bucket');
+
+        BlockRegistry.BLUESTONE_DUST = new BlockBluestoneDust(163, 0, "bluestone_dust", "Bluestone Dust");
+        BlockRegistry.BLUESTONE_LAMP = new BlockBluestoneLamp(164, 0, "bluestone_lamp", "Bluestone Lamp");
+        BlockRegistry.BLUESTONE_BLOCK = new BlockBluestoneBlock(165, 0, "bluestone_block", "Bluestone Block");
+        BlockRegistry.BLUESTONE_PUSHER = new BlockBluestonePusher(166, 0, "bluestone_pusher", "Bluestone Pusher");
 
         for (const [key, val] of Object.entries(BlockRegistry)) {
             if (val && typeof val === "object" && val.id !== undefined) {

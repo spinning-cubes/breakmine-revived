@@ -63,7 +63,7 @@ export default class Chunk {
 
                     let typeId = section.getBlockAt(x, y & 15, z);
                     let block = Block.getById(typeId);
-                    let blockLight = typeId === 0 ? 0 : block.getLightValue();
+                    let blockLight = typeId === 0 ? 0 : block.getLightValue(this.world, x + this.x * 16, y, z + this.z * 16);
 
                     if (blockLight > 0) {
                         section.setLightAt(EnumSkyBlock.BLOCK, x, y & 15, z, blockLight);
@@ -80,7 +80,7 @@ export default class Chunk {
                     let block = Block.getById(typeId);
 
                     let opacity = typeId === 0 ? 0 : block.getOpacity();
-                    let blockLight = typeId === 0 ? 0 : block.getLightValue();
+                    let blockLight = typeId === 0 ? 0 : block.getLightValue(this.world, x + this.x * 16, y, z + this.z * 16);
 
                     if (opacity === 0) {
                         opacity = 1;

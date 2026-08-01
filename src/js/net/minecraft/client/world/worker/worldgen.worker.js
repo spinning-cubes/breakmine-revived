@@ -189,7 +189,7 @@ class ChunkStub {
                     const section = this.getSection(y >> 4);
                     const typeId = section.getBlockAt(x, y & 15, z);
                     const block = Block.getById(typeId);
-                    const blockLight = typeId === 0 ? 0 : block.getLightValue();
+                    const blockLight = typeId === 0 ? 0 : block.getLightValue(null, 0, 0, 0);
                     if (blockLight > 0) {
                         section.setLightAt(EnumSkyBlock.BLOCK, x, y & 15, z, blockLight);
                     }

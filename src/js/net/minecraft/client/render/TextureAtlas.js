@@ -277,7 +277,29 @@ export default class TextureAtlas {
             "stonebrick.png",
             "dark_stonebrick.png",
             "oak_door_top.png",
-            "oak_door_bottom.png"
+            "oak_door_bottom.png",
+            "bluestoneBlock.png",
+            "bluestoneDust0000.png",
+            "bluestoneDust0001.png",
+            "bluestoneDust0010.png",
+            "bluestoneDust0011.png",
+            "bluestoneDust0100.png",
+            "bluestoneDust0101.png",
+            "bluestoneDust0110.png",
+            "bluestoneDust0111.png",
+            "bluestoneDust1000.png",
+            "bluestoneDust1001.png",
+            "bluestoneDust1010.png",
+            "bluestoneDust1011.png",
+            "bluestoneDust1100.png",
+            "bluestoneDust1101.png",
+            "bluestoneDust1110.png",
+            "bluestoneDust1111.png",
+            "bluestoneLampOff.png",
+            "bluestoneLampOn.png",
+            "bluestonePusherOn.png",
+            "bluestonePusherOff.png",
+            "cobblestone_frame.png"
         ];
 
         const toolTextureNames = [];
