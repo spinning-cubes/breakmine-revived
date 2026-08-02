@@ -13,6 +13,28 @@ export default class BlockBluestoneDust extends Block {
         this.description = "Bluestone Dust";
         this.hardness = 0.5;
         this.inventoryTab = EnumCreativeInventoryTab.MACHINES;
+        this.isBluestoneDust = true;
+    }
+
+    _isBluestoneWire(block) {
+        return !!(block && (block.isBluestoneDust || block.isBluestoneRod));
+    }
+
+    // Dust conducts only horizontally; the rod overrides this to conduct in
+    // every direction (including up/down).
+    canConductTo(world, x, y, z, dx, dy, dz) {
+        if (dy !== 0) return false;
+        return this._isBluestoneWire(Block.getById(world.getBlockAt(x + dx, y + dy, z + dz)));
+    }
+
+    // Wires a dust can draw power from: horizontal wires on any axis, plus
+    // rods directly above or below (so a vertical rod run feeds the dust at
+    // its base).
+    canReadFrom(world, x, y, z, dx, dy, dz) {
+        const block = Block.getById(world.getBlockAt(x + dx, y + dy, z + dz));
+        if (!this._isBluestoneWire(block)) return false;
+        if (block.isBluestoneRod) return true;
+        return dy === 0;
     }
 
     hasBlockEntity() { return true; }
@@ -41,9 +63,10 @@ export default class BlockBluestoneDust extends Block {
 
     canConnect(world, x, y, z, targetFace) {
         const blockId = world.getBlockAt(x, y, z);
-        if (blockId === this.id) return true;
         const block = Block.getById(blockId);
         if (!block) return false;
+
+        if (this._isBluestoneWire(block)) return true;
 
         if (typeof block.bluestoneConnectingFaces === 'function') {
             const faces = block.bluestoneConnectingFaces(world, x, y, z);
@@ -91,7 +114,11 @@ export default class BlockBluestoneDust extends Block {
             const block = Block.getById(blockId);
             if (!block) continue;
 
-            if (blockId === this.id) {
+            if (this._isBluestoneWire(block)) {
+                // Wires only contribute through canReadFrom; a wire that isn't
+                // readable (e.g. dust above/below regular dust) must not fall
+                // through to the getPower branch or it would couple vertically.
+                if (!this.canReadFrom(world, x, y, z, nx - x, ny - y, nz - z)) continue;
                 const p = this.getPower(world, nx, ny, nz) - 1;
                 if (p > best) best = p;
             } else if (typeof block.getPower === 'function') {
@@ -139,7 +166,7 @@ export default class BlockBluestoneDust extends Block {
         // Recalculate connected wires immediately so the network settles to
         // its new state in one tick rather than fading out block by block.
         for (const [dx, dy, dz] of this._neighborOffsets()) {
-            if (world.getBlockAt(x + dx, y + dy, z + dz) === this.id) {
+            if (this.canConductTo(world, x, y, z, dx, dy, dz)) {
                 this.onBlockTick(world, x + dx, y + dy, z + dz);
             }
         }
@@ -166,7 +193,12 @@ export default class BlockBluestoneDust extends Block {
             steps++;
             const [cx, cy, cz] = queue.pop();
 
-            const newPower     = this.calculatePower(world, cx, cy, cz);
+            // Use the wire's own block class so a rod reached through a dust
+            // cascade still computes power with its all-direction rules.
+            const wireBlock = Block.getById(world.getBlockAt(cx, cy, cz));
+            if (!wireBlock || !(wireBlock.isBluestoneDust || wireBlock.isBluestoneRod)) continue;
+
+            const newPower     = wireBlock.calculatePower(world, cx, cy, cz);
             const currentPower = this.getPower(world, cx, cy, cz);
             if (newPower === currentPower) continue;
 
@@ -178,7 +210,7 @@ export default class BlockBluestoneDust extends Block {
             this._scheduleNeighbors(world, cx, cy, cz);
 
             for (const [dx, dy, dz] of this._neighborOffsets()) {
-                if (world.getBlockAt(cx + dx, cy + dy, cz + dz) === this.id) {
+                if (wireBlock.canConductTo(world, cx, cy, cz, dx, dy, dz)) {
                     queue.push([cx + dx, cy + dy, cz + dz]);
                 }
             }

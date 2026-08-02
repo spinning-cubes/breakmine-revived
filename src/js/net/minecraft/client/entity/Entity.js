@@ -188,93 +188,102 @@ export default class Entity {
             }
         }
 
-        // Get level tiles as bounding boxes
-        let boundingBoxList = this.world.getCollisionBoxes(this.boundingBox.expand(targetX, targetY, targetZ));
+        // Move per axis so a diagonal move can't slip through the corner of a
+        // solid block: each axis only tests the blocks actually in that axis's
+        // sweep, and the working box is advanced between axes.
+        let collisionBoxes = [];
+        let movingBox = this.boundingBox.clone();
         let isClimbable = false;
 
-        // Move bounding box
-
         // Calculate target Y
-        for (let aABB in boundingBoxList) {
-            targetY = boundingBoxList[aABB].clipYCollide(this.boundingBox, targetY);
+        let boundingBoxList = this.world.getCollisionBoxes(movingBox.expand(0.0, targetY, 0.0));
+        collisionBoxes.push(...boundingBoxList);
+        for (let aABB of boundingBoxList) {
+            targetY = aABB.clipYCollide(movingBox, targetY);
         }
 
         // Check if on ground
         this.onGround = originalTargetY !== targetY && originalTargetY < 0.0;
 
+        // Move up or down before resolving horizontal movement
+        movingBox.move(0.0, targetY, 0.0);
+
         // Calculate target X
-        for (let aABB in boundingBoxList) {
+        boundingBoxList = this.world.getCollisionBoxes(movingBox.expand(targetX, 0.0, 0.0));
+        collisionBoxes.push(...boundingBoxList);
+        for (let aABB of boundingBoxList) {
             // Skip collision check for half blocks on ground
-            if ((boundingBoxList[aABB].maxY - this.boundingBox.minY) <= 0.5 && (boundingBoxList[aABB].maxY - this.boundingBox.minY) > 0 && this.onGround) {
+            if ((aABB.maxY - movingBox.minY) <= 0.5 && (aABB.maxY - movingBox.minY) > 0 && this.onGround) {
+                if (targetX === originalTargetX && aABB.clipXCollide(movingBox, targetX) !== originalTargetX) {
+                    isClimbable = true;
+                }
                 continue;
             }
-            targetX = boundingBoxList[aABB].clipXCollide(this.boundingBox, targetX);
+            targetX = aABB.clipXCollide(movingBox, targetX);
         }
+        movingBox.move(targetX, 0.0, 0.0);
 
         // Calculate target Z
-        for (let aABB in boundingBoxList) {
+        boundingBoxList = this.world.getCollisionBoxes(movingBox.expand(0.0, 0.0, targetZ));
+        collisionBoxes.push(...boundingBoxList);
+        for (let aABB of boundingBoxList) {
             // Skip collision check for half blocks on ground
-            if ((boundingBoxList[aABB].maxY - this.boundingBox.minY) <= 0.5 && (boundingBoxList[aABB].maxY - this.boundingBox.minY) > 0 && this.onGround) {
+            if ((aABB.maxY - movingBox.minY) <= 0.5 && (aABB.maxY - movingBox.minY) > 0 && this.onGround) {
+                if (targetZ === originalTargetZ && aABB.clipZCollide(movingBox, targetZ) !== originalTargetZ) {
+                    isClimbable = true;
+                }
                 continue;
             }
-            targetZ = boundingBoxList[aABB].clipZCollide(this.boundingBox, targetZ);
+            targetZ = aABB.clipZCollide(movingBox, targetZ);
         }
-
-        // Check for climbable blocks on ground
-        if (this.onGround) {
-            for (let aABB in boundingBoxList) {
-                if ((boundingBoxList[aABB].maxY - this.boundingBox.minY) <= 0.5 && (boundingBoxList[aABB].maxY - this.boundingBox.minY) > 0) {
-                    if (targetX == originalTargetX && boundingBoxList[aABB].clipXCollide(this.boundingBox, targetX) !== originalTargetX) {
-                        isClimbable = true;
-                    }
-                    if (targetZ == originalTargetZ && boundingBoxList[aABB].clipZCollide(this.boundingBox, targetZ) !== originalTargetZ) {
-                        isClimbable = true;
-                    }
-                }
-            }
-        }
+        movingBox.move(0.0, 0.0, targetZ);
 
         // Attemp to climb
         if (isClimbable && this.onGround && (targetX === originalTargetX || targetZ === originalTargetZ)) {
-        
+            // Remember the horizontal movement resolved at the current height
+            let stepX = targetX;
+            let stepZ = targetZ;
+
             // Move bounding box up
-            this.boundingBox.move(0.0, 0.5, 0.0);
+            movingBox.move(0.0, 0.5, 0.0);
 
             // Calculate collision
             let isColliding = false;
 
             if (targetX === originalTargetX) {
-                for (let aABB in boundingBoxList) {
-                    targetX = boundingBoxList[aABB].clipXCollide(this.boundingBox, targetX);
+                for (let aABB of collisionBoxes) {
+                    targetX = aABB.clipXCollide(movingBox, targetX);
                 }
                 if (targetX !== originalTargetX) {
                     isColliding = true;
                 }
             }
-            
+
             if (targetZ === originalTargetZ) {
-                for (let aABB in boundingBoxList) {
-                    targetZ = boundingBoxList[aABB].clipZCollide(this.boundingBox, targetZ);
+                for (let aABB of collisionBoxes) {
+                    targetZ = aABB.clipZCollide(movingBox, targetZ);
                 }
                 if (targetZ !== originalTargetZ) {
                     isColliding = true;
                 }
             }
-            
+
             // Climb if block is reachable
             if (!isColliding) {
                 // Recalculate target Y
-                for (let aABB in boundingBoxList) {
-                    targetY = boundingBoxList[aABB].clipYCollide(this.boundingBox, targetY);
-                } 
+                for (let aABB of collisionBoxes) {
+                    targetY = aABB.clipYCollide(movingBox, targetY);
+                }
             }
             else {
-                this.boundingBox.move(0.0, -0.5, 0.0);
+                movingBox.move(0.0, -0.5, 0.0);
+                targetX = stepX;
+                targetZ = stepZ;
             }
         }
-        
-        // Move bounding box
-        this.boundingBox.move(targetX, targetY, targetZ);
+
+        // Commit the resulting position
+        this.boundingBox = movingBox;
 
         // Stop motion on collision
         if (originalTargetX !== targetX) {

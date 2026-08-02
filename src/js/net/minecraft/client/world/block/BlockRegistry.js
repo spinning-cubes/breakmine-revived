@@ -60,6 +60,8 @@ import BlockBluestoneRepeater from "./type/BlockBluestoneRepeater.js";
 import BlockBluestoneObserver from "./type/BlockBluestoneObserver.js";
 import BlockBluestoneAdjustingLamp from "./type/BlockBluestoneAdjustingLamp.js";
 import BlockBluestoneBulb from "./type/BlockBluestoneBulb.js";
+import BlockBluestoneRod from "./type/BlockBluestoneRod.js";
+import BlockBluestoneRodPillar from "./type/BlockBluestoneRodPillar.js";
 
 export class BlockRegistry {
 
@@ -291,6 +293,8 @@ export class BlockRegistry {
         BlockRegistry.BLUESTONE_LAMP = new BlockBluestoneLamp(164, 0, "bluestone_lamp", "Bluestone Lamp");
         BlockRegistry.BLUESTONE_ADJUSTING_LAMP = new BlockBluestoneAdjustingLamp(172, 0, "bluestone_adjusting_lamp", "Adjustable Bluestone Lamp");
         BlockRegistry.BLUESTONE_BULB = new BlockBluestoneBulb(173, 0, "bluestone_bulb", "Bluestone Bulb");
+        BlockRegistry.BLUESTONE_ROD = new BlockBluestoneRod(174, 0, "bluestone_rod", "Bluestone Rod");
+        BlockRegistry.BLUESTONE_ROD_PILLAR = new BlockBluestoneRodPillar(175, 0, "bluestone_rod_pillar", "Bluestone Rod");
         BlockRegistry.BLUESTONE_BLOCK = new BlockBluestoneBlock(165, 0, "bluestone_block", "Bluestone Block");
         BlockRegistry.BLUESTONE_PUSHER = new BlockBluestonePusher(166, 0, 167, "bluestone_pusher", "Bluestone Pusher");
         BlockRegistry.BLUESTONE_PUSHER_HEAD = new BlockBluestonePusherHead(167, 0, "bluestone_pusher_head", "Bluestone Pusher Head");
