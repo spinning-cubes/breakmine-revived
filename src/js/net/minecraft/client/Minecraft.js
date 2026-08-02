@@ -201,6 +201,7 @@ export default class Minecraft {
     }
 
     async initVersionChecker() {
+        return;
         const TARGET_URL = 'https://breakmine.com/src/resources/version.js';
         const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
         const STORAGE_KEY = 'breakmine_known_version';
@@ -1510,10 +1511,14 @@ export default class Minecraft {
                 if (hitResult != null) {
                     let typeId = this.world.getBlockAt(hitResult.x, hitResult.y, hitResult.z);
                     if (typeId !== 0) {
+                        let block = Block.getById(typeId);
+                        if (block === null) return;
+                        let pickedItemId = block.pickedItem();
+                        if (pickedItemId === null) return;
                         // Switch to slot if item is already in hotbar
                         for (let i = 0; i < 9; i++) {
                             let itemStack = this.player.inventory.getItemInSlot(i);
-                            if (!itemStack.isEmpty() && itemStack.getType() === typeId) {
+                            if (!itemStack.isEmpty() && itemStack.getType() === pickedItemId) {
                                 this.player.inventory.selectedSlotIndex = i;
                                 return;
                             }
@@ -1548,7 +1553,16 @@ export default class Minecraft {
                     let z = hitResult.z + hitResult.face.z;
 
                     let blockCheck = Block.getById(this.world.getBlockAt(hitResult.x, hitResult.y, hitResult.z));
-                    if (blockCheck && blockCheck.onMouseButton && blockCheck.onMouseButton(this.world, hitResult.x, hitResult.y, hitResult.z, button)) return;
+                    if (blockCheck && blockCheck.onMouseButton && blockCheck.onMouseButton(this.world, hitResult.x, hitResult.y, hitResult.z, button)) {
+                        // In multiplayer, tell the server so the interaction
+                        // (e.g. door toggle) is applied authoritatively and
+                        // broadcast to all players.
+                        if (!this.isSingleplayer()) {
+                            let blockPos = new BlockPosition(hitResult.x, hitResult.y, hitResult.z);
+                            this.playerController.sendBlockPlacementPacket(blockPos, 255, { id: -1 });
+                        }
+                        return;
+                    }
 
                     let placedBoundingBox = new BoundingBox(x, y, z, x + 1, y + 1, z + 1);
 

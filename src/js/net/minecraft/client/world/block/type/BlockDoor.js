@@ -140,6 +140,80 @@ export default class BlockDoor extends Block {
         world.onBlockChanged(x, y, z);
     }
 
+    isPowered(world, x, y, z) {
+        const neighbors = [
+            [x + 1, y, z],
+            [x - 1, y, z],
+            [x, y, z + 1],
+            [x, y, z - 1],
+            [x, y - 1, z],
+            [x, y + 1, z],
+        ];
+
+        for (const [nx, ny, nz] of neighbors) {
+            const blockId = world.getBlockAt(nx, ny, nz);
+            if (blockId === undefined || blockId === null || blockId === -1) continue;
+
+            const block = Block.getById(blockId);
+            if (!block) continue;
+
+            if (block.isPowerSource) return true;
+
+            if (typeof block.getPower === 'function') {
+                if (block.getPower(world, nx, ny, nz) > 0) return true;
+            }
+        }
+
+        return false;
+    }
+
+    updateState(world, x, y, z) {
+        // Resolve to the bottom half so both halves stay in sync.
+        if (this.id === DOOR_TOP && world.getBlockAt(x, y - 1, z) === DOOR_BOTTOM) {
+            y = y - 1;
+        }
+        if (this.id !== DOOR_BOTTOM || world.getBlockAt(x, y, z) !== DOOR_BOTTOM) return;
+
+        const powered = this.isPowered(world, x, y, z) || this.isPowered(world, x, y + 1, z);
+        const data = world.getBlockDataAt(x, y, z);
+        const isOpen = (data & 8) !== 0;
+
+        if (powered === isOpen) return;
+
+        world.setBlockDataAt(x, y, z, powered ? (data | 8) : (data & ~8));
+
+        if (world.getBlockAt(x, y + 1, z) === DOOR_TOP) {
+            const aboveData = world.getBlockDataAt(x, y + 1, z);
+            world.setBlockDataAt(x, y + 1, z, powered ? (aboveData | 8) : (aboveData & ~8));
+        }
+
+        world.onBlockChanged(x, y, z);
+        world.onBlockChanged(x, y + 1, z);
+
+        const soundName = powered ? 'random.door_open' : 'random.door_close';
+        if (world.minecraft && world.minecraft.soundManager) {
+            world.minecraft.soundManager.playSoundMono(soundName, 1.0, 1.0, true);
+        }
+    }
+
+    onBlockAdded(world, x, y, z) {
+        if (this.id === DOOR_BOTTOM) {
+            world.scheduleBlockTick(x, y, z, 1);
+        }
+    }
+
+    onNeighborBlockChange(world, x, y, z) {
+        if (this.id === DOOR_BOTTOM) {
+            world.scheduleBlockTick(x, y, z, 1);
+        } else if (world.getBlockAt(x, y - 1, z) === DOOR_BOTTOM) {
+            world.scheduleBlockTick(x, y - 1, z, 1);
+        }
+    }
+
+    onBlockTick(world, x, y, z) {
+        this.updateState(world, x, y, z);
+    }
+
     onBlockRemoved(world, x, y, z) {
         if (this.id === DOOR_BOTTOM) {
             if (world.getBlockAt(x, y + 1, z) === DOOR_TOP) {

@@ -1,15 +1,26 @@
 import EnumBlockFace from "../../../../util/EnumBlockFace.js";
 import Block from "../Block.js";
 import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
+import BlockEntityBluestonePusher from "../entity/BlockEntityBluestonePusher.js";
 
 export default class BlockBluestonePusher extends Block {
 
-    constructor(id, textureSlotId) {
+    constructor(id, textureSlotId, headBlockId) {
         super(id, textureSlotId);
         this.description = "Bluestone Pusher";
         this.hardness = 0.3;
         this.isBluestoneConsumer = true;
+        this.isPusher = true;
         this.inventoryTab = EnumCreativeInventoryTab.MACHINES;
+        this.headBlockId = headBlockId; // Pass registered head block ID or reference
+    }
+
+    pickedItem() { return 166; }
+
+    hasBlockEntity() { return true; }
+
+    createBlockEntity(world, x, y, z) {
+        return new BlockEntityBluestonePusher(world, x, y, z);
     }
 
     isSolid() { return true; }
@@ -50,11 +61,11 @@ export default class BlockBluestonePusher extends Block {
         const targetId = world.getBlockAt(x, targetY, z);
 
         if (targetId === undefined || targetId === null || targetId === 0 || targetId === -1) {
-            return;
+            return true;
         }
 
         const dy = 1;
-        const MAX_PUSH_LIMIT = 30;
+        const MAX_PUSH_LIMIT = 16;
 
         const blocksToPush = [];
         let currY = targetY;
@@ -68,7 +79,7 @@ export default class BlockBluestonePusher extends Block {
 
             const block = Block.getById(bId);
             if (block && block.unpushable) {
-                return;
+                return false;
             }
 
             const bData = world.getBlockDataAt(x, currY, z) || 0;
@@ -77,7 +88,7 @@ export default class BlockBluestonePusher extends Block {
             if (i === MAX_PUSH_LIMIT - 1) {
                 const nextId = world.getBlockAt(x, currY + dy, z);
                 if (nextId !== 0 && nextId !== undefined && nextId !== null && nextId !== -1) {
-                    return;
+                    return false;
                 }
             }
 
@@ -96,6 +107,7 @@ export default class BlockBluestonePusher extends Block {
         world.setBlockAt(x, targetY, z, 0);
         world.setBlockDataAt(x, targetY, z, 0);
         world.onBlockChanged(x, targetY, z);
+        return true;
     }
 
     updateState(world, x, y, z) {
@@ -105,17 +117,26 @@ export default class BlockBluestonePusher extends Block {
         const currentState = this.getState(world, x, y, z);
 
         if (isNowPowered && currentState === 0) {
-            world.setBlockDataAt(x, y, z, 1);
-            world.onBlockChanged(x, y, z);
-            this.pushBlockOnTop(world, x, y, z);
+            const pushed = this.pushBlockOnTop(world, x, y, z);
+            if (pushed) {
+                world.setBlockDataAt(x, y, z, 1);
+                world.setBlockAt(x, y + 1, z, this.headBlockId);
+                world.onBlockChanged(x, y, z);
+                world.onBlockChanged(x, y + 1, z);
+            }
         } else if (!isNowPowered && currentState === 1) {
             world.setBlockDataAt(x, y, z, 0);
+            if (world.getBlockAt(x, y + 1, z) === this.headBlockId) {
+                world.setBlockAt(x, y + 1, z, 0);
+                world.onBlockChanged(x, y + 1, z);
+            }
             world.onBlockChanged(x, y, z);
         }
     }
 
     getTextureForFace(face, data, x, y, z, world) {
         if (face === EnumBlockFace.TOP) {
+            if (world) return this.getState(world, x, y, z) === 1 ? 'cobblestone_frame_on' : 'oak_planks';
             return 'oak_planks';
         } else if (face === EnumBlockFace.BOTTOM) {
             return 'cobblestone_frame';
@@ -130,6 +151,13 @@ export default class BlockBluestonePusher extends Block {
 
     onBlockAdded(world, x, y, z) {
         world.scheduleBlockTick(x, y, z, 1);
+    }
+
+    onBlockRemoved(world, x, y, z) {
+        if (world.getBlockAt(x, y + 1, z) === this.headBlockId) {
+            world.setBlockAt(x, y + 1, z, 0);
+            world.onBlockChanged(x, y + 1, z);
+        }
     }
 
     onBlockTick(world, x, y, z) {

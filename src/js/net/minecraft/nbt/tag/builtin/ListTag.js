@@ -51,4 +51,8 @@ export default class ListTag extends Tag {
     setValue(value) {
         this.value = value;
     }
+
+    toObject() {
+        return this.value.map((tag) => tag.toObject ? tag.toObject() : tag.getValue());
+    }
 }

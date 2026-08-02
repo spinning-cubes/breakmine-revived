@@ -38,6 +38,46 @@ export default class Block {
         this.inventoryTab = EnumCreativeInventoryTab.BUILDING_BLOCKS;
 
         this.mod = "Breakmine";
+
+        this.hasBlockEntityFlag = false;
+    }
+
+    /**
+     * Override and return true if this block should own a BlockEntity at
+     * every placed position.
+     */
+    hasBlockEntity() {
+        return this.hasBlockEntityFlag;
+    }
+
+    /**
+     * Called by the World when a block of this type is placed (or loaded
+     * from save without a stored entity). MUST return a BlockEntity instance
+     * or null. Default returns null even when hasBlockEntity() is true, so
+     * subclasses MUST override both together.
+     */
+    createBlockEntity(world, x, y, z) {
+        return null;
+    }
+
+    /**
+     * Called once after the World finishes hydrating a block entity from NBT.
+     * Useful for blocks that need to sync render state (e.g. update the
+     * displayed name) when loading from save.
+     */
+    onBlockEntityLoaded(world, x, y, z, entity) {
+        // override
+    }
+
+    /**
+     * Called when a block entity at this position is marked dirty. The block
+     * can use this to trigger a chunk rebuild for visual changes. Default
+     * implementation just calls world.onBlockChanged(x, y, z).
+     */
+    onBlockEntityChanged(world, x, y, z, entity) {
+        if (world && typeof world.onBlockChanged === "function") {
+            world.onBlockChanged(x, y, z);
+        }
     }
 
     onRender(world, x, y, z, blockRenderer) {
@@ -97,6 +137,10 @@ export default class Block {
         return 'missing';
     }
 
+    getRotationForFace(face, data, x, y, z, world) {
+        return 0;
+    }
+
     getTransparency() {
         return 0.0;
     }
@@ -137,6 +181,10 @@ export default class Block {
 
     getParticleColor(world, x, y, z) {
         return this.getColor(world, x, y, z, this.getParticleTextureFace());
+    }
+
+    pickedItem() {
+        return this.id;
     }
 
     getLightValue(world, x, y, z) {
@@ -393,4 +441,3 @@ export default class Block {
         return typeof block === "undefined" ? null : block;
     }
 }
-

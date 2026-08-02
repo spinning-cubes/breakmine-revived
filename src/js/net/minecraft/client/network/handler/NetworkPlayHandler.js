@@ -340,7 +340,10 @@ export default class NetworkPlayHandler extends PacketHandler {
 
         let withinRange = dx <= 4 && dy <= 4 && dz <= 4;
 
-        this.minecraft.world.setBlockAt(position.getX(), position.getY(), position.getZ(), typeId, blockData);
+        // The server is authoritative in multiplayer: apply the received state
+        // without running block placement callbacks (which would recompute e.g.
+        // door facing from the local player and desync from the server).
+        this.minecraft.world.setBlockAtNoEvents(position.getX(), position.getY(), position.getZ(), typeId, blockData);
     }
 
     handleSignTextUpdate(packet) {

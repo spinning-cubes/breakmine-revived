@@ -22,6 +22,9 @@ const {
 const { isSpectator } = require('./players');
 const config = require('./config');
 const Logger = require('./logger');
+const getServerWorld = require('./server/World.js');
+const BlockModule = require('./src/js/net/minecraft/client/world/block/Block.js');
+const Block = BlockModule.default || BlockModule.Block;
 
 const badWordsModule = require('bad-words');
 const Filter = badWordsModule.Filter || badWordsModule;
@@ -364,12 +367,29 @@ function handlePlayerDigging(player, buffer, offset) {
     // Status 2 is sent when survival blocks break or creative blocks are hit once
     if (status === 2 || status === 0) {
         const blockId = 0; // Air (broken block)
+        const prevBlockId = getBlockAt(x, y, z);
+        const serverWorld = getServerWorld();
 
         addWorldChange(x, y, z, blockId);
 
         // Delete sign text / block inventory state on server
         const { deleteBlockInventory } = require('./world');
         deleteBlockInventory(`${x},${y},${z}`);
+
+        // Let the removed block clean up (door halves, pusher head, dust
+        // network re-propagation) before its neighbors are woken up.
+        const prevBlock = Block.getById(prevBlockId);
+        if (prevBlock && prevBlock.onBlockRemoved) {
+            try {
+                prevBlock.onBlockRemoved(serverWorld, x, y, z);
+            } catch (e) {
+                log.error('Server', `onBlockRemoved error at ${x},${y},${z}: ${e.message}`);
+            }
+        }
+
+        // Wake up neighbors so observers / repeaters / dust react.
+        serverWorld.scheduleNeighborTicks(x, y, z);
+        serverWorld.notifyNeighborBlockChange(x, y, z);
 
         saveWorld();
 
@@ -416,6 +436,23 @@ function handleBlockPlacement(player, buffer, offset) {
 
     // Read held item from packet (offset + 9)
     const heldItemId = buffer.readInt16BE(offset + 9);
+
+    // Protocol 47: direction 255 means "use item / interact with block"
+    // (right-click). Blocks that change state when activated (doors) are
+    // handled here so the change is authoritative and broadcast to everyone.
+    if (direction === 255) {
+        const targetId = getBlockAt(x, y, z);
+        const targetBlock = Block.getById(targetId);
+        if (targetBlock && typeof targetBlock.onMouseButton === 'function') {
+            const serverWorld = getServerWorld();
+            try {
+                targetBlock.onMouseButton(serverWorld, x, y, z, 2);
+            } catch (e) {
+                log.error('Server', `onMouseButton error at ${x},${y},${z}: ${e.message}`);
+            }
+        }
+        return;
+    }
 
     if (direction !== 255) {
         // Calculate offset block position based on face targeted
@@ -503,15 +540,51 @@ function handleBlockPlacement(player, buffer, offset) {
             } else {
                 metadata = 0;
             }
+        } else if (blockId === 160) { // Oak Door (bottom half places the top half)
+            let yaw = player.yaw ?? player.rotationYaw ?? 0;
+            let dirIndex = Math.floor((yaw * 4 / 360) + 0.5) & 3;
+            metadata = [2, 5, 3, 4][dirIndex];
+        } else if (blockId === 168 || blockId === 169) { // Bluestone Repeater / Observer
+            let yaw = player.yaw ?? player.rotationYaw ?? 0;
+            let dirIndex = Math.floor((yaw * 4 / 360) + 0.5) & 3;
+            // Direction stored in bits 1-2 (0: SOUTH, 1: WEST, 2: NORTH, 3: EAST)
+            metadata = dirIndex << 1;
         }
 
         addWorldChange(placeX, placeY, placeZ, blockId, metadata);
+
+        // Doors are two blocks tall; the bottom half always carries the top.
+        const doorTop = blockId === 160 && getBlockAt(placeX, placeY + 1, placeZ) !== 161;
+        if (doorTop) {
+            addWorldChange(placeX, placeY + 1, placeZ, 161, metadata);
+        }
+
+        // Trigger the block's server-side lifecycle + wake up neighbors so the
+        // bluestone simulation (dust propagation, lamps, repeaters, observers,
+        // doors) runs authoritatively on the server.
+        const serverWorld = getServerWorld();
+        const placedBlock = Block.getById(blockId);
+        if (placedBlock && typeof placedBlock.onBlockAdded === 'function') {
+            try {
+                placedBlock.onBlockAdded(serverWorld, placeX, placeY, placeZ);
+            } catch (e) {
+                log.error('Server', `onBlockAdded error at ${placeX},${placeY},${placeZ}: ${e.message}`);
+            }
+        }
+        serverWorld.scheduleNeighborTicks(placeX, placeY, placeZ);
+        serverWorld.notifyNeighborBlockChange(placeX, placeY, placeZ);
+
         saveWorld();
 
         const { sendBlockChange } = require('./packets');
-        const blockState = (blockId << 4) | metadata;
-        for (const p of players.values()) {
-            sendBlockChange(p.ws, placeX, placeY, placeZ, blockState);
+        const blockStates = [[placeX, placeY, placeZ, (blockId << 4) | metadata]];
+        if (doorTop) {
+            blockStates.push([placeX, placeY + 1, placeZ, (161 << 4) | metadata]);
+        }
+        for (const [bx, by, bz, state] of blockStates) {
+            for (const p of players.values()) {
+                sendBlockChange(p.ws, bx, by, bz, state);
+            }
         }
 
         // Broadcast animation to other players when block is placed

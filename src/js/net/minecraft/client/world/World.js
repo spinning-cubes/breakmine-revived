@@ -9,6 +9,7 @@ import Vector4 from "../../util/Vector4.js";
 import MetadataChunkBlock from "../../util/MetadataChunkBlock.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
 import ContainerFurnace from "../inventory/container/ContainerFurnace.js";
+import BlockEntityRegistry from "./block/entity/BlockEntityRegistry.js";
 
 export default class World {
 
@@ -32,6 +33,10 @@ export default class World {
         // Block tick system
         this.blockTickQueue = [];
         this.scheduledBlockTicks = new Map();
+
+        // NBT-backed block entities (TileEntity equivalent).
+        // Keyed by `${x},${y},${z}` -> BlockEntity instance.
+        this.blockEntities = new Map();
 
         // Store interval ID for cleanup
         this.lightUpdateInterval = null;
@@ -101,6 +106,9 @@ export default class World {
 
         // Process scheduled block ticks
         this.processBlockTicks();
+
+        // Tick NBT-backed block entities
+        this.tickBlockEntities();
 
         // Tick furnace tile entities
         if (this.blockInventories) {
@@ -504,6 +512,16 @@ export default class World {
         let chunk = this.getChunkAt(x >> 4, z >> 4);
         chunk.setBlockAt(x & 15, y, z & 15, type, data);
 
+        // NBT block-entity lifecycle:
+        //   - If the old block had an entity, remove it (closes the entity,
+        //     releases resources, fires onClose()).
+        //   - We remove whenever the block is destroyed (type === 0) OR the
+        //     block type is changing. When the same block type is re-placed
+        //     (e.g. just a data update), the entity survives.
+        if (oldTypeId !== type || type === 0) {
+            this.removeBlockEntity(x, y, z);
+        }
+
         // Call onBlockRemoved for the old block if it's being replaced
         if (oldBlock && oldBlock.onBlockRemoved && (type === 0 || oldTypeId !== type)) {
             oldBlock.onBlockRemoved(this, x, y, z);
@@ -512,18 +530,246 @@ export default class World {
         // Call onBlockPlaced for the new block if it's being placed
         if (type !== 0 && type !== oldTypeId) {
             let newBlock = Block.getById(type);
-            if (newBlock && newBlock.onBlockPlaced) {
-                newBlock.onBlockPlaced(this, x, y, z, null);
+            if (newBlock) {
+                if (newBlock.onBlockPlaced) {
+                    newBlock.onBlockPlaced(this, x, y, z, null);
+                }
+                // Auto-create a BlockEntity if the new block type opts in.
+                if (newBlock.hasBlockEntity && newBlock.hasBlockEntity()) {
+                    let entity = newBlock.createBlockEntity(this, x, y, z);
+                    if (entity) {
+                        // Seed the entity from the block data nibble that
+                        // onBlockPlaced (or the placement code) already wrote.
+                        if (typeof entity.readFromBlockData === "function") {
+                            entity.readFromBlockData(this.getBlockDataAt(x, y, z));
+                        }
+                        this.setBlockEntity(x, y, z, entity);
+                        if (typeof newBlock.onBlockEntityLoaded === "function") {
+                            newBlock.onBlockEntityLoaded(this, x, y, z, entity);
+                        }
+                    }
+                }
             }
+
+            // Tell surrounding blocks that a new block appeared next to them
+            // (observers/repeaters watch for this to detect state changes).
+            this.notifyNeighborBlockChange(x, y, z);
         }
 
         // Schedule ticks for adjacent blocks when a block is removed
         if (type === 0) {
             this.scheduleNeighborTicks(x, y, z);
+            this.notifyNeighborBlockChange(x, y, z);
         }
 
         // Rebuild chunk
         this.onBlockChanged(x, y, z);
+    }
+
+    /**
+     * Apply a server-authoritative block change without running any block
+     * callbacks (onBlockPlaced / onBlockAdded / onBlockRemoved / neighbor
+     * notification). In multiplayer the server runs the bluestone/door
+     * simulation, so clients must trust the received state verbatim instead of
+     * re-running placement logic (which would e.g. recompute a door's facing
+     * from the local player's yaw and desync it from the server).
+     */
+    setBlockAtNoEvents(x, y, z, type, data = 0) {
+        if (y < 0 || y >= World.TOTAL_HEIGHT) {
+            return;
+        }
+
+        let chunk = this.getChunkAt(x >> 4, z >> 4);
+        if (!chunk) {
+            return;
+        }
+
+        let prevTypeId = this.getBlockAt(x, y, z);
+        if (prevTypeId === type && this.getBlockDataAt(x, y, z) === data) {
+            return;
+        }
+
+        let section = chunk.getSection(y >> 4);
+        section.setBlockAt(x & 15, y & 15, z & 15, type, data);
+
+        // Keep block entities (if any) in sync so NBT and rendering stay
+        // correct for the received state.
+        if (prevTypeId !== type || type === 0) {
+            this.removeBlockEntity(x, y, z);
+        }
+        if (type !== 0 && type !== prevTypeId) {
+            let newBlock = Block.getById(type);
+            if (newBlock && newBlock.hasBlockEntity && newBlock.hasBlockEntity()) {
+                let entity = newBlock.createBlockEntity(this, x, y, z);
+                if (entity) {
+                    if (typeof entity.readFromBlockData === "function") {
+                        entity.readFromBlockData(this.getBlockDataAt(x, y, z));
+                    }
+                    this.setBlockEntity(x, y, z, entity);
+                }
+            }
+        }
+
+        // Refresh light the same way Chunk.setBlockAt would.
+        this.updateLight(EnumSkyBlock.SKY, x, y, z, x, y, z);
+        this.updateLight(EnumSkyBlock.BLOCK, x, y, z, x, y, z);
+
+        // Rebuild chunk
+        this.onBlockChanged(x, y, z);
+    }
+
+    // ------------------------------------------------------------------
+    // Block Entity management (NBT-backed per-block state)
+    // ------------------------------------------------------------------
+
+    static blockEntityKey(x, y, z) {
+        return `${x},${y},${z}`;
+    }
+
+    /**
+     * Get the BlockEntity at the given position, or null.
+     */
+    getBlockEntity(x, y, z) {
+        return this.blockEntities.get(World.blockEntityKey(x, y, z)) || null;
+    }
+
+    /**
+     * Attach (or replace) a BlockEntity at the given position. The entity's
+     * world reference and position are synced, and the owning chunk's
+     * `blockEntities` set is updated so serialization picks it up.
+     */
+    setBlockEntity(x, y, z, entity) {
+        if (!entity) {
+            this.removeBlockEntity(x, y, z);
+            return;
+        }
+        entity.world = this;
+        entity.setPosition(x, y, z);
+
+        // Track on the chunk for fast serialization
+        let chunk = this.chunkExists(x >> 4, z >> 4) ? this.getChunkAt(x >> 4, z >> 4) : null;
+        if (chunk && typeof chunk.addBlockEntity === "function") {
+            chunk.addBlockEntity(entity);
+        }
+
+        this.blockEntities.set(World.blockEntityKey(x, y, z), entity);
+    }
+
+    /**
+     * Remove (and close) any BlockEntity at the given position. Safe to call
+     * when no entity exists. Returns the removed entity (or null).
+     */
+    removeBlockEntity(x, y, z) {
+        let key = World.blockEntityKey(x, y, z);
+        let entity = this.blockEntities.get(key);
+        if (!entity) return null;
+
+        if (typeof entity.onClose === "function") {
+            try { entity.onClose(); } catch (e) { console.warn("BlockEntity onClose error:", e); }
+        }
+
+        this.blockEntities.delete(key);
+
+        let chunk = this.chunkExists(x >> 4, z >> 4) ? this.getChunkAt(x >> 4, z >> 4) : null;
+        if (chunk && typeof chunk.removeBlockEntity === "function") {
+            chunk.removeBlockEntity(entity);
+        }
+        return entity;
+    }
+
+    /**
+     * Move a block entity from one position to another (used when a piston
+     * pushes a block that owns an entity). The block type at the new position
+     * must already match — this method only relocates the entity.
+     */
+    moveBlockEntity(fromX, fromY, fromZ, toX, toY, toZ) {
+        let entity = this.removeBlockEntity(fromX, fromY, fromZ);
+        if (entity) {
+            entity.setPosition(toX, toY, toZ);
+            this.setBlockEntity(toX, toY, toZ, entity);
+        }
+        return entity;
+    }
+
+    /**
+     * Called by BlockEntity.markDirty(). Marks the owning chunk as modified
+     * and lets the block at this position react (e.g. schedule a render
+     * rebuild).
+     */
+    onBlockEntityChanged(entity) {
+        if (!entity) return;
+        let chunk = this.chunkExists(entity.x >> 4, entity.z >> 4)
+            ? this.getChunkAt(entity.x >> 4, entity.z >> 4)
+            : null;
+        if (chunk) chunk.isModified = true;
+
+        let typeId = this.getBlockAt(entity.x, entity.y, entity.z);
+        let block = Block.getById(typeId);
+        if (block && typeof block.onBlockEntityChanged === "function") {
+            block.onBlockEntityChanged(this, entity.x, entity.y, entity.z, entity);
+        }
+    }
+
+    /**
+     * Tick every loaded block entity once. Iterates a snapshot of the values
+     * so entities can safely remove themselves during update().
+     */
+    tickBlockEntities() {
+        if (this.blockEntities.size === 0) return;
+        for (let entity of Array.from(this.blockEntities.values())) {
+            if (entity.isClosed && entity.isClosed()) continue;
+            if (typeof entity.update === "function") {
+                try {
+                    entity.update();
+                } catch (e) {
+                    console.warn("BlockEntity update error:", e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns all block entities located in the given chunk. Delegates to
+     * Chunk.getBlockEntities() when the chunk is loaded.
+     */
+    getBlockEntitiesInChunk(chunkX, chunkZ) {
+        if (!this.chunkExists(chunkX, chunkZ)) return [];
+        let chunk = this.getChunkAt(chunkX, chunkZ);
+        return chunk && typeof chunk.getBlockEntities === "function"
+            ? chunk.getBlockEntities()
+            : [];
+    }
+
+    /**
+     * Called by Chunk.deserialize after a chunk's block entities have been
+     * rehydrated from NBT. Wires them into the world map. The chunk's own
+     * blockEntities list is updated by the caller.
+     */
+    loadBlockEntities(chunk) {
+        if (!chunk || !Array.isArray(chunk.blockEntities)) return;
+        for (let entity of chunk.blockEntities) {
+            entity.world = this;
+            this.blockEntities.set(World.blockEntityKey(entity.x, entity.y, entity.z), entity);
+        }
+    }
+
+    /**
+     * Called when a chunk is unloaded — removes all of its block entities
+     * from the world map so they don't keep ticking.
+     */
+    unloadBlockEntities(chunk) {
+        if (!chunk || !Array.isArray(chunk.blockEntities)) return;
+        for (let entity of chunk.blockEntities) {
+            let key = World.blockEntityKey(entity.x, entity.y, entity.z);
+            let current = this.blockEntities.get(key);
+            if (current === entity) {
+                if (typeof entity.onClose === "function") {
+                    try { entity.onClose(); } catch (e) { console.warn(e); }
+                }
+                this.blockEntities.delete(key);
+            }
+        }
+        chunk.blockEntities = [];
     }
 
     scheduleNeighborTicks(x, y, z) {
@@ -552,8 +798,45 @@ export default class World {
         }
     }
 
+    /**
+     * Notify adjacent blocks that the block at (x, y, z) changed type
+     * (placed or removed). Only blocks that explicitly implement
+     * `onNeighborBlockChange` (e.g. observers, repeaters) are affected.
+     */
+    notifyNeighborBlockChange(x, y, z) {
+        let faces = [
+            { x: 1, y: 0, z: 0 },
+            { x: -1, y: 0, z: 0 },
+            { x: 0, y: 0, z: 1 },
+            { x: 0, y: 0, z: -1 },
+            { x: 0, y: 1, z: 0 },
+            { x: 0, y: -1, z: 0 }
+        ];
+
+        for (let face of faces) {
+            let checkX = x + face.x;
+            let checkY = y + face.y;
+            let checkZ = z + face.z;
+
+            let typeId = this.getBlockAt(checkX, checkY, checkZ);
+            if (typeId === 0) continue;
+
+            let block = Block.getById(typeId);
+            if (block && typeof block.onNeighborBlockChange === "function") {
+                block.onNeighborBlockChange(this, checkX, checkY, checkZ);
+            }
+        }
+    }
+
     setBlockDataAt(x, y, z, data) {
         this.getChunkAt(x >> 4, z >> 4).setBlockDataAt(x & 15, y, z & 15, data);
+
+        // Keep the block entity (if any) in sync with the data nibble so NBT
+        // serialization always captures the latest state.
+        let entity = this.getBlockEntity(x, y, z);
+        if (entity && typeof entity.readFromBlockData === "function") {
+            entity.readFromBlockData(data);
+        }
     }
 
     getBlockAt(x, y, z) {

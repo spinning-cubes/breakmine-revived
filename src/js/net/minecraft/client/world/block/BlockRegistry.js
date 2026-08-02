@@ -53,6 +53,13 @@ import BlockBluestoneDust from "./type/BlockBluestoneDust.js";
 import BlockBluestoneLamp from "./type/BlockBluestoneLamp.js";
 import BlockBluestoneBlock from "./type/BlockBlustoneBlock.js";
 import BlockBluestonePusher from "./type/BlockBluestonePusher.js";
+import BlockBluestoneStickyPusher from "./type/BlockBluestoneStickyPusher.js";
+import BlockBluestonePusherHead from "./type/BlockBluestonePusherHead.js";
+import BlockBluestoneStickyPusherHead from "./type/BlockBluestoneStickyPusherHead.js";
+import BlockBluestoneRepeater from "./type/BlockBluestoneRepeater.js";
+import BlockBluestoneObserver from "./type/BlockBluestoneObserver.js";
+import BlockBluestoneAdjustingLamp from "./type/BlockBluestoneAdjustingLamp.js";
+import BlockBluestoneBulb from "./type/BlockBluestoneBulb.js";
 
 export class BlockRegistry {
 
@@ -282,8 +289,15 @@ export class BlockRegistry {
 
         BlockRegistry.BLUESTONE_DUST = new BlockBluestoneDust(163, 0, "bluestone_dust", "Bluestone Dust");
         BlockRegistry.BLUESTONE_LAMP = new BlockBluestoneLamp(164, 0, "bluestone_lamp", "Bluestone Lamp");
+        BlockRegistry.BLUESTONE_ADJUSTING_LAMP = new BlockBluestoneAdjustingLamp(172, 0, "bluestone_adjusting_lamp", "Adjustable Bluestone Lamp");
+        BlockRegistry.BLUESTONE_BULB = new BlockBluestoneBulb(173, 0, "bluestone_bulb", "Bluestone Bulb");
         BlockRegistry.BLUESTONE_BLOCK = new BlockBluestoneBlock(165, 0, "bluestone_block", "Bluestone Block");
-        BlockRegistry.BLUESTONE_PUSHER = new BlockBluestonePusher(166, 0, "bluestone_pusher", "Bluestone Pusher");
+        BlockRegistry.BLUESTONE_PUSHER = new BlockBluestonePusher(166, 0, 167, "bluestone_pusher", "Bluestone Pusher");
+        BlockRegistry.BLUESTONE_PUSHER_HEAD = new BlockBluestonePusherHead(167, 0, "bluestone_pusher_head", "Bluestone Pusher Head");
+        BlockRegistry.BLUESTONE_REPEATER = new BlockBluestoneRepeater(168, 0, "bluestone_repeater", "Bluestone Repeater");
+        BlockRegistry.BLUESTONE_OBSERVER = new BlockBluestoneObserver(169, 0, "bluestone_observer", "Bluestone Observer");  
+        BlockRegistry.BLUESTONE_STICKY_PUSHER = new BlockBluestoneStickyPusher(170, 0, "bluestone_sticky_pusher", "Sticky Bluestone Pusher");
+        BlockRegistry.BLUESTONE_STICKY_PUSHER_HEAD = new BlockBluestoneStickyPusherHead(171, 0, "bluestone_sticky_pusher_head", "Sticky Bluestone Pusher Head");
 
         for (const [key, val] of Object.entries(BlockRegistry)) {
             if (val && typeof val === "object" && val.id !== undefined) {

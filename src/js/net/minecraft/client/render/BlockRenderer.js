@@ -10,6 +10,7 @@ import MathHelper from "../../util/MathHelper.js";
 import Block from "../world/block/Block.js";
 import BoundingBox from "../../util/BoundingBox.js";
 import { BlockRegistry } from "../world/block/BlockRegistry.js";
+import EnumCreativeInventoryTab from "../gui/EnumCreativeInventoryTab.js";
 
 export default class BlockRenderer {
 
@@ -96,6 +97,18 @@ export default class BlockRenderer {
         }
     }
 
+    static DummyBlock = class extends Block {
+        constructor(id, texId, texName) {
+            super(id, texId);
+            this.inventoryTab = EnumCreativeInventoryTab.NOTLISTED;
+            this.texName = texName;
+        }
+        
+        getTextureForFace(face) {
+            return this.texName;
+        }
+    };
+
     renderMultipart(world, block, x, y, z) {
         const gotMultipart = block.getMultipart(world, x, y, z);
         for (let i = 0; i < gotMultipart.length; i++) {
@@ -107,6 +120,9 @@ export default class BlockRenderer {
                 bbox = gotMultipart[i][2];
             } else if (gotMultipart[i][0] === 'blockClass') {
                 partBlock = gotMultipart[i][2]['block'];
+                bbox = gotMultipart[i][2]['bbox'];
+            } else if (gotMultipart[i][0] === 'texture') {
+                partBlock = new this.constructor.DummyBlock(999, 0, gotMultipart[i][2]['texture']);
                 bbox = gotMultipart[i][2]['bbox'];
             }
             
@@ -222,6 +238,8 @@ export default class BlockRenderer {
         minV = 1 - minV;
         maxV = 1 - maxV;
 
+        let rotation = block.getRotationForFace(face, blockData, x, y, z, world);
+
         let color = block.getColor(world, x, y, z, face);
         let red = (color >> 16 & 255) / 255.0;
         let green = (color >> 8 & 255) / 255.0;
@@ -236,45 +254,66 @@ export default class BlockRenderer {
             this.tessellator.setColor(red * shade, green * shade, blue * shade);
         }
 
-        this.addFace(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, red, green, blue);
+        this.addFace(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, red, green, blue, rotation);
     }
 
-    addFace(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, red = 1, green = 1, blue = 1) {
+    addFace(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, red = 1, green = 1, blue = 1, rotation = 0) {
+        const addCorner = (x, y, z, u, v) => {
+            let r = ((rotation % 4) + 4) % 4;
+            if (r !== 0) {
+                let uRange = maxU - minU;
+                let vRange = maxV - minV;
+                let localU = (u - minU) / uRange;
+                let localV = (v - minV) / vRange;
+                if (r === 1) {
+                    u = minU + localV * uRange;
+                    v = minV + (1 - localU) * vRange;
+                } else if (r === 2) {
+                    u = minU + (1 - localU) * uRange;
+                    v = minV + (1 - localV) * vRange;
+                } else {
+                    u = minU + (1 - localV) * uRange;
+                    v = minV + localU * vRange;
+                }
+            }
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, x, y, z, u, v, red, green, blue);
+        };
+
         if (face === EnumBlockFace.BOTTOM) {
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, maxZ, maxU, maxV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, minZ, maxU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, minU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, maxZ, minU, maxV, red, green, blue);
+            addCorner(maxX, minY, maxZ, maxU, maxV);
+            addCorner(maxX, minY, minZ, maxU, minV);
+            addCorner(minX, minY, minZ, minU, minV);
+            addCorner(minX, minY, maxZ, minU, maxV);
         }
         if (face === EnumBlockFace.TOP) {
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, maxY, maxZ, minU, maxV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, maxY, minZ, minU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, maxY, minZ, maxU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, maxY, maxZ, maxU, maxV, red, green, blue);
+            addCorner(minX, maxY, maxZ, minU, maxV);
+            addCorner(minX, maxY, minZ, minU, minV);
+            addCorner(maxX, maxY, minZ, maxU, minV);
+            addCorner(maxX, maxY, maxZ, maxU, maxV);
         }
         if (face === EnumBlockFace.NORTH) {
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, maxY, minZ, maxU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxU, maxV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, minZ, minU, maxV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, maxY, minZ, minU, minV, red, green, blue);
+            addCorner(minX, maxY, minZ, maxU, minV);
+            addCorner(minX, minY, minZ, maxU, maxV);
+            addCorner(maxX, minY, minZ, minU, maxV);
+            addCorner(maxX, maxY, minZ, minU, minV);
         }
         if (face === EnumBlockFace.SOUTH) {
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, maxY, maxZ, minU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, maxY, maxZ, maxU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, maxZ, maxU, maxV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, maxZ, minU, maxV, red, green, blue);
+            addCorner(minX, maxY, maxZ, minU, minV);
+            addCorner(maxX, maxY, maxZ, maxU, minV);
+            addCorner(maxX, minY, maxZ, maxU, maxV);
+            addCorner(minX, minY, maxZ, minU, maxV);
         }
         if (face === EnumBlockFace.WEST) {
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, maxZ, maxU, maxV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, minU, maxV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, maxY, minZ, minU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, maxY, maxZ, maxU, minV, red, green, blue);
+            addCorner(minX, minY, maxZ, maxU, maxV);
+            addCorner(minX, minY, minZ, minU, maxV);
+            addCorner(minX, maxY, minZ, minU, minV);
+            addCorner(minX, maxY, maxZ, maxU, minV);
         }
         if (face === EnumBlockFace.EAST) {
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, maxY, maxZ, minU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, maxY, minZ, maxU, minV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, minZ, maxU, maxV, red, green, blue);
-            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, maxZ, minU, maxV, red, green, blue);
+            addCorner(maxX, maxY, maxZ, minU, minV);
+            addCorner(maxX, maxY, minZ, maxU, minV);
+            addCorner(maxX, minY, minZ, maxU, maxV);
+            addCorner(maxX, minY, maxZ, minU, maxV);
         }
     }
 

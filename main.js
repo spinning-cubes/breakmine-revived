@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
+const RPC = require('discord-rpc'); // [1] Moved up for clarity
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
 app.commandLine.appendSwitch('disable-pointer-lock-options');
@@ -22,24 +23,19 @@ function createWindow() {
   
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type === 'keyDown') {
-      // Toggle DevTools (F12)
       if (input.key === 'F12') {
         win.webContents.toggleDevTools();
         event.preventDefault();
       }
-
-      // Toggle Fullscreen (F11)
       if (input.key === 'F11') {
         win.setFullScreen(!win.isFullScreen());
         event.preventDefault();
       }
-      
-      // Reload page (Ctrl+R or Cmd+R)
       if ((input.control || input.meta) && input.key.toLowerCase() === 'r') {
         if (input.shift) {
-          win.webContents.reloadIgnoringCache(); // Ctrl+Shift+R
+          win.webContents.reloadIgnoringCache();
         } else {
-          win.webContents.reload(); // Ctrl+R
+          win.webContents.reload();
         }
         event.preventDefault();
       }
@@ -49,17 +45,33 @@ function createWindow() {
   win.setMenu(null);
 
   if (isDev) {
-    // Load Vite dev server URL
     win.loadURL('http://localhost:8000');
-    // win.webContents.openDevTools(); // Uncomment if you want DevTools on launch
   } else {
-    // Load built static assets in production
     win.loadFile(path.join(__dirname, 'dist/index.html'));
   }
 }
 
+// Initialize RPC client
+const rpc = new RPC.Client({ transport: 'ipc' });
+
+rpc.on('ready', () => {
+  console.log("Discord RPC Connected Successfully!");
+  rpc.setActivity({
+    details: 'Playing Breakmine',
+    state: 'Join at breakmine.com!', // [2] Changed from empty string '' (Discord often rejects empty strings)
+    startTimestamp: new Date(),
+    largeImageKey: 'favicon',
+    instance: false,
+  });
+});
+
 app.whenReady().then(() => {
   createWindow();
+
+  // [3] Log in to Discord right as Electron finishes readying up
+  rpc.login({ clientId: '1532728832660996116' }).catch((err) => {
+    console.error("Discord RPC failed to connect:", err);
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -67,5 +79,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  // [4] Clean up Discord connection on close
+  rpc.destroy().catch(() => {}); 
   if (process.platform !== 'darwin') app.quit();
 });

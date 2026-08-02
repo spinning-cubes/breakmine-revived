@@ -297,9 +297,23 @@ export default class TextureAtlas {
             "bluestoneDust1111.png",
             "bluestoneLampOff.png",
             "bluestoneLampOn.png",
+            "bluestoneBulbOff.png",
+            "bluestoneBulbOn.png",
             "bluestonePusherOn.png",
             "bluestonePusherOff.png",
-            "cobblestone_frame.png"
+            "bluestoneStickyPusherOff.png",
+            "piston_top_sticky.png",
+            "cobblestone_frame.png",
+            "cobblestone_frame_on.png",
+            "bluestoneRepeaterFront.png",
+            "bluestoneRepeaterBack.png",
+            "bluestoneObserverFront.png",
+            "bluestoneObserverBackOn.png",
+            "bluestoneObserverBackOff.png",
+            "oak_planks_green.png",
+            "oak_planks_sticky.png",
+            "bluestoneRepeaterTopOff.png",
+            "bluestoneRepeaterTopOn.png"
         ];
 
         const toolTextureNames = [];

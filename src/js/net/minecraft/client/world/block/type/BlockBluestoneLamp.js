@@ -1,5 +1,6 @@
 import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 import Block from "../Block.js";
+import BlockEntityBluestoneLamp from "../entity/BlockEntityBluestoneLamp.js";
 
 export default class BlockBluestoneLamp extends Block {
 
@@ -9,6 +10,12 @@ export default class BlockBluestoneLamp extends Block {
         this.hardness = 0.3;
         this.isBluestoneConsumer = true;
         this.inventoryTab = EnumCreativeInventoryTab.MACHINES;
+    }
+
+    hasBlockEntity() { return true; }
+
+    createBlockEntity(world, x, y, z) {
+        return new BlockEntityBluestoneLamp(world, x, y, z);
     }
 
     isSolid() { return true; }
@@ -59,7 +66,7 @@ export default class BlockBluestoneLamp extends Block {
 
     getLightValue(world, x, y, z) {
         const powered = world ? (this.isPowered(world, x, y, z) ? 1 : 0) : 0;
-        return powered === true ? 14 : 0;
+        return powered === 1 ? 14 : 0;
     }
 
     getTextureForFace(face, data, x, y, z, world) {

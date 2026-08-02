@@ -15,7 +15,7 @@ export default class MusicManager {
         this.netherTracks = [];
         this.endTracks = [];
 
-        this.volume = 0.7; //for Martwix-Game :p
+        this.volume = 0.0; //for Martwix-Game :p
         this.fadeTime = 2000;
         this.gapTime = 5000;
 

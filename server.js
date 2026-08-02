@@ -6,7 +6,7 @@ const { handlePacket, cleanupPlayerChunks } = require('./handlers');
 const { addPlayer, removePlayer, getPlayerCount, getPlayers, savePlayerData, normalizeInventoryState } = require('./players');
 const Logger = require('./logger');
 const { BlockRegistry } = require('./src/js/net/minecraft/client/world/block/BlockRegistry.js');
-const ServerWorld = require('./server/World.js');
+const getServerWorld = require('./server/World.js');
 const config = require('./config');
 
 let log = Logger;
@@ -16,7 +16,11 @@ const PORT = config.port;
 const currentWorld = loadCurrentWorld();
 initWorld(currentWorld);
 BlockRegistry.create(); // Initialize block registry from game code
-const serverWorld = new ServerWorld(); // Initialize server world for block ticking
+const serverWorld = getServerWorld(); // Initialize server world for block ticking
+
+// Seed block ticks for any saved bluestone components so loaded networks
+// (dust, lamps, repeaters, doors) settle to their correct state.
+serverWorld.seedScheduledTicks(getWorldChanges());
 
 // Start server tick loop for block ticking and world time synchronization
 setInterval(() => {

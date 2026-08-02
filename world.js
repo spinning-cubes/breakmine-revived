@@ -237,10 +237,21 @@ function getWorldChanges() {
     return worldChanges;
 }
 
+// Base flat-world terrain used for positions that were never changed. Must
+// mirror generateFlatChunkColumn so server-side block logic (bluestone
+// simulation, etc.) sees the same world as clients.
+function getBaseBlock(worldY) {
+    if (worldY === 0) return 7;        // Bedrock
+    if (worldY >= 1 && worldY <= 7) return 1; // Stone
+    if (worldY === 8) return 3;        // Dirt
+    if (worldY === 9) return 2;        // Grass
+    return 0;                          // Air
+}
+
 function getBlockAt(x, y, z) {
     const key = `${x},${y},${z}`;
     const blockState = worldChanges.get(key);
-    return blockState !== undefined ? (blockState >> 4) : 0;
+    return blockState !== undefined ? (blockState >> 4) : getBaseBlock(y);
 }
 
 function getBlockMetadata(x, y, z) {

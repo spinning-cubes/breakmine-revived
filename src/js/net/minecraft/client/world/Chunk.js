@@ -3,6 +3,8 @@ import Block from "./block/Block.js";
 import World from "./World.js";
 import ChunkSection from "./ChunkSection.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
+import TagCompound from "../../nbt/tag/TagCompound.js";
+import BlockEntityRegistry from "./block/entity/BlockEntityRegistry.js";
 
 export default class Chunk {
 
@@ -32,6 +34,47 @@ export default class Chunk {
 
         // Create height map
         this.heightMap = [];
+
+        // Block entities located in this chunk. The world also keeps a global
+        // position->entity map; this list is the chunk-local view used for
+        // serialization and chunk unload.
+        this.blockEntities = [];
+    }
+
+    // ------------------------------------------------------------------
+    // Block entity tracking (chunk-local view; world owns the global map)
+    // ------------------------------------------------------------------
+
+    /**
+     * Add a block entity to this chunk's tracking list. Called by
+     * World.setBlockEntity. Idempotent — adding the same entity twice is
+     * a no-op.
+     */
+    addBlockEntity(entity) {
+        if (!entity) return;
+        if (this.blockEntities.indexOf(entity) !== -1) return;
+        this.blockEntities.push(entity);
+        this.isModified = true;
+    }
+
+    /**
+     * Remove a block entity from this chunk's tracking list. Called by
+     * World.removeBlockEntity.
+     */
+    removeBlockEntity(entity) {
+        if (!entity) return;
+        let i = this.blockEntities.indexOf(entity);
+        if (i !== -1) {
+            this.blockEntities.splice(i, 1);
+            this.isModified = true;
+        }
+    }
+
+    /**
+     * Returns a snapshot array of block entities located in this chunk.
+     */
+    getBlockEntities() {
+        return this.blockEntities.slice();
     }
 
     generateSkylightMap() {
@@ -425,6 +468,10 @@ export default class Chunk {
     }
 
     unload() {
+        // Detach all block entities from the world when the chunk unloads.
+        if (this.world && typeof this.world.unloadBlockEntities === "function") {
+            this.world.unloadBlockEntities(this);
+        }
         this.loaded = false;
     }
 
@@ -482,8 +529,32 @@ export default class Chunk {
             x: this.x,
             z: this.z,
             sections: sections,
-            heightMap: Array.from(this.heightMap)
+            heightMap: Array.from(this.heightMap),
+            blockEntities: this.serializeBlockEntities()
         };
+    }
+
+    /**
+     * Serialize every block entity in this chunk to a plain-JS array of
+     * TagCompound.toObject() representations. Returns null when the chunk
+     * has no block entities (so old saves stay compatible).
+     */
+    serializeBlockEntities() {
+        if (!this.blockEntities || this.blockEntities.length === 0) {
+            return null;
+        }
+        let out = [];
+        for (let entity of this.blockEntities) {
+            let tag = new TagCompound("");
+            try {
+                entity.writeToNBT(tag);
+            } catch (e) {
+                console.warn(`[Chunk.serializeBlockEntities] Failed to write entity at (${entity.x},${entity.y},${entity.z}):`, e);
+                continue;
+            }
+            out.push(tag.toObject());
+        }
+        return out.length > 0 ? out : null;
     }
 
     static deserialize(world, data) {
@@ -519,8 +590,69 @@ export default class Chunk {
         }
 
         chunk.heightMap = data.heightMap.slice();
+
+        // Restore block entities from NBT objects, then push their state back
+        // into the block data nibble (NBT is authoritative for entity state).
+        chunk.blockEntities = [];
+        if (Array.isArray(data.blockEntities)) {
+            for (let obj of data.blockEntities) {
+                let tag = TagCompound.fromObject(obj);
+                if (!tag) continue;
+                let entity = BlockEntityRegistry.createFromNBT(world, tag);
+                if (entity) {
+                    entity.world = world;
+                    chunk.blockEntities.push(entity);
+                    if (typeof entity.applyToChunk === "function") {
+                        entity.applyToChunk(chunk);
+                    }
+                }
+            }
+        }
+
+        // Migration: blocks that own a BlockEntity but had no NBT entity
+        // stored (e.g. saves made before block entities existed) get one
+        // seeded from their current block data so state persists from now on.
+        {
+            let existing = new Set(chunk.blockEntities.map(
+                (e) => `${e.x},${e.y},${e.z}`
+            ));
+            for (let sy = 0; sy < Chunk.SECTION_AMOUNT; sy++) {
+                const sectionData = data.sections[sy];
+                if (!sectionData || !sectionData.blocks) continue;
+                const section = chunk.getSection(sy);
+                for (const idxStr in sectionData.blocks) {
+                    const idx = parseInt(idxStr);
+                    const block = Block.getById(section.blocks[idx]);
+                    if (!block || !block.hasBlockEntity || !block.hasBlockEntity()) continue;
+
+                    const lx = idx & 15;
+                    const ly = (idx >> 8) & 15;
+                    const lz = (idx >> 4) & 15;
+                    const wx = chunk.x * 16 + lx;
+                    const wy = sy * 16 + ly;
+                    const wz = chunk.z * 16 + lz;
+                    if (existing.has(`${wx},${wy},${wz}`)) continue;
+
+                    const entity = block.createBlockEntity(world, wx, wy, wz);
+                    if (entity) {
+                        if (typeof entity.readFromBlockData === "function") {
+                            entity.readFromBlockData(section.getBlockDataAt(lx, ly, lz));
+                        }
+                        chunk.blockEntities.push(entity);
+                    }
+                }
+            }
+        }
+
         chunk.loaded = true;
         chunk.isTerrainPopulated = true;
+
+        // Register restored entities with the world's global map. Done here
+        // (rather than from the caller) so that by the time deserialize()
+        // returns, the chunk is fully wired up.
+        if (typeof world.loadBlockEntities === "function") {
+            world.loadBlockEntities(chunk);
+        }
 
         return chunk;
     }

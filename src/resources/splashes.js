@@ -34,7 +34,8 @@ Made by SpinningCubes!
 RUNNNNNNNNNNNNNNNNNNNNNN!!!
 4 + 4 = 44!
 1 + 1 = 10!
-Breakmine.com!`.split('\n');
+Breakmine.com!
+Bluestone: by Stryck!`.split('\n');
 
     static generateSplash() {
         return this.SPLASHES[Math.floor(Math.random() * this.SPLASHES.length)];

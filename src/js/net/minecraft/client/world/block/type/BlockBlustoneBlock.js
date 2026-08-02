@@ -1,5 +1,6 @@
 import Block from "../Block.js";
 import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
+import BlockEntityBluestoneBlock from "../entity/BlockEntityBluestoneBlock.js";
 
 export default class BlockBluestoneBlock extends Block {
 
@@ -9,6 +10,12 @@ export default class BlockBluestoneBlock extends Block {
         this.hardness = 3.0;
         this.isPowerSource = true;
         this.inventoryTab = EnumCreativeInventoryTab.MACHINES;
+    }
+
+    hasBlockEntity() { return true; }
+
+    createBlockEntity(world, x, y, z) {
+        return new BlockEntityBluestoneBlock(world, x, y, z);
     }
 
     getTextureForFace(face, data, x, y, z, world) {
