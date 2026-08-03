@@ -25,6 +25,10 @@ export default class GameWindow {
         this.focusState = FocusStateType.EXITED;
         this.lastIngameSwitchTime = 0;
 
+        this.mobileTextInput = null;
+        this.mobileTextWidget = null;
+        this.mobileTextSuppressed = false;
+
         this.mobileDevice = this.detectTouchDevice();
 
         // Initialize canvas elements
@@ -528,12 +532,13 @@ export default class GameWindow {
 
         // 4. Camera Drag + Place/Break System + GUI Pass-Through
         let activeTouch = null;
-        let breakInterval = null;
+        let breakTimeout = null;
 
         this.registerListener(window, 'touchstart', event => {
             this.initialSoundEngine();
 
             if (this.minecraft.currentScreen !== null) {
+                this.mobileTextSuppressed = false;
                 for (let i = 0; i < event.changedTouches.length; i++) {
                     let touch = event.changedTouches[i];
                     if (touch.target.closest('#mobile-gui-close, #mobile-fullscreen')) continue;
@@ -546,6 +551,7 @@ export default class GameWindow {
                         0
                     );
                 }
+                this.syncMobileTextInput();
                 return;
             }
 
@@ -564,14 +570,14 @@ export default class GameWindow {
                         isBreaking: false,
                         isDragging: false
                     };
-                    this.mouseButtons[0] = true;
 
-                    breakInterval = setInterval(() => {
-                        if (activeTouch && (Date.now() - activeTouch.startTime) >= 300) {
+                    // Single break action after holding still for a moment (no repeat)
+                    breakTimeout = setTimeout(() => {
+                        if (activeTouch && !activeTouch.isDragging) {
                             activeTouch.isBreaking = true;
                             this.minecraft.onMouseClicked(0);
                         }
-                    }, 180);
+                    }, 300);
                 }
             }
         }, false);
@@ -603,6 +609,7 @@ export default class GameWindow {
                     if (totalDist > 15) {
                         if (!activeTouch.isDragging) {
                             activeTouch.isDragging = true;
+                            clearTimeout(breakTimeout);
                         }
                         this.mouseMotionX += dx * 3.2;
                         this.mouseMotionY += -dy * 3.2;
@@ -627,7 +634,7 @@ export default class GameWindow {
             for (let i = 0; i < event.changedTouches.length; i++) {
                 let touch = event.changedTouches[i];
                 if (activeTouch && touch.identifier === activeTouch.id) {
-                    clearInterval(breakInterval);
+                    clearTimeout(breakTimeout);
                     this.mouseButtons[0] = false;
                     if (!activeTouch.isDragging && !activeTouch.isBreaking && (Date.now() - activeTouch.startTime) < 300) {
                         this.minecraft.onMouseClicked(2);
@@ -649,6 +656,7 @@ export default class GameWindow {
                 if (this.minecraft.currentScreen === null) {
                     this.minecraft.onKeyPressed(keyCode);
                 }
+                this.syncMobileTextInput();
             }, { passive: false });
 
             btn.addEventListener('touchend', e => {
@@ -712,6 +720,98 @@ export default class GameWindow {
         if (this.guiCloseBtn) {
             this.guiCloseBtn.style.display = hasScreen ? 'flex' : 'none';
         }
+
+        this.syncMobileTextInput();
+    }
+
+    syncMobileTextInput() {
+        if (!this.mobileDevice) return;
+
+        const screen = this.minecraft.currentScreen;
+        let widget = null;
+        if (screen && screen.buttonList) {
+            for (const button of screen.buttonList) {
+                if (button && button.isFocused === true &&
+                    typeof button.setText === 'function' &&
+                    typeof button.getText === 'function') {
+                    widget = button;
+                    break;
+                }
+            }
+        }
+
+        if (!widget) {
+            if (this.mobileTextInput && document.activeElement === this.mobileTextInput) {
+                this.mobileTextInput.blur();
+            }
+            this.mobileTextWidget = null;
+            this.mobileTextSuppressed = false;
+            return;
+        }
+
+        const input = this.getMobileTextInput();
+
+        // Keep the native input value in sync with the widget on every frame
+        if (input.value !== widget.getText()) {
+            input.value = widget.getText();
+        }
+        if (input.maxLength !== (widget.maxLength || 32767)) {
+            input.maxLength = widget.maxLength || 32767;
+        }
+
+        // Re-focus only when the focused widget changes or the user taps a field
+        const shouldFocus = widget !== this.mobileTextWidget || this.mobileTextSuppressed === false;
+        this.mobileTextWidget = widget;
+
+        if (shouldFocus && document.activeElement !== input) {
+            const sf = this.scaleFactor || 1;
+            input.style.left = (widget.x * sf) + 'px';
+            input.style.top = (widget.y * sf) + 'px';
+            input.style.width = (widget.width * sf) + 'px';
+            input.style.height = (widget.height * sf) + 'px';
+            input.focus();
+        }
+    }
+
+    getMobileTextInput() {
+        if (this.mobileTextInput) return this.mobileTextInput;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.setAttribute('autocapitalize', 'off');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('spellcheck', 'false');
+        input.style.cssText = 'position:fixed;left:0;top:0;opacity:0;border:0;padding:0;margin:0;outline:none;background:transparent;color:transparent;caret-color:transparent;font-size:16px;z-index:10000;touch-action:none;';
+
+        input.addEventListener('input', () => {
+            const widget = this.mobileTextWidget;
+            if (widget && typeof widget.setText === 'function') {
+                widget.setText(input.value);
+            }
+        });
+
+        input.addEventListener('keydown', e => {
+            // Forward keys the game handles itself (native input handles text editing)
+            if (e.key !== 'Enter' && e.key !== 'Tab' && e.key !== 'Escape') return;
+            e.preventDefault();
+            const screen = this.minecraft.currentScreen;
+            if (screen && typeof screen.keyTyped === 'function') {
+                screen.keyTyped(e.code, e.key);
+            }
+            if (e.key === 'Escape' && document.activeElement === input) {
+                input.blur();
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            // Remember that the user dismissed the keyboard so we don't fight it
+            this.mobileTextSuppressed = true;
+        });
+
+        document.body.appendChild(input);
+        this.mobileTextInput = input;
+        return input;
     }
 
     updateWindowSize() {
