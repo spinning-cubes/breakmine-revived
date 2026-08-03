@@ -778,8 +778,12 @@ export default class GameWindow {
         let wrapperWidth = this.wrapper.offsetWidth;
         let wrapperHeight = this.wrapper.offsetHeight;
 
+        // On mobile, prefer the largest GUI scale so touch targets stay big
+        let minWidth = this.mobileDevice ? 240 : 320;
+        let minHeight = this.mobileDevice ? 160 : 240;
+
         let scale;
-        for (scale = 1; wrapperWidth / (scale + 1) >= 320 && wrapperHeight / (scale + 1) >= 240; scale++) {
+        for (scale = 1; wrapperWidth / (scale + 1) >= minWidth && wrapperHeight / (scale + 1) >= minHeight; scale++) {
             // Empty
         }
 

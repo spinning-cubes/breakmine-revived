@@ -183,6 +183,16 @@ export default class ModelRenderer {
             this.textureOffsetY + depth + height
         );
 
+        // Directional face shading (classic voxel model lighting).
+        // The model is built head-down and rendered with a negative Y scale,
+        // so the box's y-min face (polygons[2]) displays as the TOP.
+        polygons[0].shading = 0.6; // east
+        polygons[1].shading = 0.6; // west
+        polygons[2].shading = 1.0; // top (displays as top)
+        polygons[3].shading = 0.5; // bottom (displays as bottom)
+        polygons[4].shading = 0.8; // north
+        polygons[5].shading = 0.8; // south
+
         this.cubes.push(polygons);
 
         return this;

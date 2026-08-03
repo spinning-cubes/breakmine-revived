@@ -17,8 +17,8 @@ export default class GuiPlayerTexture {
         return canvas;
     }
 
-    static createSharpTexture(resources) {
-        const img = resources['char.png'];
+    static createSharpTexture(resources, sourceImage = null) {
+        const img = sourceImage || resources['char.png'];
         if (!img) return null;
 
         const canvas = GuiPlayerTexture.upscale(img, 4);

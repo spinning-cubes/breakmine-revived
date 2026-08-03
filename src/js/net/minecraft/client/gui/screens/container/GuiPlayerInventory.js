@@ -41,14 +41,25 @@ export default class GuiPlayerInventory extends GuiContainerSurvival {
         this.renderCanvas.width = cw;
         this.renderCanvas.height = ch;
 
+        this.previewTexture = null;
+        this.skinImage = null;
+        this.playerMeshes = [];
+
         try {
-            const tex = GuiPlayerTexture.createSharpTexture(this.minecraft.resources);
+            this.skinImage = this.getPlayerSkinImage();
+            const tex = GuiPlayerTexture.createSharpTexture(this.minecraft.resources, this.skinImage);
+            this.previewTexture = tex;
             if (tex) {
 
                 const t = new Tessellator();
                 t.setColor(1, 1, 1);
                 t.bindTexture(tex);
                 this.model.rebuild(t, this.modelGroup);
+                this.modelGroup.traverse(child => {
+                    if (child.isMesh) {
+                        this.playerMeshes.push(child);
+                    }
+                });
                 this.itemGroup = new THREE.Object3D();
                 this.model.rightArm.bone.add(this.itemGroup);
                 this.modelGroup.position.set(0, 8, 0);
@@ -86,9 +97,39 @@ export default class GuiPlayerInventory extends GuiContainerSurvival {
         }
     }
 
+    getPlayerSkinImage() {
+        const player = this.minecraft?.player;
+        const renderer = player?.renderer;
+        if (!renderer || typeof renderer.getTextureForEntity !== 'function') {
+            return null;
+        }
+        const texture = renderer.getTextureForEntity(player);
+        return texture && texture.image ? texture.image : null;
+    }
+
+    updatePlayerSkinPreview() {
+        const skinImage = this.getPlayerSkinImage();
+        if (skinImage === this.skinImage) return;
+        this.skinImage = skinImage;
+
+        const tex = GuiPlayerTexture.createSharpTexture(this.minecraft.resources, skinImage);
+        if (!tex) return;
+        if (this.previewTexture) this.previewTexture.dispose();
+        this.previewTexture = tex;
+
+        for (const mesh of this.playerMeshes) {
+            if (mesh.material) {
+                mesh.material.map = tex;
+                mesh.material.needsUpdate = true;
+            }
+        }
+    }
+
     renderPlayerPreview(stack, mouseX, mouseY, partialTicks) {
         const r = GuiPlayerInventory.rect;
         if (!r || !this.glRenderer) return;
+
+        this.updatePlayerSkinPreview();
 
         this.animTime = this.clock.getElapsedTime() * 20;
 

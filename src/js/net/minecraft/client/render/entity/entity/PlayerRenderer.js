@@ -56,6 +56,8 @@ export default class PlayerRenderer extends EntityRenderer {
             }
             if (renderer.lastEntity) {
                 renderer.rebuild(renderer.lastEntity);
+            } else {
+                renderer.group.buildMeta = undefined;
             }
         }
     }
@@ -100,6 +102,9 @@ export default class PlayerRenderer extends EntityRenderer {
                 this.skinTextures.set(username, texture);
                 this.pendingSkinLoads.delete(username);
 
+                // Force a rebuild so the skin applies immediately, even if the
+                // entity has not been rendered yet (e.g. local player in first person)
+                this.group.buildMeta = undefined;
                 if (this.lastEntity) {
                     this.rebuild(this.lastEntity);
                 }

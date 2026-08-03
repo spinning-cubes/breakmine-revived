@@ -15,6 +15,11 @@ export default class Tessellator {
         this.green = 0;
         this.blue = 0;
         this.alpha = 0;
+
+        this.baseRed = 0;
+        this.baseGreen = 0;
+        this.baseBlue = 0;
+        this.baseAlpha = 1;
     }
 
     bindTexture(texture) {
@@ -45,8 +50,24 @@ export default class Tessellator {
     }
 
     setColor(red, green, blue, alpha = 1) {
+        this.baseRed = red;
+        this.baseGreen = green;
+        this.baseBlue = blue;
+        this.baseAlpha = alpha;
         this.setColorRGB(red, green, blue);
         this.setAlpha(alpha);
+    }
+
+    // Apply a directional shading factor to the current base color.
+    // Unlike setColor, this does NOT replace the base color, so multiple
+    // polygons can shade independently without compounding.
+    setColorShaded(shading) {
+        this.setColorRGB(
+            this.baseRed * shading,
+            this.baseGreen * shading,
+            this.baseBlue * shading
+        );
+        this.setAlpha(this.baseAlpha);
     }
 
     multiplyColor(red, green, blue, alpha = 1) {

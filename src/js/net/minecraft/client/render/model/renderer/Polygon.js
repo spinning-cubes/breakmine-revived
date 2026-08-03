@@ -5,6 +5,7 @@ export default class Polygon {
     constructor(vertices, minU, minV, maxU, maxV, textureWidth, textureHeight) {
         this.vertices = vertices;
         this.vertexCount = vertices.length;
+        this.shading = 1.0;
 
         minU /= textureWidth;
         minV /= textureHeight;
@@ -23,6 +24,9 @@ export default class Polygon {
     }
 
     render(tessellator) {
+        // Apply directional face shading to the current base color
+        tessellator.setColorShaded(this.shading);
+
         // Render all vertices
         for (let i = 3; i >= 0; i--) {
             let vertex = this.vertices[i];
