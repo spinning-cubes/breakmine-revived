@@ -13,6 +13,7 @@ export default class CaveGenerator extends Generator {
         this.GRASS_ID = BlockRegistry.GRASS.getId();
         this.WATER_ID = BlockRegistry.WATER.getId();
         this.LAVA_ID = BlockRegistry.LAVA.getId();
+        this.SLIME_ID = BlockRegistry.SLIME.getId();
     }
 
     generateInChunk(originChunkX, originChunkZ, primer) {
@@ -27,6 +28,24 @@ export default class CaveGenerator extends Generator {
 
                 // Generate entire cave
                 this.generateCave(chunkX, chunkZ, originChunkX, originChunkZ, primer);
+            }
+        }
+
+        this.generateSlimeBlocks(originChunkX, originChunkZ, primer);
+    }
+
+    generateSlimeBlocks(chunkX, chunkZ, primer) {
+        this.setChunkSeed(chunkX, chunkZ);
+
+        const attempts = 48 + this.random.nextInt(48);
+        for (let i = 0; i < attempts; i++) {
+            let x = this.random.nextInt(16);
+            let y = 8 + this.random.nextInt(200);
+            let z = this.random.nextInt(16);
+
+            // Only replace stone
+            if (primer.get(x, y, z) === this.STONE_ID) {
+                primer.set(x, y, z, this.SLIME_ID);
             }
         }
     }

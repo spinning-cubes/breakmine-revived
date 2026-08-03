@@ -56,9 +56,9 @@ export default class ContainerCreative extends Container {
         this.dirty = true;
     }
 
-    onSlotClick(slot, player) {
+    onSlotClick(slot, player, mouseButton = 0) {
         if (slot.inventory instanceof InventoryPlayer) {
-            super.onSlotClick(slot, player);
+            super.onSlotClick(slot, player, mouseButton);
         } else {
             let inventoryPlayer = player.inventory;
             inventoryPlayer.itemInCursor = slot.inventory.getItemInSlot(slot.index);

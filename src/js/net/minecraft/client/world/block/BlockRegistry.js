@@ -62,6 +62,7 @@ import BlockBluestoneAdjustingLamp from "./type/BlockBluestoneAdjustingLamp.js";
 import BlockBluestoneBulb from "./type/BlockBluestoneBulb.js";
 import BlockBluestoneRod from "./type/BlockBluestoneRod.js";
 import BlockBluestoneRodPillar from "./type/BlockBluestoneRodPillar.js";
+import BlockSlime from "./type/BlockSlime.js";
 
 export class BlockRegistry {
 
@@ -225,6 +226,7 @@ export class BlockRegistry {
         BlockRegistry.EMERALD_ORE = new BlockStoneLike(30, 0, "emerald_ore", "Emerald Ore", 3.0, [89, 1], 'iron');
         BlockRegistry.SAPPHIRE_ORE = new BlockStoneLike(81, 0, "sapphire_ore", "Sapphire Ore");
         BlockRegistry.SAPPHIRE_BLOCK = new BlockStoneLike(82, 0, "sapphire_block", "Sapphire Block");
+        BlockRegistry.BLUESTONE_ORE = new BlockStoneLike(176, 0, "bluestone_ore", "Bluestone Ore", 3.0, [176, 1], 'iron');
 
         // --- FUNCTIONAL / MISC BLOCKS ---
         BlockRegistry.CRAFTING_TABLE = new BlockCraftingTable(31, 0);
@@ -302,6 +304,7 @@ export class BlockRegistry {
         BlockRegistry.BLUESTONE_OBSERVER = new BlockBluestoneObserver(169, 0, "bluestone_observer", "Bluestone Observer");  
         BlockRegistry.BLUESTONE_STICKY_PUSHER = new BlockBluestoneStickyPusher(170, 0, "bluestone_sticky_pusher", "Sticky Bluestone Pusher");
         BlockRegistry.BLUESTONE_STICKY_PUSHER_HEAD = new BlockBluestoneStickyPusherHead(171, 0, "bluestone_sticky_pusher_head", "Sticky Bluestone Pusher Head");
+        BlockRegistry.SLIME = new BlockSlime(177, 0, "slime_block_nontransparent", "Slime Block");
 
         for (const [key, val] of Object.entries(BlockRegistry)) {
             if (val && typeof val === "object" && val.id !== undefined) {

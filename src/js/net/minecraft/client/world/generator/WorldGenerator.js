@@ -30,6 +30,7 @@ export default class WorldGenerator extends Generator {
         this.DIAMOND_ORE_ID = BlockRegistry.DIAMOND_ORE.getId();
         this.EMERALD_ORE_ID = BlockRegistry.EMERALD_ORE.getId();
         this.SAPPHIRE_ORE_ID = BlockRegistry.SAPPHIRE_ORE.getId();
+        this.BLUESTONE_ORE_ID = BlockRegistry.BLUESTONE_ORE.getId();
 
         this.caveGenerator = new CaveGenerator(world, seed);
 
@@ -131,6 +132,7 @@ export default class WorldGenerator extends Generator {
         this.generateOreVein(primer, this.DIAMOND_ORE_ID, 8, 0, 16, 3);
         this.generateOreVein(primer, this.EMERALD_ORE_ID, 6, 156, 256, 2);
         this.generateOreVein(primer, this.SAPPHIRE_ORE_ID, 4, 0, 32, 2);
+        this.generateOreVein(primer, this.BLUESTONE_ORE_ID, 20, 0, 153, 24);
     }
 
     generateOreVein(primer, oreId, veinSize, minY, maxY, attempts) {

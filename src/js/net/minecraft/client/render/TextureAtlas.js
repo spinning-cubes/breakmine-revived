@@ -273,6 +273,8 @@ export default class TextureAtlas {
             "none.png",
             "sapphire_ore.png",
             "sapphire_block.png",
+            "bluestone_ore.png",
+            "slime_block_nontransparent.png",
             "wire.png",
             "stonebrick.png",
             "dark_stonebrick.png",

@@ -97,6 +97,7 @@ export default class CraftingRegistry {
         ])
         this.registerWoodRecipes();
         this.registerOreRecipes();
+        this.registerBluestoneRecipes();
         this.registerToolRecipes();
     }
 
@@ -144,6 +145,71 @@ export default class CraftingRegistry {
                 this.registerShapedRecipe(resultId, 1, pattern.width, pattern.height, shape);
             }
         }
+    }
+
+    static registerBluestoneRecipes() {
+        const DUST = BlockRegistry.BLUESTONE_DUST.id;
+        const BLOCK = BlockRegistry.BLUESTONE_BLOCK.id;
+        const LAMP = BlockRegistry.BLUESTONE_LAMP.id;
+        const ADJUSTING_LAMP = BlockRegistry.BLUESTONE_ADJUSTING_LAMP.id;
+        const BULB = BlockRegistry.BLUESTONE_BULB.id;
+        const ROD = BlockRegistry.BLUESTONE_ROD.id;
+        const PUSHER = BlockRegistry.BLUESTONE_PUSHER.id;
+        const STICKY_PUSHER = BlockRegistry.BLUESTONE_STICKY_PUSHER.id;
+        const REPEATER = BlockRegistry.BLUESTONE_REPEATER.id;
+        const OBSERVER = BlockRegistry.BLUESTONE_OBSERVER.id;
+        const ORE = BlockRegistry.BLUESTONE_ORE.id;
+        const GLASS = BlockRegistry.GLASS.id;
+        const WOOD = BlockRegistry.WOOD.id;
+        const COBBLE = BlockRegistry.COBBLE_STONE.id;
+        const STONE = BlockRegistry.STONE.id;
+        const IRON = BlockRegistry.ITEM_IRON.id;
+        const SLIME = BlockRegistry.SLIME.id;
+
+        this.registerShapelessRecipe(DUST, 6, [ORE]);
+
+        this.registerShapedRecipe(BLOCK, 1, 3, 3, [
+            DUST, DUST, DUST,
+            DUST, DUST, DUST,
+            DUST, DUST, DUST
+        ]);
+        this.registerShapelessRecipe(DUST, 9, [BLOCK]);
+
+        this.registerShapedRecipe(LAMP, 1, 3, 3, [
+            0, GLASS, 0,
+            GLASS, DUST, GLASS,
+            0, GLASS, 0
+        ]);
+
+        this.registerShapelessRecipe(ADJUSTING_LAMP, 1, [LAMP, REPEATER]);
+
+        this.registerShapedRecipe(BULB, 1, 3, 3, [
+            GLASS, GLASS, GLASS,
+            GLASS, DUST, GLASS,
+            GLASS, GLASS, GLASS
+        ]);
+
+        this.registerShapedRecipe(ROD, 4, 1, 2, [DUST, DUST]);
+
+        this.registerShapedRecipe(PUSHER, 1, 3, 3, [
+            WOOD, WOOD, WOOD,
+            COBBLE, DUST, COBBLE,
+            COBBLE, IRON, COBBLE
+        ]);
+
+        this.registerShapelessRecipe(STICKY_PUSHER, 1, [PUSHER, SLIME]);
+
+        this.registerShapedRecipe(REPEATER, 1, 3, 3, [
+            0, ROD, 0,
+            STONE, DUST, STONE,
+            STONE, STONE, STONE
+        ]);
+
+        this.registerShapedRecipe(OBSERVER, 1, 3, 3, [
+            COBBLE, COBBLE, COBBLE,
+            COBBLE, DUST, COBBLE,
+            COBBLE, COBBLE, COBBLE
+        ]);
     }
 
     static registerShapedRecipe(resultTypeId, resultCount = 1, width, height, shape) {

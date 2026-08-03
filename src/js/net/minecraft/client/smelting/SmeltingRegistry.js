@@ -27,6 +27,7 @@ export default class SmeltingRegistry {
         this.registerRecipe(new SmeltingRecipe(BlockRegistry.GOLD_ORE.id, BlockRegistry.ITEM_GOLD.id));
         this.registerRecipe(new SmeltingRecipe(BlockRegistry.SAND.id, BlockRegistry.GLASS.id));
         this.registerRecipe(new SmeltingRecipe(BlockRegistry.COBBLE_STONE.id, BlockRegistry.STONE.id));
+        this.registerRecipe(new SmeltingRecipe(BlockRegistry.BLUESTONE_ORE.id, BlockRegistry.BLUESTONE_DUST.id));
     }
 
     static registerAllFuels() {
