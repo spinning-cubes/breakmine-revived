@@ -202,8 +202,9 @@ function saveWorld() {
     // Write block changes
     for (const [coords, blockState] of worldChanges.entries()) {
         const [x, y, z] = coords.split(',').map(Number);
+        const clampedY = Math.max(0, Math.min(255, y));
         buffer.writeInt32BE(x, offset);
-        buffer.writeUInt8(y, offset + 4);
+        buffer.writeUInt8(clampedY, offset + 4);
         buffer.writeInt32BE(z, offset + 5);
         buffer.writeUInt16BE(blockState, offset + 9);
         offset += 11;
@@ -229,8 +230,15 @@ function saveWorld() {
 }
 
 function addWorldChange(x, y, z, blockId, metadata = 0) {
+    // The world file stores y as a single unsigned byte and chunk generation
+    // only covers y 0-255. Clamp so a block placed/teleported outside that
+    // range can never make saveWorld() throw ERR_OUT_OF_RANGE. X/Z are stored
+    // as int32, so clamp those too to survive super-far /tp coordinates.
+    const clampedY = Math.max(0, Math.min(255, y));
+    const clampedX = Math.max(-2147483648, Math.min(2147483647, x));
+    const clampedZ = Math.max(-2147483648, Math.min(2147483647, z));
     const blockState = (blockId << 4) | (metadata & 0xF);
-    worldChanges.set(`${x},${y},${z}`, blockState);
+    worldChanges.set(`${clampedX},${clampedY},${clampedZ}`, blockState);
 }
 
 function getWorldChanges() {

@@ -20,6 +20,9 @@ export default class Tessellator {
         this.baseGreen = 0;
         this.baseBlue = 0;
         this.baseAlpha = 1;
+
+        this.rotationPivot = null;
+        this.rotationFace = null;
     }
 
     bindTexture(texture) {
@@ -31,6 +34,7 @@ export default class Tessellator {
         this.vertices = [];
         this.uv = [];
         this.colors = [];
+        this.clearRotation();
     }
 
     // TODO: Use in the game for better FPS
@@ -41,6 +45,9 @@ export default class Tessellator {
     setRenderingPass(isTransparent) {
         this.material.transparent = isTransparent;
         this.material.depthWrite = !isTransparent;
+        // Reset cutout each pass; blocks that need it (e.g. embedded dust
+        // rendered inside a solid lever) opt back in while drawing.
+        this.material.alphaTest = 0;
     }
 
     setColorRGB(red, green, blue) {
@@ -84,6 +91,14 @@ export default class Tessellator {
     addVertex(x, y, z) {
         this.addedVertices++;
 
+        // Apply the active block-model rotation before pushing the vertex
+        if (this.rotationPivot !== null) {
+            let rotated = this.rotate(x, y, z);
+            x = rotated[0];
+            y = rotated[1];
+            z = rotated[2];
+        }
+
         // Add vertex
         this.vertices.push(x);
         this.vertices.push(y);
@@ -94,6 +109,58 @@ export default class Tessellator {
         this.colors.push(this.green);
         this.colors.push(this.blue);
         this.colors.push(this.alpha);
+    }
+
+    // Rotate a model so it mounts on one of the six block faces. The model is
+    // authored in "floor" orientation (base against the -Y face, handle
+    // pointing +Y); with a pivot at the block center, rotating around it keeps
+    // the base flush against the selected face.
+    setRotation(pivotX, pivotY, pivotZ, faceIndex) {
+        this.rotationPivot = [pivotX, pivotY, pivotZ];
+        this.rotationFace = faceIndex;
+    }
+
+    clearRotation() {
+        this.rotationPivot = null;
+        this.rotationFace = null;
+    }
+
+    // Rotate a vertex around the active pivot. faceIndex maps to the face the
+    // model is mounted on:
+    //   0 = floor   (base -Y, handle +Y)
+    //   1 = ceiling (base +Y, handle -Y)
+    //   2 = north   (base -Z, handle +Z)
+    //   3 = south   (base +Z, handle -Z)
+    //   4 = west    (base -X, handle +X)
+    //   5 = east    (base +X, handle -X)
+    rotate(x, y, z) {
+        let dx = x - this.rotationPivot[0];
+        let dy = y - this.rotationPivot[1];
+        let dz = z - this.rotationPivot[2];
+
+        let rx, ry, rz;
+        switch (this.rotationFace) {
+            case 1:
+                rx = dx; ry = -dy; rz = -dz;
+                break;
+            case 2:
+                rx = dx; ry = -dz; rz = dy;
+                break;
+            case 3:
+                rx = dx; ry = dz; rz = -dy;
+                break;
+            case 4:
+                rx = dy; ry = -dx; rz = dz;
+                break;
+            case 5:
+                rx = -dy; ry = dx; rz = dz;
+                break;
+            default:
+                rx = dx; ry = dy; rz = dz;
+                break;
+        }
+
+        return [rx + this.rotationPivot[0], ry + this.rotationPivot[1], rz + this.rotationPivot[2]];
     }
 
     addVertexWithUV(x, y, z, u, v) {

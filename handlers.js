@@ -1,4 +1,4 @@
-const { readVarInt, readString, broadcast } = require('./protocol');
+const { readVarInt, readString, broadcast, ensureReadable, MalformedPacketError } = require('./protocol');
 const { addPlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState } = require('./players');
 const { addWorldChange, saveWorld, getBlockAt, getAllBlockInventoriesState } = require('./world');
 const { addItemEntity, removeItemEntity, getItemEntity } = require('./entities');
@@ -65,23 +65,50 @@ function readPosition(buffer, offset) {
 }
 
 function handlePacket(player, buffer) {
-    let offset = 0;
-    const [length, lenBytes] = readVarInt(buffer, offset);
-    offset += lenBytes;
-    const [packetId, idBytes] = readVarInt(buffer, offset);
-    offset += idBytes;
-
-    if (player.protocolState === 'handshake') {
-        handleHandshakePacket(player, packetId, buffer, offset);
+    if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
         return;
     }
 
-    if (player.protocolState === 'login') {
-        handleLoginPacket(player, packetId, buffer, offset);
-        return;
-    }
+    try {
+        let offset = 0;
+        const [length, lenBytes] = readVarInt(buffer, offset);
+        offset += lenBytes;
 
-    handlePlayPacket(player, packetId, buffer, offset);
+        // The declared packet length must not exceed the bytes actually
+        // present, otherwise subsequent reads would run off the end.
+        if (length < 1 || length + lenBytes > buffer.length) {
+            throw new MalformedPacketError('Packet length mismatch');
+        }
+
+        const [packetId, idBytes] = readVarInt(buffer, offset);
+        offset += idBytes;
+
+        if (player.protocolState === 'handshake') {
+            handleHandshakePacket(player, packetId, buffer, offset);
+            return;
+        }
+
+        if (player.protocolState === 'login') {
+            handleLoginPacket(player, packetId, buffer, offset);
+            return;
+        }
+
+        handlePlayPacket(player, packetId, buffer, offset);
+    } catch (err) {
+        const who = player.username || 'unknown';
+        if (err instanceof MalformedPacketError) {
+            log.warn('Server', `Rejected malformed packet from ${who}: ${err.message}`);
+        } else {
+            log.error('Server', `Error handling packet from ${who}: ${err.message}`);
+        }
+        try {
+            if (player.ws && player.ws.readyState === 1) {
+                player.ws.close();
+            }
+        } catch (e) {
+            // Ignore errors while closing the broken connection.
+        }
+    }
 }
 
 function handleHandshakePacket(player, packetId, buffer, offset) {
@@ -90,6 +117,7 @@ function handleHandshakePacket(player, packetId, buffer, offset) {
     offset += verBytes;
     [addr, addrBytes] = readString(buffer, offset);
     offset += addrBytes;
+    ensureReadable(buffer, offset, 2);
     port = buffer.readUInt16BE(offset);
     offset += 2;
     [state, stateBytes] = readVarInt(buffer, offset);
@@ -123,6 +151,17 @@ function handleHandshakePacket(player, packetId, buffer, offset) {
 function handleLoginPacket(player, packetId, buffer, offset) {
     if (packetId === 0x00) {
         const [username, bytesConsumed] = readString(buffer, offset);
+
+        // Reject absurdly long names up front so downstream fixed-size packet
+        // writers can never run off the end of their buffers.
+        if (!username || username.length > 32) {
+            log.info('Server', `Rejected login with invalid username length`);
+            if (player.ws.readyState === 1) {
+                player.ws.send(createDisconnectPacket('§cInvalid username.'));
+                player.ws.close();
+            }
+            return;
+        }
 
         player.username = username;
 
@@ -278,6 +317,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
         }
 
         case 0x04: { // Player Position
+            ensureReadable(buffer, offset, 25);
             player.x = buffer.readDoubleBE(offset);
             player.y = buffer.readDoubleBE(offset + 8);
             player.z = buffer.readDoubleBE(offset + 16);
@@ -288,6 +328,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
         }
 
         case 0x05: { // Player Look
+            ensureReadable(buffer, offset, 9);
             player.yaw = buffer.readFloatBE(offset);
             player.pitch = buffer.readFloatBE(offset + 4);
             player.onGround = buffer.readUInt8(offset + 8) === 1;
@@ -296,6 +337,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
         }
 
         case 0x06: { // Player Position And Look
+            ensureReadable(buffer, offset, 33);
             player.x = buffer.readDoubleBE(offset);
             player.y = buffer.readDoubleBE(offset + 8);
             player.z = buffer.readDoubleBE(offset + 16);
@@ -324,6 +366,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
 
         case 0x0B: { // Entity Action (Player State)
             const [entityId, eidBytes] = readVarInt(buffer, offset);
+            ensureReadable(buffer, offset + eidBytes, 1);
             const state = buffer.readUInt8(offset + eidBytes);
             const [jumpBoost, boostBytes] = readVarInt(buffer, offset + eidBytes + 1);
 
@@ -360,6 +403,7 @@ function handlePlayPacket(player, packetId, buffer, offset) {
 
 
 function handlePlayerDigging(player, buffer, offset) {
+    ensureReadable(buffer, offset, 10);
     const status = buffer.readUInt8(offset); // 0: Started, 1: Cancelled, 2: Finished
     const [x, y, z] = readPosition(buffer, offset + 1);
     const face = buffer.readUInt8(offset + 9);
@@ -406,11 +450,12 @@ function handlePlayerDigging(player, buffer, offset) {
 }
 
 function handleUpdateSignText(player, buffer, offset) {
+    ensureReadable(buffer, offset, 8);
     const [x, y, z] = readPosition(buffer, offset);
     const [rawText, textBytes] = readString(buffer, offset + 8);
 
     // Clean text using the bad-words library
-    const text = filter.clean(rawText);
+    const text = filter.clean(rawText).substring(0, 200);
 
     log.info('Server', `Sign text update: ${x},${y},${z} = "${text}"`);
 
@@ -431,6 +476,7 @@ function handleUpdateSignText(player, buffer, offset) {
 }
 
 function handleBlockPlacement(player, buffer, offset) {
+    ensureReadable(buffer, offset, 11);
     const [x, y, z] = readPosition(buffer, offset);
     const direction = buffer.readUInt8(offset + 8);
 
@@ -549,6 +595,9 @@ function handleBlockPlacement(player, buffer, offset) {
             let dirIndex = Math.floor((yaw * 4 / 360) + 0.5) & 3;
             // Direction stored in bits 1-2 (0: SOUTH, 1: WEST, 2: NORTH, 3: EAST)
             metadata = dirIndex << 1;
+        } else if (blockId === 178) { // Bluestone Lever
+            // Mounted face (opposite of the clicked face) stored in bits 1-3
+            metadata = ([1, 0, 3, 2, 5, 4][direction] ?? 0) << 1;
         }
 
         addWorldChange(placeX, placeY, placeZ, blockId, metadata);
@@ -625,6 +674,7 @@ function broadcastAnimation(player) {
 }
 
 function handleDropItem(player, buffer, offset) {
+    ensureReadable(buffer, offset, 2);
     const blockId = buffer.readInt16BE(offset);
 
     // Calculate spawn position slightly in front of player

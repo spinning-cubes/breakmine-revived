@@ -297,7 +297,7 @@ function handleWorld(player, args) {
 
 function sendChatMessageToPlayer(player, message) {
     const chatJson = JSON.stringify({ text: message });
-    const chatData = Buffer.alloc(Buffer.byteLength(chatJson) + 5);
+    const chatData = Buffer.alloc(Buffer.byteLength(chatJson) + 6);
     let offset = 0;
     offset += writeString(chatData, chatJson, offset);
     chatData.writeUInt8(0, offset);

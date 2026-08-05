@@ -24,18 +24,23 @@ serverWorld.seedScheduledTicks(getWorldChanges());
 
 // Start server tick loop for block ticking and world time synchronization
 setInterval(() => {
-    serverWorld.onTick();
-    tickWorldTime();
+    try {
+        serverWorld.onTick();
+        tickWorldTime();
 
-    const furnaces = tickAllFurnaces(getBlockInventories());
-    broadcastFurnaceChanges(getPlayers(), furnaces);
+        const furnaces = tickAllFurnaces(getBlockInventories());
+        broadcastFurnaceChanges(getPlayers(), furnaces);
 
-    const worldTime = getWorldTime();
-    const players = getPlayers();
-    for (const player of players.values()) {
-        if (player.ws.readyState === 1) {
-            sendTimeUpdate(player, worldTime);
+        const worldTime = getWorldTime();
+        const players = getPlayers();
+        for (const player of players.values()) {
+            if (player.ws.readyState === 1) {
+                sendTimeUpdate(player, worldTime);
+            }
         }
+    } catch (e) {
+        // A single bad tick must never take down the whole server.
+        log.error('Server', 'Error during server tick: ' + e.message);
     }
 }, 1000 / 20); // Tick every 1/20th second
 
@@ -98,23 +103,23 @@ wss.on('connection', (ws) => {
     };
 
     ws.on('message', (message, isBinary) => {
-        if (isBinary) {
-            handlePacket(player, message);
-            return;
-        }
-
-        const text = message.toString('utf8');
-        if (text === 'ping' || text === 'status') {
-            const payload = {
-                type: 'status',
-                players: getPlayerCount(),
-                maxPlayers: 35
-            };
-            ws.send(JSON.stringify(payload));
-            return;
-        }
-
         try {
+            if (isBinary) {
+                handlePacket(player, message);
+                return;
+            }
+
+            const text = message.toString('utf8');
+            if (text === 'ping' || text === 'status') {
+                const payload = {
+                    type: 'status',
+                    players: getPlayerCount(),
+                    maxPlayers: 35
+                };
+                ws.send(JSON.stringify(payload));
+                return;
+            }
+
             const payload = JSON.parse(text);
             if (payload && payload.type === 'inventory') {
                 player.inventory = normalizeInventoryState(payload.inventory);
@@ -144,8 +149,16 @@ wss.on('connection', (ws) => {
                 }
             }
         } catch (err) {
-            // Ignore non-JSON text messages.
+            // Malformed packets and non-JSON text messages are handled here so
+            // a single bad connection can never crash the whole server.
+            log.warn('Server', 'Rejected bad message from client: ' + (err && err.message));
         }
+    });
+
+    // Abrupt disconnects emit 'error' on the socket; without a listener that
+    // unhandled 'error' event would crash the entire server process.
+    ws.on('error', () => {
+        // The 'close' handler does the actual cleanup.
     });
 
     ws.on('close', () => {

@@ -15,6 +15,11 @@ export default class World {
 
     static TOTAL_HEIGHT = ChunkSection.SIZE * 16; // 256 blocks high (Y 0..255)
 
+    // Small separation kept between an entity and a block face so the entity's
+    // box never becomes exactly flush with a block edge, which lets a diagonal
+    // move slip through the corner of a block.
+    static COLLISION_EPSILON = 0.001;
+
     constructor(minecraft) {
         this.minecraft = minecraft;
 
@@ -202,7 +207,7 @@ export default class World {
                         return null;
                     }
 
-                    return new BoundingBox(
+                    let bb = new BoundingBox(
                         x + bbox.minX,
                         y + bbox.minY,
                         z + bbox.minZ,
@@ -210,12 +215,16 @@ export default class World {
                         y + bbox.maxY,
                         z + bbox.maxZ
                     );
+                    bb.epsilon = World.COLLISION_EPSILON;
+                    return bb;
                 }).filter((box) => box !== null);
             }
         }
 
         if (block.isSolid()) {
-            return [new BoundingBox(x, y, z, x + 1, y + 1, z + 1)];
+            let bb = new BoundingBox(x, y, z, x + 1, y + 1, z + 1);
+            bb.epsilon = World.COLLISION_EPSILON;
+            return [bb];
         }
 
         // Liquids have no collision
@@ -226,20 +235,24 @@ export default class World {
         // Check for blocks with custom collision bounding box
         let collisionBb = block.getCollisionBoundingBox(this, x, y, z);
         if (collisionBb) {
-            return [new BoundingBox(
+            let bb = new BoundingBox(
                 x + collisionBb.minX,
                 y + collisionBb.minY,
                 z + collisionBb.minZ,
                 x + collisionBb.maxX,
                 y + collisionBb.maxY,
                 z + collisionBb.maxZ
-            )];
+            );
+            bb.epsilon = World.COLLISION_EPSILON;
+            return [bb];
         }
 
         // Legacy half-block check for blocks that override isHalf()
         // Only reached if getCollisionBoundingBox returned null
         if (this.isHalfBlockAt(x, y, z)) {
-            return [new BoundingBox(x, y, z, x + 1, y + 0.5, z + 1)];
+            let bb = new BoundingBox(x, y, z, x + 1, y + 0.5, z + 1);
+            bb.epsilon = World.COLLISION_EPSILON;
+            return [bb];
         }
 
         return [];

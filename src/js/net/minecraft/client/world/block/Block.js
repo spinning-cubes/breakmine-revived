@@ -35,6 +35,10 @@ export default class Block {
         this.noFaceCull = false;
         this.multipart = false;
 
+        // Optional array of sub-block parts (same format as getMultipart) to
+        // render inside this block after its own shape.
+        this.renderInside = null;
+
         this.inventoryTab = EnumCreativeInventoryTab.BUILDING_BLOCKS;
 
         this.mod = "Breakmine";

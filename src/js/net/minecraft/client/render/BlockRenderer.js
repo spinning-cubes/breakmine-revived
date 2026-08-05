@@ -28,36 +28,38 @@ export default class BlockRenderer {
     renderBlock(world, block, ambientOcclusion, x, y, z) {
         if (block.path) {
             this.renderPath(world, block, ambientOcclusion, x, y, z);
-            return;
         } else if (block.multipart === true) {
             this.renderMultipart(world, block, x, y, z);
-            return;
-        }
-
-        if (block) {
+        } else if (block?.lever === true) {
+            this.renderLever(world, block, x, y, z);
+        } else if (block) {
             // Pass 'this' (the BlockRenderer / WorldRenderer instance) to onRender
             const customRenderHandled = block.onRender(world, x, y, z, this);
 
             // If onRender returns true, skip standard block rendering
-            if (customRenderHandled) {
-                return; 
+            if (!customRenderHandled) {
+                switch (block.getRenderType()) {
+                    case BlockRenderType.ITEM:
+                    case (block?.renderAsItemInInventory === true && !world):
+                        this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
+                        break;
+                    case BlockRenderType.BLOCK:
+                        this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
+                        break;
+                    case BlockRenderType.TORCH:
+                        this.renderTorch(world, block, x, y, z);
+                        break;
+                    case BlockRenderType.SIGN:
+                        this.renderSign(world, block, x, y, z);
+                        break;
+                }
             }
         }
 
-        switch (block.getRenderType()) {
-            case BlockRenderType.ITEM:
-            case (block?.renderAsItemInInventory === true && !world):
-                this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
-                break;
-            case BlockRenderType.BLOCK:
-                this.renderSolidBlock(world, block, ambientOcclusion, x, y, z);
-                break;
-            case BlockRenderType.TORCH:
-                this.renderTorch(world, block, x, y, z);
-                break;
-            case BlockRenderType.SIGN:
-                this.renderSign(world, block, x, y, z);
-                break;
+        // Render blocks declared inside this block (e.g. dust inside a lever).
+        // The lever renders its inner parts itself so they rotate with it.
+        if (block && Array.isArray(block.renderInside) && block.lever !== true) {
+            this.renderParts(world, block.renderInside, x, y, z);
         }
     }
 
@@ -109,26 +111,50 @@ export default class BlockRenderer {
         }
     };
 
+    static DummyBlockTopFace = class extends Block {
+        constructor(id, texId, texName, texNameTop) {
+            super(id, texId);
+            this.inventoryTab = EnumCreativeInventoryTab.NOTLISTED;
+            this.texName = texName;
+            this.texNameTop = texNameTop;
+        }
+        
+        getTextureForFace(face) {
+            if (face === EnumBlockFace.TOP) {
+                return this.texNameTop;
+            }
+            return this.texName;
+        }
+    };
+
     renderMultipart(world, block, x, y, z) {
-        const gotMultipart = block.getMultipart(world, x, y, z);
-        for (let i = 0; i < gotMultipart.length; i++) {
+        this.renderParts(world, block.getMultipart(world, x, y, z), x, y, z);
+    }
+
+    renderParts(world, parts, x, y, z, respectFaces = false) {
+        if (!Array.isArray(parts)) return;
+
+        for (let i = 0; i < parts.length; i++) {
             let partBlock = null;
             let bbox = null;
             
-            if (gotMultipart[i][0] === 'block') {
-                partBlock = Block.getById(gotMultipart[i][1]);
-                bbox = gotMultipart[i][2];
-            } else if (gotMultipart[i][0] === 'blockClass') {
-                partBlock = gotMultipart[i][2]['block'];
-                bbox = gotMultipart[i][2]['bbox'];
-            } else if (gotMultipart[i][0] === 'texture') {
-                partBlock = new this.constructor.DummyBlock(999, 0, gotMultipart[i][2]['texture']);
-                bbox = gotMultipart[i][2]['bbox'];
+            if (parts[i][0] === 'block') {
+                partBlock = Block.getById(parts[i][1]);
+                bbox = parts[i][2];
+            } else if (parts[i][0] === 'blockClass') {
+                partBlock = parts[i][2]['block'];
+                bbox = parts[i][2]['bbox'];
+            } else if (parts[i][0] === 'texture') {
+                partBlock = new this.constructor.DummyBlock(999, 0, parts[i][2]['texture']);
+                bbox = parts[i][2]['bbox'];
             }
             
             if (partBlock && bbox) {
                 let values = EnumBlockFace.values();
                 for (let j = 0; j < values.length; j++) {
+                    if (respectFaces && partBlock.shouldRenderFace(world, x, y, z, values[j]) === false) {
+                        continue;
+                    }
                     this.renderFace(world, partBlock, bbox, values[j], false, x, y, z);
                 }
             }
@@ -335,7 +361,7 @@ export default class BlockRenderer {
     }
 
     getEffectiveLightLevel(world, x, y, z) {
-        if (world === null) return 15;
+        if (!world) return 15;
         
         let typeId = world.getBlockAt(x, y, z);
         let block = !typeId ? null : Block.getById(typeId);
@@ -363,7 +389,7 @@ export default class BlockRenderer {
     }
 
     getAverageLightLevelAt(world, x, y, z) {
-        if (world === null) {
+        if (!world) {
             return 15;
         }
 
@@ -486,6 +512,121 @@ export default class BlockRenderer {
         this.addFace(world, EnumBlockFace.TOP, false, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV + 8 / 256);
     }
 
+    renderLever(world, block, x, y, z) {
+        let chunkX = x >> 4;
+        let chunkY = y >> 4;
+        let chunkZ = z >> 4;
+
+        // Rotate the floor-authored lever model so its base sits flush against
+        // the face it was mounted on (block data bits 1-3).
+        let faceIndex = 0;
+        if (world != null) {
+            const data = world.getBlockDataAt(x, y, z) || 0;
+            faceIndex = (data >> 1) & 7;
+        }
+        this.tessellator.setRotation(
+            x + 0.5 - (chunkX << 4),
+            y + 0.5 - (chunkY << 4),
+            z + 0.5 - (chunkZ << 4),
+            faceIndex
+        );
+
+        this.renderFakeBlockWithBlockClass(world, new this.constructor.DummyBlockTopFace(998, 4, 'cobblestone', 'cobblestone_lever_base'), true, x, y, z, (1/16)*4, 0.0, (1/16)*5, (1/16)*12, (1/16)*3, (1/16)*11);
+        let size = 1 / 16;
+        let distortX2 = 0;
+        let distortZ2 = 0;
+        if (world != null) {
+            // Tilt the handle based on the powered state (block data bit 0).
+            // Off = leaning one way, on = leaning the other way.
+            const data = world.getBlockDataAt(x, y, z) || 0;
+            switch (data & 1) {
+                case 0:
+                    distortX2 = -0.2;
+                    break;
+                case 1:
+                    distortX2 = 0.2;
+                    break;
+            }
+        }
+        let centerX = 0.5;
+        let centerZ = 0.5;
+        let minX = x + centerX - size;
+        let minY = y;
+        let minZ = z + centerZ - size;
+        let maxX = x + centerX + size;
+        let maxY = y + 10 / 16;
+        let maxZ = z + centerZ + size;
+
+        // Outmost two corners dropped by 2/16 based on tilt direction
+        let topYMinX = distortX2 < 0 ? maxY - (.75 / 16) : maxY;
+        let topYMaxX = distortX2 >= 0 ? maxY - (.75 / 16) : maxY;
+
+        let uvs = this.worldRenderer.textureAtlas.getUVs("lever");
+        let uOffset = 7 / 16;
+        let vOffset = 6 / 16;
+        let uSize = 2 / 16;
+        let vSize = 10 / 16;
+
+        let minU = uvs.minU + uOffset * (uvs.maxU - uvs.minU);
+        let minV = uvs.minV + vOffset * (uvs.maxV - uvs.minV);
+        let maxU = minU + uSize * (uvs.maxU - uvs.minU);
+        let maxV = minV + vSize * (uvs.maxV - uvs.minV);
+
+        minV = 1 - minV;
+        maxV = 1 - maxV;
+        this.tessellator.setColor(1, 1, 1);
+        
+        // Add lever handle faces to tessellator second
+        this.addLeverFace(world, EnumBlockFace.NORTH, true, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX2, distortZ2, topYMinX, topYMaxX);
+        this.addLeverFace(world, EnumBlockFace.EAST, true, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX2, distortZ2, topYMinX, topYMaxX);
+        this.addLeverFace(world, EnumBlockFace.SOUTH, true, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX2, distortZ2, topYMinX, topYMaxX);
+        this.addLeverFace(world, EnumBlockFace.WEST, true, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX2, distortZ2, topYMinX, topYMaxX);
+        
+        // Top Face with custom corner Y values
+        this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, minX + distortX2, topYMinX, maxZ + distortZ2, minU, maxV + 8 / 256);
+        this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, minX + distortX2, topYMinX, minZ + distortZ2, minU, minV);
+        this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, maxX + distortX2, topYMaxX, minZ + distortZ2, maxU, minV);
+        this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, maxX + distortX2, topYMaxX, maxZ + distortZ2, maxU, maxV + 8 / 256);
+
+        // Render embedded blocks (e.g. bluestone dust) so they rotate with the
+        // lever. Enable cutout so the dust's transparent texture pixels don't
+        // render black in the solid pass (alphaTest persists until the mesh is
+        // drawn at the end of the pass).
+        if (Array.isArray(block.renderInside)) {
+            this.tessellator.material.alphaTest = 0.5;
+            this.renderParts(world, block.renderInside, x, y, z, true);
+        }
+
+        this.tessellator.clearRotation();
+    }
+
+    addLeverFace(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX, distortZ, topYMinX = maxY, topYMaxX = maxY) {
+        if (face === EnumBlockFace.NORTH) {
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX + distortX, topYMinX, minZ + distortZ, minU, minV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, minU, maxV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, minZ, maxU, maxV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX + distortX, topYMaxX, minZ + distortZ, maxU, minV);
+        }
+        if (face === EnumBlockFace.SOUTH) {
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX + distortX, topYMinX, maxZ + distortZ, maxU, minV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX + distortX, topYMaxX, maxZ + distortZ, minU, minV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, maxZ, minU, maxV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, maxZ, maxU, maxV);
+        }
+        if (face === EnumBlockFace.WEST) {
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, maxZ, minU, maxV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxU, maxV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX + distortX, topYMinX, minZ, maxU, minV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX + distortX, topYMinX, maxZ, minU, minV);
+        }
+        if (face === EnumBlockFace.EAST) {
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX + distortX, topYMaxX, maxZ + distortZ, maxU, minV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX + distortX, topYMaxX, minZ + distortZ, minU, minV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, minZ, minU, maxV);
+            this.addBlockCorner(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, maxX, minY, maxZ, maxU, maxV);
+        }
+    }
+
     renderSign(world, block, x, y, z) {
         const data = world ? world.getBlockDataAt(x, y, z) : 0;
         const xAxis = data & 1;
@@ -577,7 +718,7 @@ export default class BlockRenderer {
         // Render block by type
         if (block) {
             // Pass 'this' (the BlockRenderer / WorldRenderer instance) to onRender
-            const customRenderHandled = block.onRender(false, 0, 0, 0, this);
+            const customRenderHandled = block.onRender(null, 0, 0, 0, this);
 
             // If onRender returns true, skip standard block rendering
             if (customRenderHandled) {

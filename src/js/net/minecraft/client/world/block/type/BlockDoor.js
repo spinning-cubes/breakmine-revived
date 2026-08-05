@@ -157,10 +157,10 @@ export default class BlockDoor extends Block {
             const block = Block.getById(blockId);
             if (!block) continue;
 
-            if (block.isPowerSource) return true;
-
             if (typeof block.getPower === 'function') {
                 if (block.getPower(world, nx, ny, nz) > 0) return true;
+            } else if (block.isPowerSource) {
+                return true;
             }
         }
 

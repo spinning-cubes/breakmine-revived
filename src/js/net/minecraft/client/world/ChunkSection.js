@@ -57,11 +57,29 @@ export default class ChunkSection {
                 else if (side === 'down')  { x = a; y = 0; z = b; }
                 else if (side === 'up')    { x = a; y = 15; z = b; }
 
-                const block = this.getBlockAt(x, y, z);
-                if (!block || (block && Block.getById(block)?.isTranslucent())) return false;
+                const typeId = this.getBlockAt(x, y, z);
+                if (typeId === 0) return false;
+
+                const block = Block.getById(typeId);
+                if (block === null || !this.isOpaqueFullCube(block, x, y, z)) return false;
             }
         }
         return true;
+    }
+
+    isOpaqueFullCube(block, x, y, z) {
+        if (!block.isSolid() || block.isTranslucent()) return false;
+        if (block.multipart || block.noFaceCull || block.path) return false;
+        if (block.getOpacity() < 1) return false;
+
+        const wx = (this.x << 4) + x;
+        const wy = (this.y << 4) + y;
+        const wz = (this.z << 4) + z;
+        const bbox = block.getBoundingBox(this.world, wx, wy, wz);
+        if (bbox === null) return false;
+
+        return bbox.minX <= 0 && bbox.minY <= 0 && bbox.minZ <= 0 &&
+               bbox.maxX >= 1 && bbox.maxY >= 1 && bbox.maxZ >= 1;
     }
 
     rebuild(renderer) {

@@ -63,6 +63,8 @@ import BlockBluestoneBulb from "./type/BlockBluestoneBulb.js";
 import BlockBluestoneRod from "./type/BlockBluestoneRod.js";
 import BlockBluestoneRodPillar from "./type/BlockBluestoneRodPillar.js";
 import BlockSlime from "./type/BlockSlime.js";
+import BlockBluestoneLever from "./type/BlockBluestoneLever.js";
+import BlockBluestoneLeverDust from "./type/BlockBluestoneLeverDust.js";
 
 export class BlockRegistry {
 
@@ -305,6 +307,8 @@ export class BlockRegistry {
         BlockRegistry.BLUESTONE_STICKY_PUSHER = new BlockBluestoneStickyPusher(170, 0, "bluestone_sticky_pusher", "Sticky Bluestone Pusher");
         BlockRegistry.BLUESTONE_STICKY_PUSHER_HEAD = new BlockBluestoneStickyPusherHead(171, 0, "bluestone_sticky_pusher_head", "Sticky Bluestone Pusher Head");
         BlockRegistry.SLIME = new BlockSlime(177, 0, "slime_block_nontransparent", "Slime Block");
+        BlockRegistry.BLUESTONE_LEVER_DUST = new BlockBluestoneLeverDust(179, 0, "bluestone_lever_dust", "Bluestone Lever");
+        BlockRegistry.BLUESTONE_LEVER = new BlockBluestoneLever(178, 0, "bluestone_lever", "Bluestone Lever");
 
         for (const [key, val] of Object.entries(BlockRegistry)) {
             if (val && typeof val === "object" && val.id !== undefined) {

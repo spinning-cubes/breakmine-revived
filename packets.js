@@ -1,24 +1,26 @@
 const zlib = require('zlib');
-const { makePacket, writeVarInt, writeString, broadcast } = require('./protocol');
+const { makePacket, writeVarInt, writeString, broadcast, varIntSize } = require('./protocol');
 const { getPlayers, getPlayerCount } = require('./players');
 const { getWorldChanges, generateFlatChunkColumn } = require('./world');
 
 function createDisconnectPacket(reason) {
     const message = JSON.stringify({ text: reason || 'Disconnected from server' });
-    const data = Buffer.alloc(Buffer.byteLength(message) + 5);
+    const data = Buffer.alloc(Buffer.byteLength(message) + 6);
     let offset = 0;
     offset += writeString(data, message, offset);
     return makePacket(0x00, data.subarray(0, offset));
 }
 
 function sendLoginSuccess(player) {
-    const data = Buffer.alloc(80);
-    let offset = 0;
-    
+    const username = String(player.username || '');
     const mockUUID = "00000000-0000-0000-0000-000000000002";
+    // varint(username len, max 5) + username + varint(uuid len) + uuid
+    const data = Buffer.alloc(5 + Buffer.byteLength(username) + 5 + mockUUID.length);
+    let offset = 0;
+
     offset += writeString(data, mockUUID, offset);
-    offset += writeString(data, player.username, offset);
-    
+    offset += writeString(data, username, offset);
+
     player.ws.send(makePacket(0x02, data.subarray(0, offset)));
 }
 
@@ -157,7 +159,8 @@ function sendBlockChange(ws, x, y, z, blockState) {
 }
 
 function sendSignTextUpdate(ws, x, y, z, text) {
-    const data = Buffer.alloc(256);
+    const str = String(text || '');
+    const data = Buffer.alloc(8 + 5 + Buffer.byteLength(str));
     let offset = 0;
 
     // Protocol 47: Pack position as 64-bit long
@@ -174,7 +177,7 @@ function sendSignTextUpdate(ws, x, y, z, text) {
 
 function sendChatMessage(text) {
     const chatJson = JSON.stringify({ text });
-    const chatData = Buffer.alloc(Buffer.byteLength(chatJson) + 5);
+    const chatData = Buffer.alloc(Buffer.byteLength(chatJson) + 6);
     let offset = 0;
     offset += writeString(chatData, chatJson, offset);
     chatData.writeUInt8(0, offset); offset += 1;
@@ -183,7 +186,10 @@ function sendChatMessage(text) {
 }
 
 function createSpawnPlayerPacket(target) {
-    const data = Buffer.alloc(128); // Increased buffer size
+    const username = String(target.username || '');
+    // varint(eid, max 5) + uuid(16) + position/rotation(16) + metadata(1)
+    // + username string (varint max 5 + bytes) + metadata terminator(1)
+    const data = Buffer.alloc(5 + 16 + 16 + 1 + 5 + Buffer.byteLength(username) + 1);
     let offset = 0;
     offset += writeVarInt(data, target.eid, offset);
 
@@ -192,9 +198,9 @@ function createSpawnPlayerPacket(target) {
     uuid.copy(data, offset);
     offset += 16;
 
-    data.writeInt32BE(Math.floor(target.x * 32), offset);
-    data.writeInt32BE(Math.floor(target.y * 32), offset + 4);
-    data.writeInt32BE(Math.floor(target.z * 32), offset + 8);
+    data.writeInt32BE(packFixedPoint(target.x), offset);
+    data.writeInt32BE(packFixedPoint(target.y), offset + 4);
+    data.writeInt32BE(packFixedPoint(target.z), offset + 8);
     const yaw = ((target.yaw % 360) + 360) % 360;
     const pitch = ((target.pitch % 360) + 360) % 360;
     data.writeUInt8(Math.floor(yaw * 256 / 360), offset + 12);
@@ -205,7 +211,7 @@ function createSpawnPlayerPacket(target) {
     // Add metadata with username (index 2, type 4 = string)
     data.writeUInt8((4 << 5) | 2, offset); // Type 4 (string) | Index 2
     offset += 1;
-    offset += writeString(data, target.username, offset);
+    offset += writeString(data, username, offset);
     data.writeUInt8(127, offset); // Metadata terminator
     offset += 1;
 
@@ -213,13 +219,13 @@ function createSpawnPlayerPacket(target) {
 }
 
 function createEntityTeleportPacket(target) {
-    const data = Buffer.alloc(19);
+    const data = Buffer.alloc(5 + 15); // varint(eid, max 5) + 12 bytes pos + 3 bytes yaw/pitch/onGround
     // Capture the exact number of bytes written by writeVarInt
     let offset = writeVarInt(data, target.eid, 0); 
     
-    data.writeInt32BE(Math.floor(target.x * 32), offset);
-    data.writeInt32BE(Math.floor(target.y * 32), offset + 4);
-    data.writeInt32BE(Math.floor(target.z * 32), offset + 8);
+    data.writeInt32BE(packFixedPoint(target.x), offset);
+    data.writeInt32BE(packFixedPoint(target.y), offset + 4);
+    data.writeInt32BE(packFixedPoint(target.z), offset + 8);
     
     const yaw = ((target.yaw % 360) + 360) % 360;
     const pitch = ((target.pitch % 360) + 360) % 360;
@@ -267,15 +273,23 @@ function createAnimationPacket(player) {
     return makePacket(0x0B, data.subarray(0, offset));
 }
 
+function packFixedPoint(value) {
+    if (!isFinite(value)) return 0;
+    const scaled = Math.floor(value * 32);
+    if (scaled > 2147483647) return 2147483647;
+    if (scaled < -2147483648) return -2147483648;
+    return scaled;
+}
+
 function createSpawnObjectPacket(entity) {
     const data = Buffer.alloc(64);
     let offset = 0;
 
     offset += writeVarInt(data, entity.id, offset);
     data.writeUInt8(entity.type, offset); offset += 1;  // Object type (1 = Item)
-    data.writeInt32BE(Math.floor(entity.x * 32), offset); offset += 4;
-    data.writeInt32BE(Math.floor(entity.y * 32), offset); offset += 4;
-    data.writeInt32BE(Math.floor(entity.z * 32), offset); offset += 4;
+    data.writeInt32BE(packFixedPoint(entity.x), offset); offset += 4;
+    data.writeInt32BE(packFixedPoint(entity.y), offset); offset += 4;
+    data.writeInt32BE(packFixedPoint(entity.z), offset); offset += 4;
     data.writeUInt8(0, offset); offset += 1;  // Pitch
     data.writeUInt8(0, offset); offset += 1;  // Yaw
     data.writeInt32BE(entity.blockId, offset); offset += 4;  // Object data (blockId for items)
@@ -287,7 +301,31 @@ function createSpawnObjectPacket(entity) {
 }
 
 function sendPlayerListEntry(players, action = 0) {
-    const data = Buffer.alloc(1024);
+    // Size the buffer from the actual data instead of a fixed cap so long
+    // usernames / many players can never overrun it.
+    let dataSize = varIntSize(action) + varIntSize(players.length);
+    for (const player of players) {
+        dataSize += 16; // UUID
+        switch (action) {
+            case 0: // ADD_PLAYER
+                dataSize += varIntSize(Buffer.byteLength(player.username || '')) + Buffer.byteLength(player.username || '');
+                dataSize += varIntSize(0) + varIntSize(player.gamemode ?? 1) + varIntSize(0) + 1;
+                break;
+            case 1: // UPDATE_GAMEMODE
+                dataSize += varIntSize(player.gamemode ?? 1);
+                break;
+            case 2: // UPDATE_LATENCY
+                dataSize += varIntSize(0);
+                break;
+            case 3: // UPDATE_DISPLAY_NAME
+                dataSize += 1;
+                break;
+            case 4: // REMOVE_PLAYER
+                break;
+        }
+    }
+
+    const data = Buffer.alloc(dataSize);
     let offset = 0;
 
     offset += writeVarInt(data, action, offset);  // Action

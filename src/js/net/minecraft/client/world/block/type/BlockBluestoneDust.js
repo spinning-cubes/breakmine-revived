@@ -44,7 +44,14 @@ export default class BlockBluestoneDust extends Block {
     }
 
     shouldRenderFace(world, x, y, z, face) {
-        return face === EnumBlockFace.TOP;
+        if (face === EnumBlockFace.TOP) return true;
+        // The dust is a thin slab resting on the block below; its bottom face
+        // only exists when there is no block underneath (otherwise it would
+        // z-fight with the coplanar face of the block below).
+        if (face === EnumBlockFace.BOTTOM) {
+            return !world || world.getBlockAtFace(x, y, z, face) === 0;
+        }
+        return false;
     }
 
     getTextureForFace(face, data, x, y, z, world) {

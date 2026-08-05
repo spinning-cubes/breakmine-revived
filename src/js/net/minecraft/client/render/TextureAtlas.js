@@ -315,7 +315,9 @@ export default class TextureAtlas {
             "oak_planks_green.png",
             "oak_planks_sticky.png",
             "bluestoneRepeaterTopOff.png",
-            "bluestoneRepeaterTopOn.png"
+            "bluestoneRepeaterTopOn.png",
+            "lever.png",
+            "cobblestone_lever_base.png"
         ];
 
         const toolTextureNames = [];
