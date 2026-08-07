@@ -1,8 +1,8 @@
 import Minecraft from './net/minecraft/client/Minecraft.js';
 import * as aesjs from '../../libraries/aes.js';
 import MixinEngine from './net/minecraft/client/mixin/MixinEngine.js';
+import { base64Assets } from '../resources.js';
 
-// Handle unhandled promise rejections globally
 window.addEventListener('unhandledrejection', event => {
     event.preventDefault();
 });
@@ -11,21 +11,32 @@ class Start {
 
     loadTextures(textures) {
         let resources = [];
-        let index = 0;
 
-        return textures.reduce((currentPromise, texturePath) => {
-            return currentPromise.then(() => {
-                return new Promise((resolve, reject) => {
-                    // Load texture
-                    let image = new Image();
-                    image.src = "src/resources/" + texturePath;
-                    image.onload = () => resolve();
+        return Promise.all(textures.map((texturePath) => {
+            return new Promise((resolve) => {
+                let image = new Image();
+                
+                const base64Data = base64Assets[texturePath];
+
+                if (base64Data) {
+                    image.src = base64Data;
+                } else {
+                    console.warn(`Missing Base64 asset for: ${texturePath}`);
+                    resolve();
+                    return;
+                }
+
+                image.onload = () => {
                     resources[texturePath] = image;
+                    resolve();
+                };
 
-                    index++;
-                });
+                image.onerror = () => {
+                    console.warn(`Failed to decode Base64 texture: ${texturePath}`);
+                    resolve();
+                };
             });
-        }, Promise.resolve()).then(() => {
+        })).then(() => {
             return resources;
         });
     }
@@ -80,21 +91,17 @@ class Start {
             "gui/scrollbar.png",
             "gui/tabs.png",
         ]).then((resources) => {
-            // Launch actual game on canvas
             window.app = new Minecraft(canvasWrapperId, resources);
         });
     }
 }
 
-// Listen on history back
 window.addEventListener('pageshow', function (event) {
     if (window.app) {
-        // Reload page to restart the game
         if (!window.app.running) {
             window.location.reload();
         }
     } else {
-        // Launch game
         new Start().launch("canvas-container");
     }
 });

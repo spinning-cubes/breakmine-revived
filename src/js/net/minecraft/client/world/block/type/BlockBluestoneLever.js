@@ -13,9 +13,6 @@ export default class BlockBluestoneLever extends Block {
         this.noFaceCull = true;
         this.inventoryTab = EnumCreativeInventoryTab.NOTLISTED;
 
-        // Render a flat bluestone dust layer embedded in the lever's base so
-        // wires can visually connect to it. renderLever draws this after the
-        // body with cutout enabled (dust id 179 = BLUESTONE_LEVER_DUST).
         this.renderInside = [
             ["block", 179, new BoundingBox(0, 0, 0, 1, 1 / 16, 1)]
         ];
@@ -29,16 +26,10 @@ export default class BlockBluestoneLever extends Block {
         return this.isPowered(world, x, y, z) ? 15 : 0;
     }
 
-    // Block data bits: bit 0 = powered, bits 1-3 = face the lever is mounted
-    // on (0=floor, 1=ceiling, 2=north wall, 3=south wall, 4=west wall,
-    // 5=east wall).
     static getMountedFace(data) {
         return ((data || 0) >> 1) & 7;
     }
 
-    // The face the lever attaches to is the opposite of the face that was
-    // clicked when placing it (placing against a block's top mounts the lever
-    // on the floor of the block above it, etc.).
     static getMountedFaceFromClickedFace(face) {
         if (face.y === -1) return 1; // clicked bottom -> ceiling mount
         if (face.y === 1) return 0;  // clicked top -> floor mount

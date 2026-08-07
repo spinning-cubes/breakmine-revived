@@ -197,9 +197,13 @@ export default class BlockDoor extends Block {
     }
 
     onBlockAdded(world, x, y, z) {
-        if (this.id === DOOR_BOTTOM) {
-            world.scheduleBlockTick(x, y, z, 1);
-        }
+        // Intentionally a no-op (base class). Do NOT schedule a self-tick here:
+        // setBlockDataAt() routes through Chunk.setBlockAt(), which fires
+        // onBlockAdded on every data change — including the manual toggle in
+        // onMouseButton(). A self-tick would re-run updateState() and
+        // immediately close an unpowered door that was just opened by hand.
+        // Initial power checks on placement and power-source changes are
+        // handled via onNeighborBlockChange().
     }
 
     onNeighborBlockChange(world, x, y, z) {
