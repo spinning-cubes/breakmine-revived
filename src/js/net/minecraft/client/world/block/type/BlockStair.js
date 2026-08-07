@@ -23,11 +23,11 @@ export default class BlockStair extends Block {
     }
 
     getAmbientOcclusion() {
-        return false;
+        return true;
     }
 
     canCastAmbientOcclusion() {
-        return false;
+        return true;
     }
 
     getTextureForFace(face, data) {

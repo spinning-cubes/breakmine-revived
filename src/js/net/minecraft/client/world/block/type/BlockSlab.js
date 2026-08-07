@@ -48,7 +48,7 @@ export default class BlockSlab extends Block {
     }
 
     canCastAmbientOcclusion() {
-        return false;
+        return true;
     }
 
     getAmbientOcclusion() {

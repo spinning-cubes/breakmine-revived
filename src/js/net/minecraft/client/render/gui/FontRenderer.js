@@ -84,76 +84,6 @@ export default class FontRenderer {
         this.drawStringRaw(stack, string, x, y, color, false, "8", noColor);
     }
 
-    drawStringRaw(stack, string, x, y, color = -1, isShadow = false, size = "8", noColor = true) {
-        if (typeof string !== "string") string = String(string ?? "");
-        stack.save();
-
-        this.setColor(stack, color, isShadow);
-
-        let currentX = x;
-        let localX = x;
-        let wordBuffer = '';
-
-        const drawSegment = () => {
-            if (wordBuffer.length > 0) {
-                for (let i = 0; i < wordBuffer.length; i++) {
-                    let character = wordBuffer[i];
-                    let index = FontRenderer.CHAR_INDEX_LOOKUP.indexOf(character);
-                    let code = character.charCodeAt(0);
-                    let textureOffsetX = index % FontRenderer.BITMAP_SIZE * FontRenderer.FIELD_SIZE;
-                    let textureOffsetY = Math.floor(index / FontRenderer.BITMAP_SIZE) * FontRenderer.FIELD_SIZE;
-                    Gui.drawSpriteRGB(
-                        stack,
-                        this.texture,
-                        textureOffsetX, textureOffsetY,
-                        FontRenderer.FIELD_SIZE, FontRenderer.FIELD_SIZE,
-                        Math.floor(localX), Math.floor(y),
-                        FontRenderer.FIELD_SIZE, FontRenderer.FIELD_SIZE,
-                        this.r,
-                        this.g,
-                        this.b,
-                        1.0 
-                    );
-                    localX += this.charWidths[code];
-                }
-
-                wordBuffer = '';
-            }
-        };
-
-        for (let i = 0; i < string.length; i++) {
-            let character = string[i];
-
-            if (character === FontRenderer.COLOR_PREFIX && i < string.length - 1) {
-                let colorCodeChar = string[i + 1];
-
-                if (colorCodeChar === FontRenderer.COLOR_PREFIX) {
-                    wordBuffer += FontRenderer.COLOR_PREFIX;
-                    i += 1;
-                    continue;
-                }
-
-                drawSegment();
-
-                let newColor = this.getColorOfCharacter(colorCodeChar);
-
-                if (noColor === false) {
-                    this.setColor(stack, newColor, isShadow);
-                } else if (colorCodeChar === 'r' || colorCodeChar === 'R') {
-                    this.setColor(stack, color, isShadow);
-                }
-
-                i += 1;
-                continue;
-            }
-            wordBuffer += character;
-        }
-
-        drawSegment();
-
-        stack.restore();
-    }
-
     getColorOfCharacter(character) {
         const char = character.toLowerCase();
         if (char === 'r') {
@@ -168,21 +98,145 @@ export default class FontRenderer {
         return -1;
     }
 
+    drawStringRaw(stack, string, x, y, color = -1, isShadow = false, size = "8", noColor = true) {
+        if (typeof string !== "string") string = String(string ?? "");
+        stack.save();
+
+        this.setColor(stack, color, isShadow);
+
+        let localX = x;
+        let bold = false;
+        let italic = false;
+        let underline = false;
+
+        let solidIndex = FontRenderer.CHAR_INDEX_LOOKUP.indexOf('\u2588');
+        if (solidIndex === -1) solidIndex = 0;
+        let solidU = (solidIndex % FontRenderer.BITMAP_SIZE) * FontRenderer.FIELD_SIZE;
+        let solidV = Math.floor(solidIndex / FontRenderer.BITMAP_SIZE) * FontRenderer.FIELD_SIZE;
+
+        for (let i = 0; i < string.length; i++) {
+            let character = string[i];
+
+            if (character === FontRenderer.COLOR_PREFIX && i < string.length - 1) {
+                let codeChar = string[i + 1].toLowerCase();
+
+                if (string[i + 1] === FontRenderer.COLOR_PREFIX) {
+                    character = FontRenderer.COLOR_PREFIX;
+                    i++;
+                } else {
+                    if (codeChar === 'l') {
+                        bold = true;
+                    } else if (codeChar === 'o') {
+                        italic = true;
+                    } else if (codeChar === 'n') {
+                        underline = true;
+                    } else if (codeChar === 'r') {
+                        bold = false;
+                        italic = false;
+                        underline = false;
+                        this.setColor(stack, color, isShadow);
+                    } else {
+                        let newColor = this.getColorOfCharacter(codeChar);
+                        if (newColor !== -1) {
+                            if (noColor === false) {
+                                this.setColor(stack, newColor, isShadow);
+                            }
+                            bold = false;
+                            italic = false;
+                            underline = false;
+                        }
+                    }
+                    i++;
+                    continue;
+                }
+            }
+
+            let index = FontRenderer.CHAR_INDEX_LOOKUP.indexOf(character);
+            let code = character.charCodeAt(0);
+            let charWidth = this.charWidths[code] || 2;
+
+            if (index !== -1) {
+                let textureOffsetX = (index % FontRenderer.BITMAP_SIZE) * FontRenderer.FIELD_SIZE;
+                let textureOffsetY = Math.floor(index / FontRenderer.BITMAP_SIZE) * FontRenderer.FIELD_SIZE;
+
+                const drawGlyphAt = (offsetX) => {
+                    if (italic) {
+                        // Slices character into 2px high strips, shifting 1px right every 2px up
+                        for (let row = 0; row < FontRenderer.FIELD_SIZE; row += 2) {
+                            let shift = Math.floor((FontRenderer.FIELD_SIZE - 2 - row) / 2);
+                            Gui.drawSpriteRGB(
+                                stack, this.texture,
+                                textureOffsetX, textureOffsetY + row,
+                                FontRenderer.FIELD_SIZE, 2,
+                                Math.floor(localX + offsetX + shift), Math.floor(y + row),
+                                FontRenderer.FIELD_SIZE, 2,
+                                this.r, this.g, this.b, 1.0
+                            );
+                        }
+                    } else {
+                        Gui.drawSpriteRGB(
+                            stack, this.texture,
+                            textureOffsetX, textureOffsetY,
+                            FontRenderer.FIELD_SIZE, FontRenderer.FIELD_SIZE,
+                            Math.floor(localX + offsetX), Math.floor(y),
+                            FontRenderer.FIELD_SIZE, FontRenderer.FIELD_SIZE,
+                            this.r, this.g, this.b, 1.0
+                        );
+                    }
+                };
+
+                drawGlyphAt(0);
+
+                if (bold) {
+                    drawGlyphAt(1);
+                }
+
+                if (underline) {
+                    let totalWidth = charWidth + (bold ? 1 : 0);
+                    Gui.drawSpriteRGB(
+                        stack, this.texture,
+                        solidU, solidV,
+                        FontRenderer.FIELD_SIZE, FontRenderer.FIELD_SIZE,
+                        Math.floor(localX), Math.floor(y + FontRenderer.FONT_HEIGHT + 1),
+                        totalWidth, 1,
+                        this.r, this.g, this.b, 1.0
+                    );
+                }
+            }
+
+            localX += charWidth + (bold ? 1 : 0);
+        }
+
+        stack.restore();
+    }
+
     getStringWidth(stack, string) {
+        if (typeof stack === "string" && string === undefined) {
+            string = stack;
+        }
+        if (typeof string !== "string") string = String(string ?? "");
         let length = 0;
+        let bold = false;
 
         for (let i = 0; i < string.length; i++) {
             if (string[i] === FontRenderer.COLOR_PREFIX && i < string.length - 1) {
+                let codeChar = string[i + 1].toLowerCase();
+
                 if (string[i + 1] === FontRenderer.COLOR_PREFIX) {
                     let code = string[i].charCodeAt(0);
-                    length += this.charWidths[code];
+                    length += (this.charWidths[code] || 2) + (bold ? 1 : 0);
                     i++;
                 } else {
+                    if (codeChar === 'l') {
+                        bold = true;
+                    } else if (codeChar === 'r' || this.getColorOfCharacter(codeChar) !== -1) {
+                        bold = false;
+                    }
                     i++;
                 }
             } else {
                 let code = string[i].charCodeAt(0);
-                length += this.charWidths[code];
+                length += (this.charWidths[code] || 2) + (bold ? 1 : 0);
             }
         }
         return length;
@@ -242,21 +296,29 @@ export default class FontRenderer {
         let currentWidth = 0;
         let i = 0;
         let length = text.length;
+        let bold = false;
 
         while (i < length) {
             let char = text[i];
             
             if (char === FontRenderer.COLOR_PREFIX && i + 1 < length) {
+                let codeChar = text[i + 1].toLowerCase();
+
                 if (text[i + 1] === FontRenderer.COLOR_PREFIX) {
                     let code = char.charCodeAt(0);
-                    currentWidth += this.charWidths[code] || 0;
+                    currentWidth += (this.charWidths[code] || 0) + (bold ? 1 : 0);
                     i++;
                 } else {
+                    if (codeChar === 'l') {
+                        bold = true;
+                    } else if (codeChar === 'r' || this.getColorOfCharacter(codeChar) !== -1) {
+                        bold = false;
+                    }
                     i++;
                 }
             } else {
                 let code = char.charCodeAt(0);
-                currentWidth += this.charWidths[code] || 0;
+                currentWidth += (this.charWidths[code] || 0) + (bold ? 1 : 0);
             }
 
             if (currentWidth > width) {
