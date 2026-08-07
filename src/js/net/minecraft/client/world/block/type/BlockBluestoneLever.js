@@ -11,7 +11,7 @@ export default class BlockBluestoneLever extends Block {
         this.isPowerSource = true;
         this.lever = true;
         this.noFaceCull = true;
-        this.inventoryTab = EnumCreativeInventoryTab.MACHINES;
+        this.inventoryTab = EnumCreativeInventoryTab.NOTLISTED;
 
         // Render a flat bluestone dust layer embedded in the lever's base so
         // wires can visually connect to it. renderLever draws this after the

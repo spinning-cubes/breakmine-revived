@@ -1543,7 +1543,7 @@ export default class Minecraft {
                         y = hitResult.y + hitResult.face.y;
                         z = hitResult.z + hitResult.face.z;
                     }
-                    Block.getById(heldItem.getType()).onUse(this.world, x, y, z, heldItem);
+                    Block.getById(heldItem.getType()).onUse(this.world, x, y, z, heldItem, hitResult.face);
                     return;
                 }
 

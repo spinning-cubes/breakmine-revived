@@ -165,7 +165,7 @@ export default class Block {
         return false;
     }
     
-    onUse(world, x, y, z, itemstack) {
+    onUse(world, x, y, z, itemstack, hitFace) {
         //
     }
 

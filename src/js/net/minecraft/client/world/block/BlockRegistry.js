@@ -65,6 +65,8 @@ import BlockBluestoneRodPillar from "./type/BlockBluestoneRodPillar.js";
 import BlockSlime from "./type/BlockSlime.js";
 import BlockBluestoneLever from "./type/BlockBluestoneLever.js";
 import BlockBluestoneLeverDust from "./type/BlockBluestoneLeverDust.js";
+import ItemBluestoneLeverPlacer from "./type/ItemBluestoneLeverPlacer.js";
+import ItemBluestoneDustPlacer from "./type/ItemBluestoneDustPlacer.js";
 
 export class BlockRegistry {
 
@@ -294,6 +296,7 @@ export class BlockRegistry {
         BlockRegistry.ITEM_BUCKET_LAVA = new ItemBucketLava(120, 'lava_bucket', 'Lava Bucket');
 
         BlockRegistry.BLUESTONE_DUST = new BlockBluestoneDust(163, 0, "bluestone_dust", "Bluestone Dust");
+        BlockRegistry.ITEM_BLUESTONE_DUST_PLACER = new ItemBluestoneDustPlacer(181, 0, "Bluestone Dust");
         BlockRegistry.BLUESTONE_LAMP = new BlockBluestoneLamp(164, 0, "bluestone_lamp", "Bluestone Lamp");
         BlockRegistry.BLUESTONE_ADJUSTING_LAMP = new BlockBluestoneAdjustingLamp(172, 0, "bluestone_adjusting_lamp", "Adjustable Bluestone Lamp");
         BlockRegistry.BLUESTONE_BULB = new BlockBluestoneBulb(173, 0, "bluestone_bulb", "Bluestone Bulb");
@@ -309,6 +312,7 @@ export class BlockRegistry {
         BlockRegistry.SLIME = new BlockSlime(177, 0, "slime_block_nontransparent", "Slime Block");
         BlockRegistry.BLUESTONE_LEVER_DUST = new BlockBluestoneLeverDust(179, 0, "bluestone_lever_dust", "Bluestone Lever");
         BlockRegistry.BLUESTONE_LEVER = new BlockBluestoneLever(178, 0, "bluestone_lever", "Bluestone Lever");
+        BlockRegistry.ITEM_BLUESTONE_LEVER_PLACER = new ItemBluestoneLeverPlacer(180, 0, "Bluestone Lever");
 
         for (const [key, val] of Object.entries(BlockRegistry)) {
             if (val && typeof val === "object" && val.id !== undefined) {
