@@ -1,5 +1,6 @@
 import Block from "../world/block/Block.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
+import { base64Assets } from "../../../../../resources.js";
 
 export default class SoundManager {
 
@@ -11,7 +12,12 @@ export default class SoundManager {
 
         // Preload click sound
         this.clickReady = false;
-        this.clickAudio = new Audio('src/resources/sound/random/click.ogg');
+        const clickAssetKey = 'sound/random/click.ogg';
+        const clickSrc = (typeof base64Assets !== 'undefined' && base64Assets[clickAssetKey])
+            ? base64Assets[clickAssetKey]
+            : 'src/resources/sound/random/click.ogg';
+
+        this.clickAudio = new Audio(clickSrc);
         this.clickAudio.addEventListener('canplaythrough', () => {
             this.clickReady = true;
         }, { once: true });
@@ -47,25 +53,35 @@ export default class SoundManager {
         // Load all sounds into pool
         let path = name.replace(".", "/");
         for (let i = 0; i < amount; i++) {
+            const assetKey = `sound/${path}${i + 1}.ogg`;
+            const soundPath = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
+                ? base64Assets[assetKey]
+                : `src/resources/sound/${path}${i + 1}.ogg`;
+
             try {
-                let sound = this.loadSound('src/resources/sound/' + path + (i + 1) + '.ogg');
+                let sound = this.loadSound(soundPath);
                 if (sound) {
                     pool.push(sound);
                 }
             } catch (e) {
-                console.warn('Skipping sound file:', path + (i + 1), e);
+                console.warn('Skipping sound file:', assetKey, e);
             }
         }
 
         // Fallback to unnumbered file if no numbered variants loaded
         if (pool.length === 0) {
+            const assetKey = `sound/${path}.ogg`;
+            const soundPath = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
+                ? base64Assets[assetKey]
+                : `src/resources/sound/${path}.ogg`;
+
             try {
-                let sound = this.loadSound('src/resources/sound/' + path + '.ogg');
+                let sound = this.loadSound(soundPath);
                 if (sound) {
                     pool.push(sound);
                 }
             } catch (e) {
-                console.warn('Skipping sound file:', path, e);
+                console.warn('Skipping sound file:', assetKey, e);
             }
         }
 
@@ -111,8 +127,6 @@ export default class SoundManager {
     }
 
     playSound(name, x, y, z, volume, pitch) {
-        //console.log(name, x, y, z, volume, pitch);
-        
         let pool = this.soundPool[name];
 
         if (typeof pool === "undefined") {
@@ -178,24 +192,26 @@ export default class SoundManager {
 
     playSoundMono(name, volume = 1.0, pitch = 1.0, dontUseRandom = false) {
         let path = name.replace(".", "/");
-        
+        let soundSrc = null;
+
         if (!dontUseRandom) {
             // Try random numbered variant (1-5)
             let randomVariant = Math.floor(Math.random() * 5) + 1;
-            try {
-                let audio = new Audio('src/resources/sound/' + path + randomVariant + '.ogg');
-                audio.volume = volume;
-                audio.playbackRate = pitch;
-                audio.play();
-                return;
-            } catch (e) {
-                // Fallback to unnumbered file
-            }
+            let assetKey = `sound/${path}${randomVariant}.ogg`;
+            soundSrc = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
+                ? base64Assets[assetKey]
+                : `src/resources/sound/${path}${randomVariant}.ogg`;
         }
-        
-        // Fallback to unnumbered file
+
+        if (!soundSrc) {
+            let assetKey = `sound/${path}.ogg`;
+            soundSrc = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
+                ? base64Assets[assetKey]
+                : `src/resources/sound/${path}.ogg`;
+        }
+
         try {
-            let audio = new Audio('src/resources/sound/' + path + '.ogg');
+            let audio = new Audio(soundSrc);
             audio.volume = volume;
             audio.playbackRate = pitch;
             audio.play();

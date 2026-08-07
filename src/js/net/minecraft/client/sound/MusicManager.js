@@ -1,3 +1,5 @@
+import { base64Assets } from "../../../../../resources.js";
+
 export default class MusicManager {
 
     constructor() {
@@ -15,7 +17,7 @@ export default class MusicManager {
         this.netherTracks = [];
         this.endTracks = [];
 
-        this.volume = 0.0; //for Martwix-Game :p
+        this.volume = 0.0;
         this.fadeTime = 2000;
         this.gapTime = 5000;
 
@@ -23,8 +25,13 @@ export default class MusicManager {
     }
 
     loadTracks() {
-        const load = (path) => {
-            const audio = new Audio(path);
+        const load = (relativePath) => {
+            const assetKey = relativePath.replace(/^src\/resources\//, '');
+            const src = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
+                ? base64Assets[assetKey]
+                : relativePath;
+
+            const audio = new Audio(src);
             audio.volume = 0;
             audio.preload = 'auto';
             return audio;
