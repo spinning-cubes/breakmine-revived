@@ -6,3 +6,4 @@ jars/*
 players/*
 data/*
 package-lock.json
+src/resources.js
