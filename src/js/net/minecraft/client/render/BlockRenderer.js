@@ -231,30 +231,34 @@ export default class BlockRenderer {
         let height = boundingBox.maxY - boundingBox.minY;
         let depth = boundingBox.maxZ - boundingBox.minZ;
 
+        // UV span of a single full texture tile, derived from the bound texture's own size
+        let uSpan = maxU - minU;
+        let vSpan = maxV - minV;
+
         switch (face) {
             case EnumBlockFace.BOTTOM:
             case EnumBlockFace.TOP:
-                maxU = minU + (16 / 256 * width);
-                maxV = minV + (16 / 256 * depth);
+                maxU = minU + (uSpan * width);
+                maxV = minV + (vSpan * depth);
                 break;
             case EnumBlockFace.NORTH:
             case EnumBlockFace.SOUTH:
-                maxU = minU + (16 / 256 * width);
-                maxV = minV + (16 / 256 * height);
+                maxU = minU + (uSpan * width);
+                maxV = minV + (vSpan * height);
                 
                 if (height < 1.0 && block?.topAlign !== true) {
-                    let vOffset = (16 / 256) * (1.0 - height);
+                    let vOffset = vSpan * (1.0 - height);
                     minV += vOffset;
                     maxV += vOffset;
                 }
                 break;
             case EnumBlockFace.WEST:
             case EnumBlockFace.EAST:
-                maxU = minU + (16 / 256 * depth);
-                maxV = minV + (16 / 256 * height);
+                maxU = minU + (uSpan * depth);
+                maxV = minV + (vSpan * height);
 
                 if (height < 1.0 && block?.topAlign !== true) {
-                    let vOffset = (16 / 256) * (1.0 - height);
+                    let vOffset = vSpan * (1.0 - height);
                     minV += vOffset;
                     maxV += vOffset;
                 }
@@ -509,7 +513,8 @@ export default class BlockRenderer {
         this.addDistortFace(world, EnumBlockFace.EAST, false, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX, distortZ);
         this.addDistortFace(world, EnumBlockFace.SOUTH, false, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX, distortZ);
         this.addDistortFace(world, EnumBlockFace.WEST, false, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX, distortZ);
-        this.addFace(world, EnumBlockFace.TOP, false, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV + 8 / 256);
+        let atlasSize = this.worldRenderer.textureAtlas ? this.worldRenderer.textureAtlas.atlasSize : 256;
+        this.addFace(world, EnumBlockFace.TOP, false, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV + 8 / atlasSize);
     }
 
     renderLever(world, block, x, y, z) {
@@ -583,10 +588,11 @@ export default class BlockRenderer {
         this.addLeverFace(world, EnumBlockFace.WEST, true, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, distortX2, distortZ2, topYMinX, topYMaxX);
         
         // Top Face with custom corner Y values
-        this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, minX + distortX2, topYMinX, maxZ + distortZ2, minU, maxV + 8 / 256);
+        let leverPixelV = 8 / this.worldRenderer.textureAtlas.atlasSize;
+        this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, minX + distortX2, topYMinX, maxZ + distortZ2, minU, maxV + leverPixelV);
         this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, minX + distortX2, topYMinX, minZ + distortZ2, minU, minV);
         this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, maxX + distortX2, topYMaxX, minZ + distortZ2, maxU, minV);
-        this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, maxX + distortX2, topYMaxX, maxZ + distortZ2, maxU, maxV + 8 / 256);
+        this.addBlockCorner(world, EnumBlockFace.TOP, true, chunkX, chunkY, chunkZ, maxX + distortX2, topYMaxX, maxZ + distortZ2, maxU, maxV + leverPixelV);
 
         // Render embedded blocks (e.g. bluestone dust) so they rotate with the
         // lever. Enable cutout so the dust's transparent texture pixels don't
@@ -794,6 +800,9 @@ export default class BlockRenderer {
         let maxZ = 1;
 
         let offset = (1 / 256);
+        if (this.worldRenderer.textureAtlas && this.worldRenderer.textureAtlas.isLoaded()) {
+            offset = 1 / this.worldRenderer.textureAtlas.atlasSize;
+        }
 
         let minU, maxU, minV, maxV;
         

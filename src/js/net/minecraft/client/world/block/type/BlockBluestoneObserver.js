@@ -25,30 +25,24 @@ export default class BlockBluestoneObserver extends Block {
         const player = world.minecraft?.player;
         if (!player) return;
 
-        // Direction mapping: 0: SOUTH, 1: WEST, 2: NORTH, 3: EAST
         const dirIndex = Math.floor((player.rotationYaw * 4 / 360) + 0.5) & 3;
         const currentPower = world.getBlockDataAt(x, y, z) & 1;
 
-        // Store direction in bits 1-2 while preserving power bit 0
         world.setBlockDataAt(x, y, z, (dirIndex << 1) | currentPower);
-
-        // onBlockAdded ran before the direction was known, so re-check the
-        // front face now that the direction is set. This makes an observer
-        // placed in front of an existing block power up immediately.
         this.updateState(world, x, y, z);
     }
 
     _getDirectionFaces(data) {
-        const direction = (data >> 1) & 3; // 0: SOUTH, 1: WEST, 2: NORTH, 3: EAST
+        const direction = (data >> 1) & 3;
         
         switch (direction) {
-            case 1: // WEST
+            case 1:
                 return { front: [ -1, 0, 0 ], back: [ 1, 0, 0 ], frontFace: EnumBlockFace.WEST, backFace: EnumBlockFace.EAST };
-            case 2: // NORTH
+            case 2: 
                 return { front: [ 0, 0, -1 ], back: [ 0, 0, 1 ], frontFace: EnumBlockFace.NORTH, backFace: EnumBlockFace.SOUTH };
-            case 3: // EAST
+            case 3:
                 return { front: [ 1, 0, 0 ], back: [ -1, 0, 0 ], frontFace: EnumBlockFace.EAST, backFace: EnumBlockFace.WEST };
-            case 0: // SOUTH
+            case 0:
             default:
                 return { front: [ 0, 0, 1 ], back: [ 0, 0, -1 ], frontFace: EnumBlockFace.SOUTH, backFace: EnumBlockFace.NORTH };
         }

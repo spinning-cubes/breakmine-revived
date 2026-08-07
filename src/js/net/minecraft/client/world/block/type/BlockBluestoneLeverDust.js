@@ -1,11 +1,6 @@
 import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 import BlockBluestoneDust from "./BlockBluestoneDust.js";
 
-/**
- * Render-only helper used as the embedded dust part of the Bluestone Lever.
- * It renders the flat dust layer using the lever's own powered state as the
- * power value (the lever's block data is not a dust power value).
- */
 export default class BlockBluestoneLeverDust extends BlockBluestoneDust {
 
     constructor(id, textureSlotId) {
