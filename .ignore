@@ -1,3 +1,5 @@
+*.iml
+.idea
 world.bin
 world_data.bin
 worlds/*
@@ -5,5 +7,10 @@ minecraft/*
 jars/*
 players/*
 data/*
+vcs.py
+vcs2.py
+node_modules/*
 package-lock.json
-src/resources.js
+dist/
+serverconfig.conf
+current_world.txt
