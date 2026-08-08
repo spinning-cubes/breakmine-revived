@@ -382,6 +382,7 @@ module.exports = {
     saveWorld,
     addWorldChange,
     getWorldChanges,
+    getWorldDir,
     getBlockInventories,
     setBlockInventory,
     getBlockInventory,

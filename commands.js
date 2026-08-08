@@ -1,7 +1,7 @@
 const Logger = require('./logger');
 const { sendChatMessage } = require('./packets');
 const { broadcast, writeString, makePacket } = require('./protocol');
-const { getPlayers, isSpectator, findPlayerByUsername } = require('./players');
+const { getPlayers, isSpectator, findPlayerByUsername, isOp } = require('./players');
 
 function canSee(viewer, target) {
     if (isSpectator(target)) {
@@ -13,6 +13,14 @@ const { initWorld, saveWorld, getCurrentWorldName, getSpawnPosition } = require(
 
 const log = Logger;
 
+function requireOp(player) {
+    if (isOp(player)) {
+        return true;
+    }
+    sendChatMessageToPlayer(player, '§cYou do not have permission to use this command.');
+    return false;
+}
+
 function handleCommand(player, command) {
     const parts = command.split(' ');
     const cmd = parts[0].toLowerCase();
@@ -20,10 +28,10 @@ function handleCommand(player, command) {
 
     switch (cmd) {
         case '/tp':
-            handleTp(player, args);
+            if (requireOp(player)) handleTp(player, args);
             break;
         case '/gamemode':
-            handleGamemode(player, args);
+            if (requireOp(player)) handleGamemode(player, args);
             break;
         case '/help':
             handleHelp(player);
@@ -32,7 +40,7 @@ function handleCommand(player, command) {
             handleTime(player, args);
             break;
         case '/heal':
-            handleHeal(player, args);
+            if (requireOp(player)) handleHeal(player, args);
             break;
         case '/world':
         case '/server':
@@ -192,6 +200,9 @@ function handleTime(player, args) {
     }
 
     if (args[0].toLowerCase() === 'set') {
+        if (!requireOp(player)) {
+            return;
+        }
         if (args.length < 2) {
             sendChatMessageToPlayer(player, '§cUsage: /time set <number|day|night|midnight|noon>');
             return;
@@ -255,9 +266,23 @@ function handleServer(player, args) {
 
     const serverName = subCommand;
 
+    if (!requireOp(player)) {
+        return;
+    }
+
     if (serverName === getCurrentWorldName()) {
         sendChatMessageToPlayer(player, `§cYou are already in server "${serverName}"`);
         return;
+    }
+
+    // Persist each player's state on the server they are leaving before
+    // switching, so their position/inventory stay intact per server.
+    const players = getPlayers();
+    const { savePlayerData, loadPlayerData, normalizeInventoryState } = require('./players');
+    for (const p of players.values()) {
+        if (p.username) {
+            savePlayerData(p);
+        }
     }
 
     // Save current server
@@ -272,24 +297,62 @@ function handleServer(player, args) {
     initWorld(serverName);
 
     const spawn = getSpawnPosition();
-
-    // Send reset world packet to all players to clear chunks, then send new chunks
-    const players = getPlayers();
     const { sendRespawn, sendSpawnPosition, sendPlayerPositionLook, sendChunks, sendResetWorldPacket } = require('./packets');
 
     for (const p of players.values()) {
-        // Reset player position to spawn
-        p.x = spawn.x;
-        p.y = spawn.y;
-        p.z = spawn.z;
-        p.yaw = 0.0;
-        p.pitch = 0.0;
+        // Apply the player's saved state for the new server, or fall back to
+        // the spawn point if they have never been there.
+        const playerData = loadPlayerData(p.username);
+        if (playerData) {
+            p.x = typeof playerData.x === 'number' ? playerData.x : spawn.x;
+            p.y = typeof playerData.y === 'number' ? playerData.y : spawn.y;
+            p.z = typeof playerData.z === 'number' ? playerData.z : spawn.z;
+            p.yaw = typeof playerData.yaw === 'number' ? playerData.yaw : 0;
+            p.pitch = typeof playerData.pitch === 'number' ? playerData.pitch : 0;
+            p.isFlying = playerData.isFlying || false;
+            p.gamemode = typeof playerData.gamemode === 'number' ? playerData.gamemode : p.gamemode;
+            p.health = typeof playerData.health === 'number' && playerData.health > 0 ? playerData.health : 20;
+            p.inventory = normalizeInventoryState(playerData.inventory);
+        } else {
+            p.x = spawn.x;
+            p.y = spawn.y;
+            p.z = spawn.z;
+            p.yaw = 0;
+            p.pitch = 0;
+            p.isFlying = false;
+            p.health = 20;
+            p.inventory = normalizeInventoryState([]);
+        }
+
+        // Forget which chunks were already sent so every chunk around the
+        // player's (possibly far away) saved position is streamed fresh.
+        const { cleanupPlayerChunks } = require('./handlers');
+        cleanupPlayerChunks(p.eid);
 
         // Send reset world packet to clear all chunks
         sendResetWorldPacket(p);
 
         // Send respawn packet (dimension 0 = overworld)
         sendRespawn(p, 0);
+
+        // Authoritative restore so the client targets the saved position while
+        // it streams in the new server's terrain.
+        if (p.ws.readyState === 1) {
+            p.ws.send(JSON.stringify({
+                type: 'playerState',
+                x: p.x,
+                y: p.y,
+                z: p.z,
+                yaw: p.yaw,
+                pitch: p.pitch,
+                health: p.health,
+                gamemode: p.gamemode,
+                flying: !!p.isFlying
+            }));
+            p.ws.send(JSON.stringify({ type: 'inventory', inventory: p.inventory }));
+            p.ws.send(JSON.stringify({ type: 'health', health: p.health }));
+            p.ws.send(JSON.stringify({ type: 'gamemode', gamemode: p.gamemode, flying: !!p.isFlying }));
+        }
 
         // Send chunks from the new server
         sendChunks(p);

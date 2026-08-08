@@ -1344,8 +1344,9 @@ export default class Minecraft {
                 // Singleplayer: create entity locally
                 this.world.addEntity(new ItemEntity(this, this.world, droppedBlock[0], hitResult.x, hitResult.y, hitResult.z));
             } else {
-                // Multiplayer: tell server to spawn item for all players
-                this.playerController.getNetworkHandler().sendPacket(new ClientDropItemPacket(droppedBlock[0]));
+                // Multiplayer: tell server to spawn item for all players at the
+                // broken block's position
+                this.playerController.getNetworkHandler().sendPacket(new ClientDropItemPacket(droppedBlock[0], hitResult.x, hitResult.y, hitResult.z));
             }
         }
         this.player.swingArm();
@@ -1445,8 +1446,9 @@ export default class Minecraft {
                     // Singleplayer: create entity locally
                     this.world.addEntity(new ItemEntity(this, this.world, itemStack.typeId, this.player.x, this.player.y, this.player.z));
                 } else {
-                    // Multiplayer: tell server to spawn item for all players
-                    this.playerController.getNetworkHandler().sendPacket(new ClientDropItemPacket(itemStack.typeId));
+                    // Multiplayer: tell server to spawn item for all players at
+                    // the player's position
+                    this.playerController.getNetworkHandler().sendPacket(new ClientDropItemPacket(itemStack.typeId, this.player.x, this.player.y, this.player.z));
                 }
 
                 // Play drop sound

@@ -4,14 +4,24 @@ const Logger = require('./logger');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
+const world = require('./world');
 
 let log = Logger;
 
-const PLAYERS_DIR = path.join(__dirname, 'players');
+// Player data is stored inside each server's own directory so every server
+// keeps its players' positions, inventories and states separate:
+//   main    -> <root>/players/<username>.json
+//   server2 -> <root>/worlds/server2/players/<username>.json
+function getPlayersDir() {
+    return path.join(world.getWorldDir(world.getCurrentWorldName()), 'players');
+}
 
-// Ensure players directory exists
-if (!fs.existsSync(PLAYERS_DIR)) {
-    fs.mkdirSync(PLAYERS_DIR, { recursive: true });
+function ensurePlayersDir() {
+    const dir = getPlayersDir();
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    return dir;
 }
 
 function normalizeItem(item) {
@@ -56,10 +66,30 @@ function normalizeInventoryState(inventory) {
 
 const GAMEMODE_MAP = { survival: 0, creative: 1, spectator: 3 };
 
+function resolveDefaultGamemode() {
+    const value = config.default_gamemode;
+    if (value === 0 || value === 1 || value === 3 || value === '0' || value === '1' || value === '3') {
+        return Number(value);
+    }
+    return GAMEMODE_MAP[String(value).toLowerCase()] ?? 1;
+}
+
+function isOp(player) {
+    const username = String((player && player.username) || '').toLowerCase();
+    if (!username) {
+        return false;
+    }
+    if (config.default_op === true) {
+        return true;
+    }
+    const list = Array.isArray(config.op_player_list) ? config.op_player_list : [];
+    return list.some(name => String(name).toLowerCase() === username);
+}
+
 function addPlayer(player) {
     player.eid = nextEntityId++;
     player.joinTime = Date.now();
-    player.gamemode = player.gamemode ?? (GAMEMODE_MAP[config.default_gamemode] ?? 1);
+    player.gamemode = player.gamemode ?? resolveDefaultGamemode();
     player.health = typeof player.health === 'number' ? player.health : 20;
     player.inventory = normalizeInventoryState(player.inventory);
     players.set(player.eid, player);
@@ -127,10 +157,11 @@ function updatePosition(player) {
 
 function getPlayerFile(username) {
     const sanitized = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    return path.join(PLAYERS_DIR, `${sanitized}.json`);
+    return path.join(getPlayersDir(), `${sanitized}.json`);
 }
 
 function savePlayerData(player) {
+    ensurePlayersDir();
     const playerFile = getPlayerFile(player.username);
     const data = {
         username: player.username,
@@ -168,6 +199,7 @@ module.exports = {
     getPlayers,
     getPlayerCount,
     isSpectator,
+    isOp,
     updatePosition,
     savePlayerData,
     loadPlayerData,

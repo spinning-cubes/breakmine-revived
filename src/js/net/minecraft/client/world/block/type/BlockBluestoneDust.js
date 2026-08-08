@@ -3,6 +3,7 @@ import EnumBlockFace from "../../../../util/EnumBlockFace.js";
 import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
 import Block from "../Block.js";
 import BlockEntityBluestoneDust from "../entity/BlockEntityBluestoneDust.js";
+import { BlockRegistry } from "../BlockRegistry.js";
 
 const MAX_POWER = 15;
 const TICK_DELAY = 1;
@@ -14,6 +15,11 @@ export default class BlockBluestoneDust extends Block {
         this.hardness = 0.5;
         this.inventoryTab = EnumCreativeInventoryTab.NOTLISTED;
         this.isBluestoneDust = true;
+    }
+
+    getDrop(world, x, y, z) {
+        // Breaking a dust wire yields the placeable dust item, not the wire block.
+        return [BlockRegistry.ITEM_BLUESTONE_DUST_PLACER.getId(), 1];
     }
 
     _isBluestoneWire(block) {
