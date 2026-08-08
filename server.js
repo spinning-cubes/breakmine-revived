@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 const { initWorld, saveWorld, getWorldChanges, generateFlatChunkColumn, loadCurrentWorld, getWorldTime, tickWorldTime, setBlockInventory, getAllBlockInventoriesState, getBlockInventories } = require('./world');
 const { tickAllFurnaces, broadcastFurnaceChanges } = require('./server/Furnace');
 const { sendLoginSuccess, sendJoinGame, sendSpawnPosition, sendChunks, sendTimeUpdate } = require('./packets');
-const { handlePacket, cleanupPlayerChunks } = require('./handlers');
+const { handlePacket, cleanupPlayerChunks, respawnPlayer } = require('./handlers');
 const { addPlayer, removePlayer, getPlayerCount, getPlayers, savePlayerData, normalizeInventoryState } = require('./players');
 const Logger = require('./logger');
 const { BlockRegistry } = require('./src/js/net/minecraft/client/world/block/BlockRegistry.js');
@@ -124,6 +124,22 @@ wss.on('connection', (ws) => {
             if (payload && payload.type === 'inventory') {
                 player.inventory = normalizeInventoryState(payload.inventory);
                 savePlayerData(player);
+            } else if (payload && payload.type === 'health') {
+                if (typeof payload.health === 'number') {
+                    player.health = Math.max(0, Math.min(20, payload.health));
+                    savePlayerData(player);
+                }
+            } else if (payload && payload.type === 'gamemode') {
+                if (typeof payload.gamemode === 'number') {
+                    player.gamemode = payload.gamemode;
+                    if (typeof payload.flying === 'boolean') {
+                        player.isFlying = payload.flying;
+                    }
+                    savePlayerData(player);
+                    const packets = require('./packets');
+                    const protocol = require('./protocol');
+                    protocol.broadcast(packets.sendPlayerListEntry([player], 1), getPlayers());
+                }
             } else if (payload && payload.type === 'blockInventory') {
                 const blockKey = payload.key || `chest:${payload.position?.x}:${payload.position?.y}:${payload.position?.z}`;
                 if (blockKey && payload.inventory) {
@@ -134,6 +150,10 @@ wss.on('connection', (ws) => {
                 const deathMsg = `${payload.username} ${payload.message}`;
                 const { sendChatMessage } = require('./packets');
                 sendChatMessage(deathMsg);
+                player.health = 0;
+                savePlayerData(player);
+            } else if (payload && payload.type === 'respawn' && player) {
+                respawnPlayer(player);
             } else if (payload && payload.type === 'attack' && player) {
                 const targetId = payload.target;
                 const damage = payload.damage || 2;

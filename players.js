@@ -59,8 +59,8 @@ const GAMEMODE_MAP = { survival: 0, creative: 1, spectator: 3 };
 function addPlayer(player) {
     player.eid = nextEntityId++;
     player.joinTime = Date.now();
-    player.gamemode = GAMEMODE_MAP[config.default_gamemode] ?? 1;
-    player.health = 20;
+    player.gamemode = player.gamemode ?? (GAMEMODE_MAP[config.default_gamemode] ?? 1);
+    player.health = typeof player.health === 'number' ? player.health : 20;
     player.inventory = normalizeInventoryState(player.inventory);
     players.set(player.eid, player);
 }
@@ -140,6 +140,7 @@ function savePlayerData(player) {
         yaw: player.yaw,
         pitch: player.pitch,
         isFlying: player.isFlying || false,
+        gamemode: player.gamemode,
         health: player.health,
         inventory: normalizeInventoryState(player.inventory)
     };

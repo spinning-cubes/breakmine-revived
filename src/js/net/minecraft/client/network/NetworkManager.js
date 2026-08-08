@@ -26,6 +26,10 @@ export default class NetworkManager {
 
         this.carryBuffer = [];
 
+        this.pendingInventory = null;
+        this.pendingHealth = null;
+        this.pendingGamemode = null;
+
         // Throttle tracking for movement packets
         this.lastMovementPacketTime = 0;
         this.movementThrottleCooldown = 50; // Minimum ms between movement updates
@@ -196,7 +200,33 @@ export default class NetworkManager {
                 return;
             }
 
-            if (payload.type === 'blockInventories' && this.minecraft?.world) {
+            if (payload.type === 'playerState') {
+                const player = this.minecraft?.player;
+                if (player) {
+                    this._applyPlayerState(player, payload);
+                } else {
+                    this.pendingPlayerState = payload;
+                }
+            } else if (payload.type === 'respawn') {
+                const player = this.minecraft?.player;
+                if (player) {
+                    this._applyPlayerState(player, payload);
+                } else {
+                    this.pendingPlayerState = payload;
+                }
+                // Freeze the player and load chunks around the new spawn before
+                // letting them move again, so they can't spawn in mid-air.
+                if (this.minecraft) {
+                    this.minecraft.showLoadingScreen("Respawning...");
+                }
+            } else if (payload.type === 'inventory') {
+                const player = this.minecraft?.player;
+                if (player) {
+                    player.inventory.applyNetworkState(payload.inventory);
+                } else {
+                    this.pendingInventory = payload.inventory;
+                }
+            } else if (payload.type === 'blockInventories' && this.minecraft?.world) {
                 const world = this.minecraft.world;
                 if (!world.blockInventories) {
                     world.blockInventories = new Map();
@@ -224,19 +254,27 @@ export default class NetworkManager {
                     world.blockInventories.set(payload.key, inventory);
                 }
             } else if (payload.type === 'health') {
-                const player = this.minecraft.player;
-                if (!player) return;
-                player.health = payload.health;
+                const player = this.minecraft?.player;
+                if (player) {
+                    player.health = payload.health;
+                } else {
+                    this.pendingHealth = payload.health;
+                }
             } else if (payload.type === 'gamemode') {
-                const player = this.minecraft.player;
-                if (!player) return;
-                const gamemode = payload.gamemode;
-                player.creative = (gamemode === 1);
-                player.spectator = (gamemode === 3);
-                if (gamemode === 0) {
-                    player.flying = false;
-                } else if (gamemode === 1 || gamemode === 3) {
-                    player.flying = true;
+                const player = this.minecraft?.player;
+                if (player) {
+                    const gamemode = payload.gamemode;
+                    player.creative = (gamemode === 1);
+                    player.spectator = (gamemode === 3);
+                    if (typeof payload.flying === 'boolean') {
+                        player.flying = payload.flying;
+                    } else if (gamemode === 0) {
+                        player.flying = false;
+                    } else if (gamemode === 1 || gamemode === 3) {
+                        player.flying = true;
+                    }
+                } else {
+                    this.pendingGamemode = payload;
                 }
             } else if (payload.type === 'hurt' && this.minecraft?.world) {
                 const entity = this.minecraft.world.getEntityById(payload.eid);
@@ -249,6 +287,44 @@ export default class NetworkManager {
             }
         } catch (error) {
             console.error("Failed to parse JSON network message", error);
+        }
+    }
+
+    _applyPlayerState(player, state) {
+        if (typeof state.x === 'number' && typeof state.y === 'number' && typeof state.z === 'number') {
+            player.setPositionAndRotation(state.x, state.y, state.z, state.yaw, state.pitch);
+            player.motionX = 0;
+            player.motionY = 0;
+            player.motionZ = 0;
+            player.fallDistance = 0;
+            if (typeof player.lastReportedX === 'number') {
+                player.lastReportedX = state.x;
+                player.lastReportedY = state.y;
+                player.lastReportedZ = state.z;
+                player.lastReportedYaw = state.yaw;
+                player.lastReportedPitch = state.pitch;
+                player.positionUpdateTicks = 0;
+            }
+        }
+
+        if (typeof state.health === 'number') {
+            player.health = state.health;
+        }
+
+        // A restored or respawned player is always alive
+        player.isDead = false;
+
+        if (typeof state.gamemode === 'number') {
+            const gamemode = state.gamemode;
+            player.creative = (gamemode === 1);
+            player.spectator = (gamemode === 3);
+            if (typeof state.flying === 'boolean') {
+                player.flying = state.flying;
+            } else if (gamemode === 0) {
+                player.flying = false;
+            } else if (gamemode === 1 || gamemode === 3) {
+                player.flying = true;
+            }
         }
     }
 

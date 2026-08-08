@@ -87,6 +87,29 @@ export default class PlayerEntity extends EntityLiving {
         });
     }
 
+    sendHealthUpdate() {
+        if (!this.minecraft || !this.minecraft.isInGame()) {
+            return;
+        }
+
+        if (this.minecraft.isSingleplayer()) {
+            return;
+        }
+
+        const networkController = this.minecraft.playerController;
+        const networkHandler = networkController?.getNetworkHandler?.();
+        const networkManager = networkHandler?.getNetworkManager?.();
+        if (!networkManager || typeof networkManager.sendJson !== 'function') {
+            return;
+        }
+
+        networkManager.sendJson({
+            type: 'health',
+            username: this.username,
+            health: this.health
+        });
+    }
+
     respawn() {
         let spawn = this.world.getSpawn();
         this.setPosition(spawn.x, spawn.y, spawn.z);
@@ -107,6 +130,11 @@ export default class PlayerEntity extends EntityLiving {
     }
 
     onUpdate() {
+        // Freeze the player while the world is still loading so it can't fall
+        // through unloaded terrain before the world is ready.
+        if (this.minecraft.loadingScreen !== null) {
+            return;
+        }
         super.onUpdate();
     }
 
@@ -582,6 +610,7 @@ export default class PlayerEntity extends EntityLiving {
         // Reset health
         this.health = 20;
         this.isDead = false;
+        this.sendHealthUpdate();
 
         // Reset fall distance
         this.fallDistance = 0;

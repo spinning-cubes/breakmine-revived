@@ -10,7 +10,9 @@ const defaults = {
     default_op: 'true',
     op_player_list: [],
     motd: 'Brand new server',
-    allowMods: false
+    allowMods: false,
+    worldType: 'flat',
+    seed: 0
 };
 
 function parseValue(value) {
@@ -60,5 +62,10 @@ function loadConfig() {
 }
 
 const config = loadConfig();
+
+// World types supported by the server generator.
+const WORLD_TYPES = ['flat', 'normal', 'amplified'];
+const worldType = String(config.worldType || 'flat').toLowerCase().trim();
+config.worldType = WORLD_TYPES.includes(worldType) ? worldType : 'flat';
 
 module.exports = config;

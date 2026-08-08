@@ -1162,15 +1162,27 @@ export default class Minecraft {
             let progress = 1 / requiredChunks * Math.max(0, loadedChunks - this.world.lightUpdateQueue.length / 1000);
             this.loadingScreen.setProgress(progress);
 
+            // The player must only become active once the terrain under and
+            // around them is actually loaded; the plain chunk count also
+            // includes spawn chunks elsewhere, so it can read "done" while the
+            // player's own column is still missing (and they fall through).
+            let terrainReady = this._chunksLoadedAround(cameraChunkX, cameraChunkZ, 2);
+
             // Finish loading when enough chunks are loaded, or fall back after a timeout
             // to prevent getting stuck on slow connections
             let timeoutElapsed = this.lastChunkArrivalTime > 0
                 && Date.now() - this.lastChunkArrivalTime > 5000
                 && loadedChunks >= 9;
 
-            if (progress >= 0.99 || timeoutElapsed) {
+            if ((progress >= 0.99 || timeoutElapsed) && terrainReady) {
                 this.world.loadSpawnChunks();
-                this.player.respawn();
+                // In multiplayer the server already restored the player's saved
+                // position/health via the playerState packet; respawning here
+                // would reset health to 20 (and teleport to the world spawn),
+                // clobbering the restore and reporting full health to the server.
+                if (this.isSingleplayer()) {
+                    this.player.respawn();
+                }
                 this.musicManager.playMusic('game');
                 this.loadingScreen = null;
                 this.displayScreen(null);
@@ -1195,6 +1207,26 @@ export default class Minecraft {
                 this.saveWorld();
             }
         }
+    }
+
+    showLoadingScreen(title) {
+        this.loadingScreen = new GuiLoadingScreen();
+        this.loadingScreen.setTitle(title || "Loading terrain...");
+        this.displayScreen(this.loadingScreen);
+        this.lastChunkCount = 0;
+        this.lastChunkArrivalTime = 0;
+    }
+
+    _chunksLoadedAround(chunkX, chunkZ, radius) {
+        const provider = this.world.getChunkProvider();
+        for (let x = chunkX - radius; x <= chunkX + radius; x++) {
+            for (let z = chunkZ - radius; z <= chunkZ + radius; z++) {
+                if (!provider.chunkExists(x, z)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     handleMiningTicks() {

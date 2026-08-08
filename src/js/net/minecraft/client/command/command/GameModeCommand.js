@@ -34,6 +34,12 @@ export default class GameModeCommand extends Command {
             return false;
         }
 
+        const gamemode = (mode === "creative" || mode === "1") ? 1 : (mode === "spectator" || mode === "3") ? 3 : 0;
+        const nm = minecraft.playerController?.getNetworkHandler?.()?.getNetworkManager?.();
+        if (nm?.sendJson) {
+            nm.sendJson({ type: 'gamemode', gamemode, flying: minecraft.player.flying });
+        }
+
         return true;
     }
 

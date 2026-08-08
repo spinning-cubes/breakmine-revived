@@ -1,5 +1,5 @@
 const { readVarInt, readString, broadcast, ensureReadable, MalformedPacketError } = require('./protocol');
-const { addPlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState } = require('./players');
+const { addPlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState, savePlayerData } = require('./players');
 const { addWorldChange, saveWorld, getBlockAt, getAllBlockInventoriesState } = require('./world');
 const { addItemEntity, removeItemEntity, getItemEntity } = require('./entities');
 const { handleCommand } = require('./commands');
@@ -8,6 +8,7 @@ const {
     sendJoinGame,
     sendSpawnPosition,
     sendChunks,
+    sendPlayerPositionLook,
     sendSingleChunk,
     sendTimeUpdate,
     sendChatMessage,
@@ -28,6 +29,13 @@ const Block = BlockModule.default || BlockModule.Block;
 
 const badWordsModule = require('bad-words');
 const Filter = badWordsModule.Filter || badWordsModule;
+
+// A block counts as "solid" for the buried-at-login check only if it fully
+// occupies its cell: air, water, lava and passable plants don't count.
+const FLUID_IDS = new Set([8, 9, 10, 11]);
+function isSolidBlock(blockId) {
+    return blockId !== 0 && !FLUID_IDS.has(blockId);
+}
 const filter = new Filter();
 
 let log = Logger;
@@ -187,22 +195,39 @@ function handleLoginPacket(player, packetId, buffer, offset) {
 
         player.protocolState = 'play';
 
+        const { getSpawnPosition } = require('./world');
+        const spawn = getSpawnPosition();
+
         // Load player data if exists
         const playerData = loadPlayerData(username);
         if (playerData) {
-            player.x = playerData.x || 0;
-            player.y = playerData.y || 10;
-            player.z = playerData.z || 0;
-            player.yaw = playerData.yaw || 0;
-            player.pitch = playerData.pitch || 0;
+            player.x = typeof playerData.x === 'number' ? playerData.x : spawn.x;
+            player.y = typeof playerData.y === 'number' ? playerData.y : spawn.y;
+            player.z = typeof playerData.z === 'number' ? playerData.z : spawn.z;
+            player.yaw = typeof playerData.yaw === 'number' ? playerData.yaw : 0;
+            player.pitch = typeof playerData.pitch === 'number' ? playerData.pitch : 0;
             player.isFlying = playerData.isFlying || false;
-            player.health = typeof playerData.health === 'number' ? playerData.health : 20;
+            player.gamemode = typeof playerData.gamemode === 'number' ? playerData.gamemode : player.gamemode;
+            player.health = typeof playerData.health === 'number' && playerData.health > 0 ? playerData.health : 20;
             player.inventory = normalizeInventoryState(playerData.inventory);
+
+            // A saved position from a previous world type/seed can be buried
+            // inside solid terrain (e.g. y=10 saved on a flat world, now
+            // underground on a normal world). If the player's whole body is in
+            // solid blocks, respawn at the current world spawn instead.
+            const px = Math.floor(player.x);
+            const py = Math.floor(player.y);
+            const pz = Math.floor(player.z);
+            if (isSolidBlock(getBlockAt(px, py, pz)) && isSolidBlock(getBlockAt(px, py + 1, pz))) {
+                player.x = spawn.x;
+                player.y = spawn.y;
+                player.z = spawn.z;
+            }
         } else {
             // Initialize player position at spawn
-            player.x = 0;
-            player.y = 10;
-            player.z = 0;
+            player.x = spawn.x;
+            player.y = spawn.y;
+            player.z = spawn.z;
             player.yaw = 0;
             player.pitch = 0;
             player.isFlying = false;
@@ -215,6 +240,46 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         sendLoginSuccess(player);
         sendJoinGame(player);
         sendSpawnPosition(player);
+
+        // Transmit the saved position right away so the client is placed at
+        // its saved spot before it can report the spawn position back to us.
+        sendPlayerPositionLook(player);
+
+        // Send the player's saved state via a custom JSON packet. This is the
+        // authoritative restore: position, rotation, health and gamemode all in
+        // one atomic message, so the client can apply them regardless of how the
+        // vanilla 0x08 teleport happens to be ordered against world loading.
+        if (player.ws.readyState === 1) {
+            player.ws.send(JSON.stringify({
+                type: 'playerState',
+                x: player.x,
+                y: player.y,
+                z: player.z,
+                yaw: player.yaw,
+                pitch: player.pitch,
+                health: player.health,
+                gamemode: player.gamemode,
+                flying: !!player.isFlying
+            }));
+        }
+
+        // Send the player's saved inventory, health and gamemode so the client
+        // starts with the same state as when they left, instead of a fresh one.
+        if (player.ws.readyState === 1) {
+            player.ws.send(JSON.stringify({
+                type: 'inventory',
+                inventory: player.inventory
+            }));
+            player.ws.send(JSON.stringify({
+                type: 'health',
+                health: player.health
+            }));
+            player.ws.send(JSON.stringify({
+                type: 'gamemode',
+                gamemode: player.gamemode,
+                flying: !!player.isFlying
+            }));
+        }
 
         // Initialize chunk tracking BEFORE sending chunks so checkAndSendChunks
         // can track which chunks have already been sent
@@ -746,7 +811,60 @@ function cleanupPlayerChunks(eid) {
     playerChunks.delete(eid);
 }
 
+// Respawn a player after death: reset to the world spawn, push fresh chunks
+// around it, and tell the client to re-arm its loading gate so the player only
+// becomes active once the terrain around the spawn is loaded. Returns nothing.
+function respawnPlayer(player) {
+    const { getSpawnPosition } = require('./world');
+    const spawn = getSpawnPosition();
+
+    player.x = spawn.x;
+    player.y = spawn.y;
+    player.z = spawn.z;
+    player.yaw = 0.0;
+    player.pitch = 0.0;
+    player.onGround = false;
+    player.health = 20;
+    player.isFlying = false;
+    savePlayerData(player);
+
+    // Reset per-player chunk tracking so every chunk around the new spawn is
+    // sent again instead of being skipped as "already sent" from the old spot.
+    const sentChunks = new Set();
+    for (let cx = -2; cx <= 2; cx++) {
+        for (let cz = -2; cz <= 2; cz++) {
+            sentChunks.add(`${cx},${cz}`);
+        }
+    }
+    playerChunks.set(player.eid, sentChunks);
+
+    if (player.ws.readyState === 1) {
+        // Authoritative respawn state must arrive BEFORE chunks so the client
+        // re-arms its loading screen and targets the new position while it
+        // streams terrain in (it cannot fall while frozen on the loading screen).
+        player.ws.send(JSON.stringify({
+            type: 'respawn',
+            x: player.x,
+            y: player.y,
+            z: player.z,
+            yaw: player.yaw,
+            pitch: player.pitch,
+            health: player.health,
+            gamemode: player.gamemode,
+            flying: !!player.isFlying
+        }));
+    }
+
+    sendChunks(player);
+    checkAndSendChunks(player);
+    sendSpawnPosition(player);
+
+    // Let other players see the respawned player at the new position.
+    broadcast(createEntityTeleportPacket(player), getPlayers());
+}
+
 module.exports = {
     handlePacket,
-    cleanupPlayerChunks
+    cleanupPlayerChunks,
+    respawnPlayer
 };
