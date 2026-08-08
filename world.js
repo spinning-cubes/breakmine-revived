@@ -6,6 +6,7 @@ const log = Logger;
 const worldGen = require('./server/WorldGen.js');
 
 const WORLDS_DIR = path.join(__dirname, 'worlds');
+const DEFAULT_WORLD_DIR = __dirname;
 const DEFAULT_WORLD_FILE = path.join(__dirname, 'world_data.bin');
 const CURRENT_WORLD_FILE = path.join(__dirname, 'current_world.txt');
 
@@ -19,27 +20,46 @@ const blockInventories = new Map();
 let currentWorldName = 'main';
 let worldTime = 0; // In-game time (0-24000 ticks)
 
-function getWorldFile(worldName) {
+// Every server owns a self-contained directory. The main server lives in the
+// project root (world_data.bin), additional servers live in worlds/<name>/
+// and each holds its own world_data.bin plus an optional serverconfig.conf.
+function getWorldDir(worldName) {
     if (worldName === 'main') {
-        return DEFAULT_WORLD_FILE;
+        return DEFAULT_WORLD_DIR;
     }
     const sanitized = worldName.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    return path.join(WORLDS_DIR, `${sanitized}_data.bin`);
+    return path.join(WORLDS_DIR, sanitized);
+}
+
+function getWorldFile(worldName) {
+    return path.join(getWorldDir(worldName), 'world_data.bin');
 }
 
 function migrateOldWorld(worldName) {
     const worldFile = getWorldFile(worldName);
     if (fs.existsSync(worldFile)) return false;
 
-    const oldBin = worldName === 'main'
+    // Old flat-file layout: worlds/<name>.bin or worlds/<name>_data.bin. Both
+    // are folded into worlds/<name>/world_data.bin so existing worlds survive.
+    let oldBin = worldName === 'main'
         ? path.join(__dirname, 'world.bin')
         : path.join(WORLDS_DIR, `${worldName}.bin`);
+    if (worldName !== 'main' && !fs.existsSync(oldBin)) {
+        const legacyData = path.join(WORLDS_DIR, `${worldName}_data.bin`);
+        if (fs.existsSync(legacyData)) {
+            oldBin = legacyData;
+        }
+    }
 
     if (fs.existsSync(oldBin)) {
+        const worldDir = getWorldDir(worldName);
+        if (!fs.existsSync(worldDir)) {
+            fs.mkdirSync(worldDir, { recursive: true });
+        }
         log.info('World', `Migrating ${oldBin} to ${worldFile}`);
         fs.renameSync(oldBin, worldFile);
 
-        const oldChests = worldFile.replace('_data.bin', '.chests.json');
+        const oldChests = oldBin.replace(/\.bin$/, '.chests.json');
         if (fs.existsSync(oldChests)) {
             const chestsData = JSON.parse(fs.readFileSync(oldChests, 'utf8'));
             if (Array.isArray(chestsData)) {
@@ -65,6 +85,11 @@ function initWorld(worldName = 'main') {
 
     // Save current world name to file
     fs.writeFileSync(CURRENT_WORLD_FILE, worldName);
+
+    const worldDir = getWorldDir(worldName);
+    if (!fs.existsSync(worldDir)) {
+        fs.mkdirSync(worldDir, { recursive: true });
+    }
 
     const worldFile = getWorldFile(worldName);
 
@@ -173,6 +198,10 @@ function loadCurrentWorld() {
 }
 
 function saveWorld() {
+    const worldDir = getWorldDir(currentWorldName);
+    if (!fs.existsSync(worldDir)) {
+        fs.mkdirSync(worldDir, { recursive: true });
+    }
     const worldFile = getWorldFile(currentWorldName);
 
     // Serialize block inventories
@@ -291,11 +320,25 @@ function listWorlds() {
     const worlds = ['main']; // Always include main
 
     if (fs.existsSync(WORLDS_DIR)) {
+        // New layout: worlds/<name>/ holding world_data.bin and/or serverconfig.conf
+        const entries = fs.readdirSync(WORLDS_DIR, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.isDirectory() || !/^[a-z0-9_]+$/.test(entry.name)) continue;
+            const dir = path.join(WORLDS_DIR, entry.name);
+            if (fs.existsSync(path.join(dir, 'world_data.bin')) || fs.existsSync(path.join(dir, 'serverconfig.conf'))) {
+                worlds.push(entry.name);
+            }
+        }
+
+        // Legacy layout: worlds/<name>_data.bin flat files, listed so they can
+        // still be entered (which migrates them into the new layout).
         const files = fs.readdirSync(WORLDS_DIR);
         files.forEach(file => {
             if (file.endsWith('_data.bin')) {
                 const worldName = file.replace('_data.bin', '');
-                worlds.push(worldName);
+                if (worldName && !worlds.includes(worldName)) {
+                    worlds.push(worldName);
+                }
             }
         });
     }
