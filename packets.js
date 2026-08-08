@@ -1,7 +1,7 @@
 const zlib = require('zlib');
 const { makePacket, writeVarInt, writeString, broadcast, varIntSize } = require('./protocol');
 const { getPlayers, getPlayerCount } = require('./players');
-const { getWorldChanges, generateFlatChunkColumn } = require('./world');
+const { getWorldChanges, generateFlatChunkColumn, getWorldType, getSpawnPosition } = require('./world');
 
 function createDisconnectPacket(reason) {
     const message = JSON.stringify({ text: reason || 'Disconnected from server' });
@@ -33,7 +33,7 @@ function sendJoinGame(player) {
     data.writeUInt8(0, offset); offset += 1;           // Dimension: Overworld
     data.writeUInt8(1, offset); offset += 1;           // Difficulty: Normal
     data.writeUInt8(60, offset); offset += 1;          // Max Players
-    offset += writeString(data, "flat", offset);       // Level Type
+    offset += writeString(data, getWorldType(), offset); // Level Type
     data.writeUInt8(0, offset); offset += 1;           // Reduced Debug Info
 
     player.ws.send(makePacket(0x01, data.subarray(0, offset)));
@@ -48,7 +48,7 @@ function sendRespawn(player, dimension) {
     data.writeUInt8(dimension, offset); offset += 1;   // Dimension
     data.writeUInt8(1, offset); offset += 1;           // Difficulty: Normal
     data.writeUInt8(60, offset); offset += 1;          // Max Players
-    offset += writeString(data, "flat", offset);       // Level Type
+    offset += writeString(data, getWorldType(), offset); // Level Type
     data.writeUInt8(0, offset); offset += 1;           // Reduced Debug Info
 
     player.ws.send(makePacket(0x07, data.subarray(0, offset)));
@@ -56,9 +56,10 @@ function sendRespawn(player, dimension) {
 
 function sendSpawnPosition(player) {
     const data = Buffer.alloc(12);
-    data.writeInt32BE(0, 0);   // Spawn X
-    data.writeInt32BE(10, 4);  // Spawn Y (on grass layer)
-    data.writeInt32BE(0, 8);   // Spawn Z
+    const spawn = getSpawnPosition();
+    data.writeInt32BE(spawn.x, 0);       // Spawn X
+    data.writeInt32BE(spawn.y, 4);       // Spawn Y (on the surface, never in a cave)
+    data.writeInt32BE(spawn.z, 8);       // Spawn Z
     player.ws.send(makePacket(0x05, data));
 }
 

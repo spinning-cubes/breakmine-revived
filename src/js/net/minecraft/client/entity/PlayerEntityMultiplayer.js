@@ -27,6 +27,12 @@ export default class PlayerEntityMultiplayer extends PlayerEntity {
     }
 
     onUpdate() {
+        // Freeze the player until world loading completes so it can't fall
+        // through unloaded chunks or report junk positions to the server
+        // before the server has finished sending the join state.
+        if (this.minecraft.loadingScreen !== null) {
+            return;
+        }
         super.onUpdate();
         // Rate limit network updates to every 5 ticks to reduce main thread blocking
         if (this.ticksExisted % 5 === 0) {
@@ -94,6 +100,17 @@ export default class PlayerEntityMultiplayer extends PlayerEntity {
 
     getNetworkHandler() {
         return this.networkHandler;
+    }
+
+    requestRespawn() {
+        // Ask the server to reset position to spawn and push fresh chunks.
+        // The server replies with a respawn message that re-arms the loading
+        // gate, so the player stays frozen until terrain around the new spawn
+        // has loaded (instead of falling into an underground air pocket).
+        const nm = this.networkHandler?.getNetworkManager?.();
+        if (nm) {
+            nm.sendJson({ type: 'respawn' });
+        }
     }
 
 }

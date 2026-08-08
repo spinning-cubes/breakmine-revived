@@ -9,7 +9,7 @@ function canSee(viewer, target) {
     }
     return true;
 }
-const { initWorld, saveWorld, getCurrentWorldName, listWorlds } = require('./world');
+const { initWorld, saveWorld, getCurrentWorldName, listWorlds, getSpawnPosition } = require('./world');
 
 const log = Logger;
 
@@ -264,15 +264,17 @@ function handleWorld(player, args) {
     // Load new world
     initWorld(worldName);
 
+    const spawn = getSpawnPosition();
+
     // Send reset world packet to all players to clear chunks, then send new chunks
     const players = getPlayers();
     const { sendRespawn, sendSpawnPosition, sendPlayerPositionLook, sendChunks, sendResetWorldPacket } = require('./packets');
 
     for (const p of players.values()) {
         // Reset player position to spawn
-        p.x = 0.0;
-        p.y = 64.0;
-        p.z = 0.0;
+        p.x = spawn.x;
+        p.y = spawn.y;
+        p.z = spawn.z;
         p.yaw = 0.0;
         p.pitch = 0.0;
 

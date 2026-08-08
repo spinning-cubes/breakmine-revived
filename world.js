@@ -3,6 +3,7 @@ const path = require('path');
 const zlib = require('zlib');
 const Logger = require('./logger');
 const log = Logger;
+const worldGen = require('./server/WorldGen.js');
 
 const WORLDS_DIR = path.join(__dirname, 'worlds');
 const DEFAULT_WORLD_FILE = path.join(__dirname, 'world_data.bin');
@@ -245,21 +246,10 @@ function getWorldChanges() {
     return worldChanges;
 }
 
-// Base flat-world terrain used for positions that were never changed. Must
-// mirror generateFlatChunkColumn so server-side block logic (bluestone
-// simulation, etc.) sees the same world as clients.
-function getBaseBlock(worldY) {
-    if (worldY === 0) return 7;        // Bedrock
-    if (worldY >= 1 && worldY <= 7) return 1; // Stone
-    if (worldY === 8) return 3;        // Dirt
-    if (worldY === 9) return 2;        // Grass
-    return 0;                          // Air
-}
-
 function getBlockAt(x, y, z) {
     const key = `${x},${y},${z}`;
     const blockState = worldChanges.get(key);
-    return blockState !== undefined ? (blockState >> 4) : getBaseBlock(y);
+    return blockState !== undefined ? (blockState >> 4) : worldGen.getBaseBlockAt(x, y, z);
 }
 
 function getBlockMetadata(x, y, z) {
@@ -330,58 +320,18 @@ function tickWorldTime() {
 }
 
 function generateFlatChunkColumn(chunkX, chunkZ, worldChanges) {
-    const SECTION_COUNT = 16;
-    const BLOCK_STATE_SIZE = 4096 * 2;
-    const NIBBLE_SIZE = 2048;
-    const BIOME_SIZE = 256;
+    return worldGen.generateChunkColumn(chunkX, chunkZ, worldChanges);
+}
 
-    const sectionSize = BLOCK_STATE_SIZE + NIBBLE_SIZE + NIBBLE_SIZE;
-    const buffer = Buffer.alloc(sectionSize * SECTION_COUNT + BIOME_SIZE);
+// The configured world type ('flat', 'normal' or 'amplified').
+function getWorldType() {
+    return worldGen.getWorldType();
+}
 
-    for (let sectionIndex = 0; sectionIndex < SECTION_COUNT; sectionIndex++) {
-        const sectionOffset = sectionIndex * sectionSize;
-        const baseY = sectionIndex * 16;
-
-        for (let y = 0; y < 16; y++) {
-            for (let z = 0; z < 16; z++) {
-                for (let x = 0; x < 16; x++) {
-                    const localIndex = ((y << 8) | (z << 4) | x) * 2;
-                    const worldY = baseY + y;
-                    const worldX = chunkX * 16 + x;
-                    const worldZ = chunkZ * 16 + z;
-                    const key = `${worldX},${worldY},${worldZ}`;
-                    let blockState = worldChanges.get(key);
-
-                    if (blockState === undefined) {
-                        let blockId;
-                        if (worldY === 0) {
-                            blockId = 7; // Bedrock
-                        } else if (worldY >= 1 && worldY <= 7) {
-                            blockId = 1; // Stone
-                        } else if (worldY === 8) {
-                            blockId = 3; // Dirt
-                        } else if (worldY === 9) {
-                            blockId = 2; // Grass
-                        } else {
-                            blockId = 0; // Air
-                        }
-                        const metadata = 0;
-                        blockState = (blockId << 4) | (metadata & 0xF);
-                    }
-
-                    buffer.writeUInt16LE(blockState, sectionOffset + localIndex);
-                }
-            }
-        }
-
-        const lightOffset = sectionOffset + BLOCK_STATE_SIZE;
-        buffer.fill(0xFF, lightOffset, lightOffset + NIBBLE_SIZE);
-        buffer.fill(0xFF, lightOffset + NIBBLE_SIZE, lightOffset + NIBBLE_SIZE * 2);
-    }
-
-    buffer.fill(1, sectionSize * SECTION_COUNT);
-
-    return buffer;
+// Safe spawn position for the configured world type (on the surface, never
+// inside a cave opening).
+function getSpawnPosition() {
+    return worldGen.getSpawnPosition();
 }
 
 module.exports = {
@@ -396,6 +346,8 @@ module.exports = {
     getBlockAt,
     getBlockMetadata,
     generateFlatChunkColumn,
+    getWorldType,
+    getSpawnPosition,
     getCurrentWorldName,
     listWorlds,
     getWorldTime,

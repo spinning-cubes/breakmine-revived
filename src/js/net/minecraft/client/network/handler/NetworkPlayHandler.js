@@ -115,6 +115,9 @@ export default class NetworkPlayHandler extends PacketHandler {
 
     handleServerPlayerPositionRotation(packet) {
         let player = this.minecraft.player;
+        if (!player) {
+            return;
+        }
 
         let x = packet.getX();
         let y = packet.getY();

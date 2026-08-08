@@ -277,6 +277,9 @@ export default class EntityLiving extends Entity {
                 this.die();
             }
         }
+        if (this === this.minecraft.player && typeof this.sendHealthUpdate === 'function') {
+            this.sendHealthUpdate();
+        }
     }
 
     damageEntity(amount, attackerName) {
@@ -295,6 +298,9 @@ export default class EntityLiving extends Entity {
             if (typeof this.die === 'function') {
                 this.die();
             }
+        }
+        if (this === this.minecraft.player && typeof this.sendHealthUpdate === 'function') {
+            this.sendHealthUpdate();
         }
     }
 
