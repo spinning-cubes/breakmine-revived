@@ -9,7 +9,7 @@ function canSee(viewer, target) {
     }
     return true;
 }
-const { initWorld, saveWorld, getCurrentWorldName, listWorlds, getSpawnPosition } = require('./world');
+const { initWorld, saveWorld, getCurrentWorldName, getSpawnPosition } = require('./world');
 
 const log = Logger;
 
@@ -35,7 +35,8 @@ function handleCommand(player, command) {
             handleHeal(player, args);
             break;
         case '/world':
-            handleWorld(player, args);
+        case '/server':
+            handleServer(player, args);
             break;
         default:
             sendChatMessageToPlayer(player, `§cUnknown command: ${cmd}`);
@@ -117,8 +118,8 @@ function handleHelp(player) {
     sendChatMessageToPlayer(player, '§e/time set <number> §7- Set time to specific tick value');
     sendChatMessageToPlayer(player, '§e/time set <day|night|midnight|noon> §7- Set time to preset');
     sendChatMessageToPlayer(player, '§e/heal <player> <amount> §7- Heal a player');
-    sendChatMessageToPlayer(player, '§e/world [name] §7- Show current world or switch worlds');
-    sendChatMessageToPlayer(player, '§e/world list §7- List all available worlds');
+    sendChatMessageToPlayer(player, '§e/server [name] §7- Show current server or switch servers');
+    sendChatMessageToPlayer(player, '§e/server list §7- List all available servers');
     sendChatMessageToPlayer(player, '§e/help §7- Show this help message');
 }
 
@@ -233,36 +234,42 @@ function handleTime(player, args) {
     }
 }
 
-function handleWorld(player, args) {
+function handleServer(player, args) {
     if (args.length === 0) {
-        sendChatMessageToPlayer(player, `§6Current world: §e${getCurrentWorldName()}`);
+        sendChatMessageToPlayer(player, `§6Current server: §e${getCurrentWorldName()}`);
         return;
     }
 
     const subCommand = args[0].toLowerCase();
 
     if (subCommand === 'list') {
-        const worlds = listWorlds();
-        sendChatMessageToPlayer(player, '§6Available worlds:');
-        worlds.forEach(world => {
-            const isCurrent = world === getCurrentWorldName() ? ' §7(current)' : '';
-            sendChatMessageToPlayer(player, `§e- ${world}${isCurrent}`);
+        const config = require('./config');
+        const servers = config.listServers();
+        sendChatMessageToPlayer(player, '§6Available servers:');
+        servers.forEach(server => {
+            const isCurrent = server === getCurrentWorldName() ? ' §7(current)' : '';
+            sendChatMessageToPlayer(player, `§e- ${server}${isCurrent}`);
         });
         return;
     }
 
-    const worldName = subCommand;
+    const serverName = subCommand;
 
-    if (worldName === getCurrentWorldName()) {
-        sendChatMessageToPlayer(player, `§cYou are already in world "${worldName}"`);
+    if (serverName === getCurrentWorldName()) {
+        sendChatMessageToPlayer(player, `§cYou are already in server "${serverName}"`);
         return;
     }
 
-    // Save current world
+    // Save current server
     saveWorld();
 
-    // Load new world
-    initWorld(worldName);
+    // Load the target server's own config (world type, seed, gamemode, ...).
+    // If it has no serverconfig.conf the current settings are kept.
+    const config = require('./config');
+    config.reload(serverName);
+
+    // Load new server
+    initWorld(serverName);
 
     const spawn = getSpawnPosition();
 
@@ -284,7 +291,7 @@ function handleWorld(player, args) {
         // Send respawn packet (dimension 0 = overworld)
         sendRespawn(p, 0);
 
-        // Send chunks from the new world
+        // Send chunks from the new server
         sendChunks(p);
 
         // Send spawn position
@@ -294,7 +301,7 @@ function handleWorld(player, args) {
         sendPlayerPositionLook(p);
     }
 
-    sendChatMessage(`§eWorld switched to "${worldName}"`);
+    sendChatMessage(`§eServer switched to "${serverName}"`);
 }
 
 function sendChatMessageToPlayer(player, message) {

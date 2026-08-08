@@ -12,8 +12,12 @@ const config = require('./config');
 let log = Logger;
 const PORT = config.port;
 
-// Load the last used world, or default to 'main'
-const currentWorld = loadCurrentWorld();
+// Pick the server to run: a --server <name> CLI flag wins, otherwise resume
+// the last used server (current_world.txt). The selected server's own
+// serverconfig.conf (worlds/<name>/serverconfig.conf) is loaded before the
+// listener binds, so its port/host apply when started that way.
+const currentWorld = config.requestedServer || loadCurrentWorld();
+config.reload(currentWorld);
 initWorld(currentWorld);
 BlockRegistry.create(); // Initialize block registry from game code
 const serverWorld = getServerWorld(); // Initialize server world for block ticking
