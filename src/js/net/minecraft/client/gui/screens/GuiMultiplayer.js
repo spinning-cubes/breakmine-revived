@@ -84,12 +84,12 @@ export default class GuiMultiplayer extends GuiScreen {
                 details: "play.breakmine.com",
                 motd: "Create epic things at Publix Creative!"
             },
-            //{
-            //    name: "\u00ca Publix SMP",
-            //    date: "",
-            //    details: "play.breakmine.com/smp",
-            //    motd: "Survive and fight in the new Publix SMP!"
-            //}
+            {
+                name: "\u00ca Publix SMP",
+                date: "",
+                details: "playsmp.breakmine.com",
+                motd: "Survive and fight in the new Publix SMP!"
+            }
         ];
 
         this.minecraft.fs.listDir(`servers/`).then(fileList => {
