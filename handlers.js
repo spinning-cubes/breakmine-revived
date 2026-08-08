@@ -739,20 +739,20 @@ function broadcastAnimation(player) {
 }
 
 function handleDropItem(player, buffer, offset) {
-    ensureReadable(buffer, offset, 2);
+    ensureReadable(buffer, offset, 14);
     const blockId = buffer.readInt16BE(offset);
 
-    // Calculate spawn position slightly in front of player
-    const yaw = ((player.yaw % 360) + 360) % 360;
-    const rad = yaw * Math.PI / 180;
-    const spawnX = player.x - Math.sin(rad) * 0.5;
-    const spawnY = player.y + 1.0;
-    const spawnZ = player.z + Math.cos(rad) * 0.5;
+    // The client sends the exact spawn position: the broken block's position
+    // when an item is dropped from breaking, or the player's position when
+    // dropping the held item (Q).
+    const spawnX = buffer.readInt32BE(offset + 2) + 0.5;
+    const spawnY = buffer.readInt32BE(offset + 6) + 0.5;
+    const spawnZ = buffer.readInt32BE(offset + 10) + 0.5;
 
-    // Motion: throw forward and up
-    const motionX = -Math.sin(rad) * 0.15;
+    // Motion: pop upward with a little random drift
+    const motionX = (Math.random() - 0.5) * 0.15;
     const motionY = 0.2;
-    const motionZ = Math.cos(rad) * 0.15;
+    const motionZ = (Math.random() - 0.5) * 0.15;
 
     const entity = addItemEntity(blockId, spawnX, spawnY, spawnZ, motionX, motionY, motionZ, player.eid);
 

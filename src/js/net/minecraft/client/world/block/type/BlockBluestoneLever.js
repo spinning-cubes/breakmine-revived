@@ -1,6 +1,7 @@
 import Block from "../Block.js";
 import BoundingBox from "../../../../util/BoundingBox.js";
 import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
+import { BlockRegistry } from "../BlockRegistry.js";
 
 export default class BlockBluestoneLever extends Block {
 
@@ -16,6 +17,11 @@ export default class BlockBluestoneLever extends Block {
         this.renderInside = [
             ["block", 179, new BoundingBox(0, 0, 0, 1, 1 / 16, 1)]
         ];
+    }
+
+    getDrop(world, x, y, z) {
+        // Breaking a lever yields the placeable lever item, not the lever block.
+        return [BlockRegistry.ITEM_BLUESTONE_LEVER_PLACER.getId(), 1];
     }
 
     isPowered(world, x, y, z) {
