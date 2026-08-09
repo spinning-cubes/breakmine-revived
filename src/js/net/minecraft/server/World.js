@@ -5,11 +5,10 @@
 // in single-player (dust propagation, lamps, repeaters, observers, pushers,
 // bulbs, doors) runs authoritatively on the server in multiplayer. Every
 // state change is persisted and broadcast to all connected players.
-const { getBlockAt, getBlockMetadata, addWorldChange } = require('./world.js');
-const { getPlayers } = require('./players.js');
-const { sendBlockChange } = require('./packets.js');
-const BlockModule = require('../client/world/block/Block.js');
-const Block = BlockModule.default || BlockModule.Block;
+import { getBlockAt, getBlockMetadata, addWorldChange } from './world.js';
+import { getPlayers } from './players.js';
+import { sendBlockChange } from './packets.js';
+import Block from '../client/world/block/Block.js';
 
 const TICK_MS = 50; // 20 game ticks per second
 
@@ -189,6 +188,5 @@ function getServerWorld() {
     return instance;
 }
 
-getServerWorld.ServerWorld = ServerWorld;
-
-module.exports = getServerWorld;
+export default getServerWorld;
+export { ServerWorld };

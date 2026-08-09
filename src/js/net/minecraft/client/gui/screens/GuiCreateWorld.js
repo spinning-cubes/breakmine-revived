@@ -191,14 +191,9 @@ export default class GuiCreateWorld extends GuiScreen {
         }
 
         const worldName = this.textboxWorldName.getText().trim() || "New World";
-        this.minecraft.createNewWorld(worldName, seedLong, this.worldType, this.gameMode).then(world => {
-            this.minecraft.player.creative = (this.gameMode === "creative");
-            this.minecraft.player.spectator = (this.gameMode === "spectator");
-
-            if (this.minecraft.player.creative) {
-                this.minecraft.musicManager.playMusic('creative');
-            }
-        });
+        // The integrated server owns the world now; the game mode is applied
+        // server-side and streamed back to the client on login.
+        this.minecraft.createNewWorld(worldName, seedLong, this.worldType, this.gameMode);
     }
 
 

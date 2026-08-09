@@ -1,12 +1,13 @@
-const { IsomorphicFilesystem } = require('../client/fs/IsomorphicFilesystem.js');
-const fs = new IsomorphicFilesystem();
-const path = require('path');
-const zlib = require('zlib');
-const Logger = require('./logger');
-const log = Logger;
-const worldGen = require('./WorldGen.js');
+import { Buffer } from 'buffer';
+import fs from '../client/fs/ServerFs.js';
+import path from '../util/path.js';
+import Logger from './logger.js';
+import * as worldGen from './WorldGen.js';
 
-const PROJECT_ROOT = path.join(__dirname, '..', '..', '..', '..', '..');
+const log = Logger;
+
+const MODULE_DIR = new URL('.', import.meta.url).pathname;
+const PROJECT_ROOT = path.join(MODULE_DIR, '..', '..', '..', '..', '..');
 const WORLDS_DIR = path.join(PROJECT_ROOT, 'worlds');
 const DEFAULT_WORLD_DIR = PROJECT_ROOT;
 const DEFAULT_WORLD_FILE = path.join(PROJECT_ROOT, 'world_data.bin');
@@ -379,7 +380,7 @@ function getSpawnPosition() {
     return worldGen.getSpawnPosition();
 }
 
-module.exports = {
+export {
     initWorld,
     saveWorld,
     addWorldChange,

@@ -14,24 +14,17 @@
 //
 // The seed may be a number, a signed long string (e.g. "-5529091579467429620")
 // or a non-numeric string (hashed like the client's create-world screen).
-'use strict';
+import { Buffer } from 'buffer';
+import config from './config.js';
+import { BlockRegistry } from '../client/world/block/BlockRegistry.js';
+import WorldGenerator from '../client/world/generator/WorldGenerator.js';
+import Primer from '../client/world/generator/Primer.js';
+import Random from '../util/Random.js';
+import Long from '../../../../../libraries/long.js';
 
-const config = require('./config.js');
-const { BlockRegistry } = require('../client/world/block/BlockRegistry.js');
-
-let WorldGeneratorClass = null;
-let PrimerClass = null;
-let RandomClass = null;
-let Long = null;
-
-try {
-    WorldGeneratorClass = require('../client/world/generator/WorldGenerator.js').default;
-    PrimerClass = require('../client/world/generator/Primer.js').default;
-    RandomClass = require('../util/Random.js').default;
-    Long = require('../../../../../libraries/long.js').default;
-} catch (e) {
-    console.error('[WorldGen] Failed to load client generator classes:', e.message);
-}
+let WorldGeneratorClass = WorldGenerator;
+let PrimerClass = Primer;
+let RandomClass = Random;
 
 const VALID_TYPES = ['flat', 'normal', 'amplified'];
 
@@ -397,7 +390,7 @@ function getSpawnPosition() {
     return { x: bestX, y: bestTop + 1, z: bestZ };
 }
 
-module.exports = {
+export {
     normalizeWorldType,
     getWorldType,
     generateChunkColumn,

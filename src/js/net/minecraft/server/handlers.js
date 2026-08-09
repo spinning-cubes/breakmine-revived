@@ -1,9 +1,10 @@
-const { readVarInt, readString, broadcast, ensureReadable, MalformedPacketError } = require('./protocol');
-const { addPlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState, savePlayerData } = require('./players');
-const { addWorldChange, saveWorld, getBlockAt, getAllBlockInventoriesState } = require('./world');
-const { addItemEntity, removeItemEntity, getItemEntity } = require('./entities');
-const { handleCommand } = require('./commands');
-const {
+import { Buffer } from 'buffer';
+import { readVarInt, readString, broadcast, ensureReadable, MalformedPacketError } from './protocol.js';
+import { addPlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState, savePlayerData, isSpectator } from './players.js';
+import { addWorldChange, saveWorld, getBlockAt, getAllBlockInventoriesState, getSpawnPosition, deleteBlockInventory, getBlockInventories, getWorldTime, getBlockMetadata, setBlockInventory, getWorldChanges } from './world.js';
+import { addItemEntity, removeItemEntity, getItemEntity, getAllItemEntities } from './entities.js';
+import { handleCommand } from './commands.js';
+import {
     sendLoginSuccess,
     sendJoinGame,
     sendSpawnPosition,
@@ -18,17 +19,35 @@ const {
     createSpawnObjectPacket,
     sendPlayerListEntry,
     sendPlayerListData,
-    createDisconnectPacket
-} = require('./packets');
-const { isSpectator } = require('./players');
-const config = require('./config');
-const Logger = require('./logger');
-const getServerWorld = require('./World.js');
-const BlockModule = require('../client/world/block/Block.js');
-const Block = BlockModule.default || BlockModule.Block;
+    createDisconnectPacket,
+    sendBlockChange,
+    sendSignTextUpdate,
+    createEntityMetadataPacket,
+    createAnimationPacket
+} from './packets.js';
+import config from './config.js';
+import Logger from './logger.js';
+import getServerWorld from './World.js';
+import Block from '../client/world/block/Block.js';
+import { NO_MODULES } from '../util/environment.js';
 
-const badWordsModule = require('bad-words');
-const Filter = badWordsModule.Filter || badWordsModule;
+// Sign-text censoring. The bad-words package is never loaded when the server
+// runs without Node modules (singleplayer integrated server), so sign text is
+// stored verbatim there. In Node it is imported lazily and applies from the
+// first edit after it resolves.
+let filter = null;
+if (!NO_MODULES) {
+    import('bad-words')
+        .then((mod) => {
+            const FilterClass = (mod.default && mod.default.Filter) || mod.default || mod.Filter;
+            filter = new FilterClass();
+        })
+        .catch(() => {});
+}
+
+function sanitizeText(text) {
+    return filter ? filter.clean(text) : text;
+}
 
 // A block counts as "solid" for the buried-at-login check only if it fully
 // occupies its cell: air, water, lava and passable plants don't count.
@@ -36,7 +55,6 @@ const FLUID_IDS = new Set([8, 9, 10, 11]);
 function isSolidBlock(blockId) {
     return blockId !== 0 && !FLUID_IDS.has(blockId);
 }
-const filter = new Filter();
 
 let log = Logger;
 
@@ -195,7 +213,6 @@ function handleLoginPacket(player, packetId, buffer, offset) {
 
         player.protocolState = 'play';
 
-        const { getSpawnPosition } = require('./world');
         const spawn = getSpawnPosition();
 
         // Load player data if exists
@@ -308,8 +325,6 @@ function handleLoginPacket(player, packetId, buffer, offset) {
             }));
 
             // Send sign text updates for all signs
-            const { getBlockInventories } = require('./world');
-            const { sendSignTextUpdate } = require('./packets');
             const inventories = getBlockInventories();
             for (const [key, inv] of inventories) {
                 if (inv && inv.text) {
@@ -320,7 +335,6 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         }
 
         // Send initial time to client
-        const { getWorldTime } = require('./world');
         sendTimeUpdate(player, getWorldTime());
 
         // Send player list to the new player (include self so Tab list shows own username)
@@ -346,7 +360,6 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         }
 
         // Send existing item entities to the new player
-        const { getAllItemEntities } = require('./entities');
         const allItems = getAllItemEntities();
         for (const item of allItems) {
             player.ws.send(createSpawnObjectPacket(item));
@@ -482,7 +495,6 @@ function handlePlayerDigging(player, buffer, offset) {
         addWorldChange(x, y, z, blockId);
 
         // Delete sign text / block inventory state on server
-        const { deleteBlockInventory } = require('./world');
         deleteBlockInventory(`${x},${y},${z}`);
 
         // Let the removed block clean up (door halves, pusher head, dust
@@ -502,7 +514,6 @@ function handlePlayerDigging(player, buffer, offset) {
 
         saveWorld();
 
-        const { sendBlockChange } = require('./packets');
         const players = getPlayers();
         const blockState = (blockId << 4) | 0; // No metadata for broken blocks
         for (const p of players.values()) {
@@ -519,19 +530,17 @@ function handleUpdateSignText(player, buffer, offset) {
     const [x, y, z] = readPosition(buffer, offset);
     const [rawText, textBytes] = readString(buffer, offset + 8);
 
-    // Clean text using the bad-words library
-    const text = filter.clean(rawText).substring(0, 200);
+    // Clean text using the bad-words library (when enabled; singleplayer
+    // integrated servers store sign text verbatim).
+    const text = sanitizeText(rawText).substring(0, 200);
 
     log.info('Server', `Sign text update: ${x},${y},${z} = "${text}"`);
 
     const blockKey = `${x},${y},${z}`;
-    const { setBlockInventory, saveWorld } = require('./world');
-    
     setBlockInventory(blockKey, { text: text });
     saveWorld();
 
     // Broadcast sign text update to all players via packet
-    const { sendSignTextUpdate } = require('./packets');
     const players = getPlayers();
     for (const p of players.values()) {
         if (p.ws.readyState === 1) {
@@ -596,8 +605,6 @@ function handleBlockPlacement(player, buffer, offset) {
                 placeY < playerMaxY && placeY + 1 > playerMinY &&
                 placeZ < playerMaxZ && placeZ + 1 > playerMinZ) {
                 // Send block change to revert client prediction
-                const { sendBlockChange } = require('./packets');
-                const { getBlockAt, getBlockMetadata } = require('./world');
                 const currentBlockId = getBlockAt(placeX, placeY, placeZ) || 0;
                 const currentMetadata = getBlockMetadata(placeX, placeY, placeZ) || 0;
                 const currentBlockState = (currentBlockId << 4) | currentMetadata;
@@ -690,7 +697,6 @@ function handleBlockPlacement(player, buffer, offset) {
 
         saveWorld();
 
-        const { sendBlockChange } = require('./packets');
         const blockStates = [[placeX, placeY, placeZ, (blockId << 4) | metadata]];
         if (doorTop) {
             blockStates.push([placeX, placeY + 1, placeZ, (161 << 4) | metadata]);
@@ -717,7 +723,6 @@ function broadcastMovement(player) {
 }
 
 function broadcastEntityMetadata(player) {
-    const { createEntityMetadataPacket } = require('./packets');
     const packet = createEntityMetadataPacket(player);
     const players = getPlayers();
     for (const [eid, p] of players) {
@@ -728,7 +733,6 @@ function broadcastEntityMetadata(player) {
 }
 
 function broadcastAnimation(player) {
-    const { createAnimationPacket } = require('./packets');
     const packet = createAnimationPacket(player);
     const players = getPlayers();
     for (const [eid, p] of players) {
@@ -791,7 +795,6 @@ function checkAndSendChunks(player) {
     const playerChunkZ = Math.floor(player.z / 16);
 
     const sentChunks = playerChunks.get(player.eid) || new Set();
-    const { getWorldChanges } = require('./world');
     const worldChanges = getWorldChanges();
 
     for (let cx = playerChunkX - renderDistance; cx <= playerChunkX + renderDistance; cx++) {
@@ -815,7 +818,6 @@ function cleanupPlayerChunks(eid) {
 // around it, and tell the client to re-arm its loading gate so the player only
 // becomes active once the terrain around the spawn is loaded. Returns nothing.
 function respawnPlayer(player) {
-    const { getSpawnPosition } = require('./world');
     const spawn = getSpawnPosition();
 
     player.x = spawn.x;
@@ -863,7 +865,7 @@ function respawnPlayer(player) {
     broadcast(createEntityTeleportPacket(player), getPlayers());
 }
 
-module.exports = {
+export {
     handlePacket,
     cleanupPlayerChunks,
     respawnPlayer

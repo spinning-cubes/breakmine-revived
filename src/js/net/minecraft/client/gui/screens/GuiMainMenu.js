@@ -44,7 +44,7 @@ export default class GuiMainMenu extends GuiScreen {
         this.buttonList.push(new GuiButton(this.minecraft, "Singleplayer", this.width / 2 - 100, y, 200, 20, async () => {
             const hasSave = await this.minecraft.hasSaveData();
             if (hasSave) {
-                this.minecraft.displayScreen(new GuiCreateWorld(this));
+                this.minecraft.displayScreen(new GuiSelectWorld(this));
             } else {
                 this.minecraft.displayScreen(new GuiCreateWorld(this));
             }

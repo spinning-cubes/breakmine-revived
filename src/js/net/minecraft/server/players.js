@@ -1,11 +1,13 @@
+import Logger from './logger.js';
+import fs from '../client/fs/ServerFs.js';
+import path from '../util/path.js';
+import config from './config.js';
+import * as world from './world.js';
+import * as packets from './packets.js';
+import * as protocol from './protocol.js';
+
 const players = new Map();
 let nextEntityId = 1;
-const Logger = require('./logger');
-const { IsomorphicFilesystem } = require('../client/fs/IsomorphicFilesystem.js');
-const fs = new IsomorphicFilesystem();
-const path = require('path');
-const config = require('./config');
-const world = require('./world');
 
 let log = Logger;
 
@@ -112,11 +114,6 @@ function findPlayerByUsername(username) {
 }
 
 function removePlayer(player) {
-    // Lazily require packets here. To bypass the circular dependency safely,
-    // we ensure we access module.exports after the application has fully initialized.
-    const packets = require('./packets');
-    const protocol = require('./protocol');
-
     // Send player list removal (action 4 = REMOVE_PLAYER) BEFORE deleting from map
     if (packets.sendPlayerListEntry && protocol.broadcast) {
         const removePacket = packets.sendPlayerListEntry([player], 4);
@@ -193,7 +190,7 @@ function loadPlayerData(username) {
     return null;
 }
 
-module.exports = {
+export {
     addPlayer,
     findPlayerByUsername,
     removePlayer,

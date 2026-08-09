@@ -30,12 +30,17 @@ import UUID from "../util/UUID.js";
 import FocusStateType from "../util/FocusStateType.js";
 import Session from "../util/Session.js";
 import PlayerControllerMultiplayer from "./network/controller/PlayerControllerMultiplayer.js";
+import NetworkManager from "./network/NetworkManager.js";
+import NetworkLoginHandler from "./network/handler/NetworkLoginHandler.js";
+import HandshakePacket from "./network/packet/handshake/client/HandshakePacket.js";
+import ProtocolState from "./network/ProtocolState.js";
+import LoginStartPacket from "./network/packet/login/client/LoginStartPacket.js";
+import { startIntegratedServer, stopIntegratedServer, isIntegratedRunning, getIntegratedServerName, deleteServerWorld, serverNameForKey, listServerWorlds } from "./integrated/IntegratedServer.js";
 import ChunkProviderGenerateWorker from "./world/provider/ChunkProviderGenerateWorker.js";
 import FileSystem from "./fs/Filesystem.js";
 import Chunk from "./world/Chunk.js";
 import World from "./world/World.js";
 import PlayerController from "./network/controller/PlayerController.js";
-import Long from "../../../../../libraries/long.js";
 import generateUsername from "./UsernameGenerator.js";
 import Vector3 from "../util/Vector3.js";
 import MathHelper from "../util/MathHelper.js";
@@ -440,6 +445,13 @@ export default class Minecraft {
                 // Reset header and footer
                 this.ingameOverlay.playerListOverlay.setHeader(null);
                 this.ingameOverlay.playerListOverlay.setFooter(null);
+
+                // The loopback 'close' handler saves the player asynchronously;
+                // give it a beat, then shut the integrated server down and
+                // refresh the world index metadata (time / gamemode / lastPlayed).
+                await new Promise(resolve => setTimeout(resolve, 50));
+                stopIntegratedServer();
+                await this._updateWorldIndexOnQuit();
             }
             this.playerController = null;
 
@@ -454,6 +466,12 @@ export default class Minecraft {
                 this.world = null;
                 this.player = null;
                 this.loadingScreen = null;
+
+                // The hotbar/inventory overlay keeps rendering during the
+                // async teardown above (server shutdown awaits), re-adding
+                // item groups to the 3D scene after reset(); clear them now
+                // that the world is gone so they don't linger over the menu.
+                this.itemRenderer.reset();
             }
             this.displayScreen(new GuiMainMenu());
         } else {
@@ -676,21 +694,69 @@ export default class Minecraft {
     }
 
     async hasSaveData() {
-        const index = await this._loadWorldIndex();
-        return index.length > 0;
+        const list = await this.getWorldList();
+        return list.length > 0;
     }
 
+    // List singleplayer worlds from the server-directory layout (the source of
+    // truth for world storage now), merged with the legacy IndexedDB index for
+    // metadata (last played, display name of not-yet-entered legacy worlds).
     async getWorldList() {
-        return this._loadWorldIndex();
+        const index = await this._loadWorldIndex();
+        const byKey = new Map(index.map(e => [e.key, e]));
+        const serverWorlds = await listServerWorlds();
+        const seen = new Set();
+
+        const list = [];
+        for (const sw of serverWorlds) {
+            // Skip pure multiplayer-style servers (no singleplayer world key
+            // and never indexed as a world).
+            if (!sw.key.startsWith('w_') && !byKey.has(sw.key)) continue;
+
+            const idx = byKey.get(sw.key);
+            seen.add(sw.key);
+            list.push({
+                key: sw.key,
+                name: sw.name || (idx && idx.name) || sw.key,
+                seedLow: sw.seedLow ?? (idx && idx.seedLow) ?? 0,
+                seedHigh: sw.seedHigh ?? (idx && idx.seedHigh) ?? 0,
+                worldType: sw.worldType || (idx && idx.worldType) || 'normal',
+                gameMode: sw.gameMode || (idx && idx.gameMode) || 'creative',
+                lastPlayed: (idx && idx.lastPlayed) || 0,
+                time: sw.time ?? (idx && idx.time) ?? 0,
+                spawnX: (idx && idx.spawnX) || 0,
+                spawnY: (idx && idx.spawnY) || 0,
+                spawnZ: (idx && idx.spawnZ) || 0,
+            });
+        }
+
+        // Legacy IndexedDB worlds that have not been entered since the switch
+        // to the integrated server have no server directory yet; they still
+        // show up and migrate on first load.
+        for (const [key, idx] of byKey) {
+            if (seen.has(key)) continue;
+            list.push({
+                key,
+                name: idx.name || key,
+                seedLow: idx.seedLow || 0,
+                seedHigh: idx.seedHigh || 0,
+                worldType: idx.worldType || 'normal',
+                gameMode: idx.gameMode || 'creative',
+                lastPlayed: idx.lastPlayed || 0,
+                time: idx.time || 0,
+                spawnX: idx.spawnX || 0,
+                spawnY: idx.spawnY || 0,
+                spawnZ: idx.spawnZ || 0,
+            });
+        }
+
+        list.sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+        return list;
     }
 
     async createNewWorld(name, seedLong, worldType, gameMode) {
         const worldKey = 'w_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
         this.currentWorldKey = worldKey;
-
-        let world = new World(this);
-        let provider = new ChunkProviderGenerateWorker(world, seedLong, worldType);
-        world.setChunkProvider(provider);
 
         // Add to world index
         const index = await this._loadWorldIndex();
@@ -709,12 +775,43 @@ export default class Minecraft {
         });
         await this._saveWorldIndex(index);
 
-        this.playerController = new PlayerController(this);
-        await this.loadWorld(world);
-        this.ingameOverlay.chatOverlay.clearChat();
+        // Start the in-page integrated server and connect as a client. The
+        // server owns the world (terrain + save files); the client renders
+        // whatever the server sends, exactly like multiplayer.
+        this.displayScreen(new GuiLoadingIntegratedServer(this.currentScreen));
+        await startIntegratedServer({
+            worldKey: worldKey,
+            name: name,
+            seedLow: seedLong.low,
+            seedHigh: seedLong.high,
+            worldType: worldType,
+            gameMode: gameMode || 'survival',
+            username: this.getSession().getProfile().getUsername(),
+            migrateData: null,
+        });
+        this.connectToIntegratedServer();
 
-        return world;
+        return null;
     }
+
+    // Open a client connection to the running integrated server over the
+    // loopback transport. handleJoinGame() on the server side will then create
+    // the WorldClient + PlayerControllerMultiplayer and enter the world.
+    connectToIntegratedServer() {
+        const networkManager = new NetworkManager(this);
+        networkManager.setNetworkHandler(new NetworkLoginHandler(networkManager));
+        networkManager.connect('loopback', 0, { url: 'ws://loopback' });
+
+        const mods = [];
+        if (this.modLoader) {
+            for (const [modId, entry] of this.modLoader.mods) {
+                mods.push({ id: modId, name: entry.name, version: entry.version });
+            }
+        }
+        networkManager.sendPacket(new HandshakePacket(Minecraft.PROTOCOL_VERSION, ProtocolState.LOGIN, mods));
+        networkManager.sendPacket(new LoginStartPacket(this.getSession().getProfile().getUsername()));
+    }
+
 
     async saveWorld() {
         if (!this.world || !this.isSingleplayer() || !this.currentWorldKey) return;
@@ -878,71 +975,82 @@ export default class Minecraft {
     }
 
     async loadSavedWorld(worldKey) {
-        const saveData = await this._loadWorldFromDB(worldKey);
-        if (!saveData) return false;
-
         this.currentWorldKey = worldKey;
 
-        let seedLong;
-        if (saveData.seedLow !== undefined) {
-            seedLong = new Long(saveData.seedLow, saveData.seedHigh);
-        } else {
-            seedLong = new Long(0, 0);
-        }
-
-        const worldType = saveData.worldType || 'normal';
-
-        let world = new World(this);
-        let provider = new ChunkProviderGenerateWorker(world, seedLong, worldType);
-        world.setChunkProvider(provider);
-
-        this.playerController = new PlayerController(this);
-        await this.loadWorld(world);
-        this.ingameOverlay.chatOverlay.clearChat();
+        // Prefer the world's own serverconfig.conf (the source of truth for
+        // re-entered worlds); fall back to the legacy IndexedDB index for
+        // worlds that have not been migrated to the server layout yet.
+        const serverWorlds = await listServerWorlds();
+        const serverEntry = serverWorlds.find(w => w.key === worldKey);
 
         const index = await this._loadWorldIndex();
         const entry = index.find(e => e.key === worldKey);
-        if (entry) {
-            if (this.player) {
-                this.player.creative = (entry.gameMode === 'creative');
-                this.player.spectator = (entry.gameMode === 'spectator');
-            }
+
+        // A legacy IndexedDB save (from before the integrated server) is
+        // migrated into server files the first time the world is entered.
+        const saveData = await this._loadWorldFromDB(worldKey);
+
+        this.displayScreen(new GuiLoadingIntegratedServer(this.currentScreen));
+        await startIntegratedServer({
+            worldKey: worldKey,
+            name: (serverEntry && serverEntry.name) || (entry && entry.name) || undefined,
+            seedLow: serverEntry ? serverEntry.seedLow : (entry ? entry.seedLow : 0),
+            seedHigh: serverEntry ? serverEntry.seedHigh : (entry ? entry.seedHigh : 0),
+            worldType: (serverEntry && serverEntry.worldType) || (entry && entry.worldType) || 'normal',
+            gameMode: (serverEntry && serverEntry.gameMode) || (entry && entry.gameMode) || 'creative',
+            username: this.getSession().getProfile().getUsername(),
+            migrateData: saveData || null,
+        });
+
+        // Once migrated, drop the IndexedDB copy so it never overwrites the
+        // server's (newer) save files on a later entry.
+        if (saveData) {
+            await this._deleteWorldFromDB(worldKey);
         }
 
-        if (saveData.playerPos && this.player) {
-            this.player.setPositionAndRotation(
-                saveData.playerPos.x, saveData.playerPos.y, saveData.playerPos.z,
-                saveData.playerRot ? saveData.playerRot.yaw : 0,
-                saveData.playerRot ? saveData.playerRot.pitch : 0
-            );
-        }
-
-        if (saveData.playerHealth !== undefined && this.player) {
-            this.player.health = saveData.playerHealth;
-            this.player.isDead = this.player.health <= 0;
-        }
-
-        if (saveData.playerGameMode && this.player) {
-            this.player.creative = saveData.playerGameMode.creative;
-            this.player.spectator = saveData.playerGameMode.spectator;
-            this.player.flying = saveData.playerGameMode.flying;
-        }
-
-        if (saveData.itemEntities && this.world && this.world.entities) {
-            for (const itemData of saveData.itemEntities) {
-                const item = new ItemEntity(this, this.world, itemData.blockId, itemData.x, itemData.y, itemData.z);
-                item.motionX = itemData.motionX || 0;
-                item.motionY = itemData.motionY || 0;
-                item.motionZ = itemData.motionZ || 0;
-                item.tickCount = 0;
-                this.world.addEntity(item);
-            }
-        }
-
+        this.connectToIntegratedServer();
         return true;
     }
 
+    _deleteWorldFromDB(worldKey) {
+        const db = this._getWorldDB();
+        return db.then((database) => new Promise((resolve, reject) => {
+            const tx = database.transaction('saves', 'readwrite');
+            tx.objectStore('saves').delete(worldKey);
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e.target.error);
+        }));
+    }
+
+    // Refresh the world index metadata (time, spawn, gamemode, lastPlayed)
+    // when leaving a singleplayer integrated-server world. The server owns the
+    // actual save; this keeps the world-selection list up to date.
+    async _updateWorldIndexOnQuit() {
+        if (!this.currentWorldKey || !this.world || !this.player) return;
+
+        const index = await this._loadWorldIndex();
+        const entry = index.find(e => e.key === this.currentWorldKey);
+        if (!entry) return;
+
+        entry.lastPlayed = Date.now();
+        entry.time = this.world.time || 0;
+        entry.spawnX = this.world.spawn ? this.world.spawn.x : 0;
+        entry.spawnY = this.world.spawn ? this.world.spawn.y : 0;
+        entry.spawnZ = this.world.spawn ? this.world.spawn.z : 0;
+        entry.gameMode = this.player.creative ? 'creative' : this.player.spectator ? 'spectator' : 'survival';
+        await this._saveWorldIndex(index);
+    }
+
+
+
     async deleteWorld(worldKey) {
+        // Stop the integrated server if it is running this world
+        if (isIntegratedRunning() && getIntegratedServerName() === serverNameForKey(worldKey)) {
+            stopIntegratedServer();
+        }
+        // Remove the server's save files for this world
+        deleteServerWorld(worldKey);
+
         const db = await this._getWorldDB();
         await new Promise((resolve, reject) => {
             const tx = db.transaction('saves', 'readwrite');
@@ -1195,7 +1303,7 @@ export default class Minecraft {
                 if (this.isSingleplayer()) {
                     this.player.respawn();
                 }
-                this.musicManager.playMusic('game');
+                this.musicManager.playMusic(this.player && this.player.creative ? 'creative' : 'game');
                 this.loadingScreen = null;
                 this.displayScreen(null);
             }
@@ -1524,7 +1632,7 @@ export default class Minecraft {
                             let soundName = block.getSound().getBreakSound();
 
                             // Play sound
-                            this.soundManager.playSound(soundName, this.player.x + 0.5, this.player.y + 1.6, this.player.z + 0.5, 1.0, 1.0);
+                            this.soundManager.playSoundMono(soundName, 1.0, 1.0);
 
                             // Get block ID before destroying
                             let blockId = this.world.getBlockAt(hitResult.x, hitResult.y, hitResult.z);

@@ -51,7 +51,7 @@ function updateItemPositions() {
     }
 }
 
-module.exports = {
+export {
     addItemEntity,
     removeItemEntity,
     getItemEntity,

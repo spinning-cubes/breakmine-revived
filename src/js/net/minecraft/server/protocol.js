@@ -1,3 +1,5 @@
+import { Buffer } from 'buffer';
+
 // Thrown when a packet is malformed or shorter than the protocol requires.
 // Callers catch this to reject the connection instead of letting the process
 // crash with an ERR_OUT_OF_RANGE / ERR_BUFFER_OUT_OF_BOUNDS.
@@ -106,7 +108,7 @@ function broadcast(packetBuffer, players) {
     }
 }
 
-module.exports = {
+export {
     readVarInt,
     writeVarInt,
     readString,

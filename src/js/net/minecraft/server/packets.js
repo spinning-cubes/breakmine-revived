@@ -1,7 +1,7 @@
-const zlib = require('zlib');
-const { makePacket, writeVarInt, writeString, broadcast, varIntSize } = require('./protocol');
-const { getPlayers, getPlayerCount } = require('./players');
-const { getWorldChanges, generateFlatChunkColumn, getWorldType, getSpawnPosition } = require('./world');
+import { Buffer } from 'buffer';
+import { makePacket, writeVarInt, writeString, broadcast, varIntSize } from './protocol.js';
+import { getPlayers, getPlayerCount } from './players.js';
+import { getWorldChanges, generateFlatChunkColumn, getWorldType, getSpawnPosition } from './world.js';
 
 function createDisconnectPacket(reason) {
     const message = JSON.stringify({ text: reason || 'Disconnected from server' });
@@ -376,7 +376,7 @@ function sendPlayerListData(header = null, footer = null) {
     return makePacket(0x47, data.subarray(0, offset));
 }
 
-module.exports = {
+export {
     createDisconnectPacket,
     sendLoginSuccess,
     sendJoinGame,
