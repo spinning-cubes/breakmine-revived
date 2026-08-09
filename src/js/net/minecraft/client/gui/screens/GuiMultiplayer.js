@@ -77,20 +77,37 @@ export default class GuiMultiplayer extends GuiScreen {
         const defaultServerFileName = "Publix_Creative.json";
         const defaultServerFileName2 = "Publix_SMP.json";
 
-        this.saveList = [
-            {
-                name: "\u00ca Publix Creative",
-                date: "",
-                details: "play.breakmine.com",
-                motd: "Create epic things at Publix Creative!"
-            },
-            {
-                name: "\u00ca Publix SMP",
-                date: "",
-                details: "playsmp.breakmine.com",
-                motd: "Survive and fight in the new Publix SMP!"
-            }
-        ];
+        this.saveList = [];
+        if (this.minecraft.settings.showPublix) {
+            this.saveList.push(
+                {
+                    name: "\u00ca Publix Creative",
+                    date: "",
+                    details: "play.breakmine.com",
+                    motd: "Create epic things at Publix Creative!"
+                },
+                {
+                    name: "\u00ca Publix SMP",
+                    date: "",
+                    details: "playsmp.breakmine.com",
+                    motd: "Survive and fight in the new Publix SMP!"
+                }
+            );
+        }
+
+        this.worldSlotContainer.slotList = this.saveList.map((data, index) =>
+            new GuiServerSlot(
+                data,
+                this.width / 2 - 110,
+                0,
+                220,
+                36,
+                () => {
+                    this.worldSlotContainer.setSelected(index);
+                },
+                this.minecraft
+            )
+        );
 
         this.minecraft.fs.listDir(`servers/`).then(fileList => {
             if (fileList !== null) {

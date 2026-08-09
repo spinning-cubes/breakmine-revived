@@ -48,6 +48,7 @@ import GuiFunctions from "./gui/screens/GuiFunctions.js";
 import ItemEntity from "./entity/ItemEntity.js";
 import PlayerEntity from "./entity/PlayerEntity.js";
 import { Version } from "../../../../resources/version.js";
+import * as AuthLib from "./network/AuthLib.js";
 
 export default class Minecraft {
 
@@ -82,6 +83,8 @@ export default class Minecraft {
 
         this.settings = new GameSettings();
         this.settings.load();
+
+        AuthLib.setApiBaseUrl(this.settings.apiUrl);
 
         // Auto-detect Smart TV platform and enable TV mode on first visit
         if (!this.settings.tvmode && !document.cookie.includes('tvmode=')) {
