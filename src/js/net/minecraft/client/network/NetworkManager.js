@@ -4,6 +4,7 @@ import ProtocolState from "./ProtocolState.js";
 import {require} from "../../../../Start.js";
 import MissingPackets from "../../util/MissingPackets.js";
 import InventoryBasic from "../inventory/inventory/InventoryBasic.js";
+import IsomorphicWebSocket from "../../util/IsomorphicWebSocket.js";
 
 export default class NetworkManager {
 
@@ -66,7 +67,7 @@ export default class NetworkManager {
             return;
         }
 
-        const socket = new WebSocket(url);
+        const socket = new IsomorphicWebSocket(url);
         socket.binaryType = "arraybuffer";
         this.socket = socket;
 
@@ -124,7 +125,7 @@ export default class NetworkManager {
     }
 
     sendJson(payload) {
-        if (this.connected && this.socket && this.socket.readyState === WebSocket.OPEN) {
+        if (this.connected && this.socket && this.socket.readyState === 1) {
             this.socket.send(JSON.stringify(payload));
         }
     }

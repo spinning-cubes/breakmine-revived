@@ -1,5 +1,6 @@
 import GuiButton from "./GuiButton.js";
 import GuiTooltip from "./GuiTooltip.js";
+import IsomorphicWebSocket from "../../../util/IsomorphicWebSocket.js";
 
 export default class GuiServerSlot extends GuiButton {
 
@@ -116,7 +117,7 @@ export default class GuiServerSlot extends GuiButton {
         if (rawAddress.startsWith('ws://') || rawAddress.startsWith('wss://')) {
             addresses.push(rawAddress);
         } else {
-            // Try wss first, then ws (using exact raw address without appending ports)
+            // Try wss first (public servers), then plain ws (e.g. local servers)
             addresses.push('wss://' + rawAddress);
             addresses.push('ws://' + rawAddress);
         }
@@ -163,7 +164,7 @@ export default class GuiServerSlot extends GuiButton {
             };
 
             try {
-                ws = new WebSocket(url);
+                ws = new IsomorphicWebSocket(url);
 
                 timeoutId = setTimeout(() => {
                     finish(false);

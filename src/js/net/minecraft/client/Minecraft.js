@@ -18,6 +18,7 @@ import GrassColorizer from "./render/GrassColorizer.js";
 import ModLoader from "./ModLoader.js";
 import GuiMainMenu from "./gui/screens/GuiMainMenu.js";
 import GuiLoadingScreen from "./gui/screens/GuiLoadingScreen.js";
+import GuiLoadingIntegratedServer from "./gui/screens/GuiLoadingIntegratedServer.js";
 import * as THREE from "../../../../../libraries/three.module.js";
 import ParticleRenderer from "./render/particle/ParticleRenderer.js";
 import ClientDropItemPacket from "./network/packet/play/client/ClientDropItemPacket.js";
@@ -48,6 +49,7 @@ import GuiFunctions from "./gui/screens/GuiFunctions.js";
 import ItemEntity from "./entity/ItemEntity.js";
 import PlayerEntity from "./entity/PlayerEntity.js";
 import { Version } from "../../../../resources/version.js";
+import { createErrorWindow } from './gui/WindowDraggable.js';
 import * as AuthLib from "./network/AuthLib.js";
 
 export default class Minecraft {
@@ -202,7 +204,7 @@ export default class Minecraft {
         // Mixins
         this.addMixinHandlers();
     }
-
+    
     async initVersionChecker() {
         return;
         const TARGET_URL = 'https://breakmine.com/src/resources/version.js';
@@ -455,6 +457,13 @@ export default class Minecraft {
             }
             this.displayScreen(new GuiMainMenu());
         } else {
+            // Singleplayer: show "Starting integrated server..." for 2 seconds
+            // before the regular terrain loading screen
+            if (!(this.playerController instanceof PlayerControllerMultiplayer)) {
+                this.displayScreen(new GuiLoadingIntegratedServer(this.currentScreen));
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
             // Display loading screen
             this.loadingScreen = new GuiLoadingScreen();
             this.loadingScreen.setTitle("Building terrain...");
