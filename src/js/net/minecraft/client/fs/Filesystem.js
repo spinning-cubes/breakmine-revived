@@ -154,7 +154,6 @@ export default class FileSystem {
             localStorage.setItem(lsKey, base64Text);
             
             await this._deleteFileFromIndexedDB(filename); 
-            console.log(`Saved '${filename}' in LocalStorage`);
             return;
 
         } catch (e) {
@@ -208,7 +207,6 @@ export default class FileSystem {
         try {
             localStorage.setItem(lsKey, base64Data);
             await this._deleteFileFromIndexedDB(filename);
-            console.log(`Saved binary file '${filename}' in LocalStorage`);
             return;
         } catch (e) {
             console.warn(`LocalStorage quota exceeded or failed for '${filename}'`);
