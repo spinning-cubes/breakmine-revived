@@ -216,8 +216,13 @@ const populateStub = new PopulateWorldStub();
 // chunk re-runs the population of its 1-ring neighborhood and keeps the
 // structure blocks that fall inside it.
 function generateBlocks(chunkX, chunkZ) {
-    const blocks = getBaseBlocks(chunkX, chunkZ);
-    if (!blocks) return null;
+    const base = getBaseBlocks(chunkX, chunkZ);
+    if (!base) return null;
+
+    // Copy the base terrain before population writes into it: the base cache
+    // must stay pure so re-running a neighbor's population (for cross-chunk
+    // tree spill) always sees the same terrain, regardless of generation order.
+    const blocks = new Uint8Array(base);
 
     const populateGenerator = getPopulateGenerator();
     if (!populateGenerator) return blocks;

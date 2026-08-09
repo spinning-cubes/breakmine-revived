@@ -479,7 +479,7 @@ export default class Minecraft {
             // before the regular terrain loading screen
             if (!(this.playerController instanceof PlayerControllerMultiplayer)) {
                 this.displayScreen(new GuiLoadingIntegratedServer(this.currentScreen));
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
 
             // Display loading screen
