@@ -45,11 +45,15 @@ export default class GuiTooltip extends Gui {
         const tooltipWidth = textWidth + padding * 2;
         const tooltipHeight = textHeight + padding * 2;
         let x = mouseX + 4;
-        const y = mouseY - 10;
+        let y = mouseY - 10;
         const screenWidth = this.minecraft?.window?.width || 1920; 
+        const screenHeight = this.minecraft?.window?.height || 1080;
         
-        if (x + tooltipWidth > screenWidth) { 
-            x = mouseX - 4 - tooltipWidth;
+        if (tooltipWidth <= screenWidth) {
+            if (x + tooltipWidth > screenWidth) x = screenWidth - tooltipWidth;
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
+            if (y + tooltipHeight > screenHeight) y = screenHeight - tooltipHeight;
         }
         
         this.drawRect(stack, x, y, x + tooltipWidth, y + tooltipHeight, 'rgba(0,0,0,0.8)');
@@ -62,6 +66,30 @@ export default class GuiTooltip extends Gui {
 
     isMouseOver(mouseX, mouseY) {
         return mouseX > this.x && mouseX < this.x + this.width && mouseY > this.y && mouseY < this.y + this.height;
+    }
+
+    isSelectable() {
+        return false;
+    }
+
+    mouseClicked(mouseX, mouseY, mouseButton) {
+
+    }
+
+    mouseReleased(mouseX, mouseY, mouseButton) {
+
+    }
+
+    mouseDragged(mouseX, mouseY, mouseButton) {
+
+    }
+
+    keyTyped(key, character) {
+
+    }
+
+    keyReleased(key) {
+
     }
 
 }

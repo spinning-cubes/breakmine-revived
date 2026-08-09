@@ -156,8 +156,9 @@ export default class GuiScreen extends Gui {
     }
 
     mouseClicked(mouseX, mouseY, mouseButton) {
-        for (let i in this.buttonList) {
-            let button = this.buttonList[i];
+        const buttonList = this.buttonList;
+        for (let i in buttonList) {
+            let button = buttonList[i];
 
             if (button.isMouseOver(mouseX, mouseY)) {
                 button.mouseClicked(mouseX, mouseY, mouseButton);

@@ -545,6 +545,17 @@ export default class GameWindow {
 
                     this.mouseX = touch.clientX / this.scaleFactor;
                     this.mouseY = touch.clientY / this.scaleFactor;
+
+                    // Drop focus from all text widgets first; the tapped widget
+                    // (if any) will re-focus via mouseClicked below
+                    const buttons = this.minecraft.currentScreen.buttonList;
+                    for (let b = 0; b < buttons.length; b++) {
+                        const btn = buttons[b];
+                        if (btn && typeof btn.isFocused === 'boolean' && typeof btn.setFocused === 'function') {
+                            btn.setFocused(false);
+                        }
+                    }
+
                     this.minecraft.currentScreen.mouseClicked(
                         this.mouseX,
                         this.mouseY,
@@ -740,6 +751,13 @@ export default class GameWindow {
             }
         }
 
+        // Release the previously bound widget so it can track focus again
+        if (this.mobileTextWidget && this.mobileTextWidget !== widget) {
+            if (typeof this.mobileTextWidget.enableS === 'boolean') {
+                this.mobileTextWidget.enableS = true;
+            }
+        }
+
         if (!widget) {
             if (this.mobileTextInput && document.activeElement === this.mobileTextInput) {
                 this.mobileTextInput.blur();
@@ -747,6 +765,12 @@ export default class GameWindow {
             this.mobileTextWidget = null;
             this.mobileTextSuppressed = false;
             return;
+        }
+
+        // Pin the widget's focus while the native keyboard is open so render()
+        // doesn't drop it based on stale mouse/touch coordinates
+        if (typeof widget.enableS === 'boolean') {
+            widget.enableS = false;
         }
 
         const input = this.getMobileTextInput();

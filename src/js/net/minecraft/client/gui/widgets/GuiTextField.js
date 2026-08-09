@@ -80,6 +80,11 @@ export default class GuiTextField extends GuiButton {
         this.cursorPosition = this.text.length;
     }
 
+    setFocused(focused) {
+        this.isFocused = !!focused;
+        return this;
+    }
+
     onTick() {
         this.cursorCounter++;
     }

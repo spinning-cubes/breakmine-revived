@@ -65,6 +65,11 @@ export default class GuiPasswordField extends GuiButton {
         this.cursorPosition = this.text.length;
     }
 
+    setFocused(focused) {
+        this.isFocused = !!focused;
+        return this;
+    }
+
     onTick() {
         this.cursorCounter++;
     }

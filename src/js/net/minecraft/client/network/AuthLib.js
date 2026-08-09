@@ -35,7 +35,16 @@ export function isLocalNetwork() {
     );
 }
 
-const API_BASE_URL = 'https://api.breakmine.com';
+let API_BASE_URL = 'https://api.breakmine.com';
+
+export function setApiBaseUrl(url) {
+    if (typeof url !== 'string' || url.length === 0) return;
+    API_BASE_URL = url.startsWith('http://') || url.startsWith('https://') ? url : 'https://' + url;
+}
+
+export function getApiBaseUrl() {
+    return API_BASE_URL;
+}
 
 
 export class AuthLibInfo {

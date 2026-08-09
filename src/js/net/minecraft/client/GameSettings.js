@@ -20,7 +20,9 @@ export default class GameSettings {
         this.debugOverlay = false;
         this.showChunkBoundaries = false;
         this.showEntityBoundingBoxes = false;
-        this.serverAddress = 'server.labystudio.de';
+        this.serverAddress = '';
+        this.apiUrl = 'api.breakmine.com';
+        this.showPublix = true;
         this.proxyAddress = '';
         this.safePlacing = false;
         this.proxy = '';
