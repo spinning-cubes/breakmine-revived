@@ -1,7 +1,11 @@
-const Logger = require('./logger');
-const { sendChatMessage } = require('./packets');
-const { broadcast, writeString, makePacket } = require('./protocol');
-const { getPlayers, isSpectator, findPlayerByUsername, isOp } = require('./players');
+import { Buffer } from 'buffer';
+import Logger from './logger.js';
+import { sendChatMessage, sendPlayerPositionLook, createEntityTeleportPacket, sendPlayerListEntry, createSpawnPlayerPacket, createDestroyEntityPacket, sendTimeUpdate, sendRespawn, sendSpawnPosition, sendChunks, sendResetWorldPacket } from './packets.js';
+import { broadcast, writeString, makePacket } from './protocol.js';
+import { getPlayers, isSpectator, findPlayerByUsername, isOp, savePlayerData, loadPlayerData, normalizeInventoryState } from './players.js';
+import config from './config.js';
+import { initWorld, saveWorld, getCurrentWorldName, getSpawnPosition, getWorldTime, setWorldTime } from './world.js';
+import { cleanupPlayerChunks } from './handlers.js';
 
 function canSee(viewer, target) {
     if (isSpectator(target)) {
@@ -9,7 +13,6 @@ function canSee(viewer, target) {
     }
     return true;
 }
-const { initWorld, saveWorld, getCurrentWorldName, getSpawnPosition } = require('./world');
 
 const log = Logger;
 
@@ -71,11 +74,9 @@ function handleTp(player, args) {
     player.z = z;
 
     // Send position update to player
-    const { sendPlayerPositionLook } = require('./packets');
     sendPlayerPositionLook(player);
 
     // Broadcast movement to other players who can see this player
-    const { createEntityTeleportPacket } = require('./packets');
     const packet = createEntityTeleportPacket(player);
     const players = getPlayers();
     for (const [eid, p] of players) {
@@ -159,7 +160,6 @@ function handleGamemode(player, args) {
     player.ws.send(JSON.stringify({ type: 'gamemode', gamemode: gamemode }));
 
     // Update visibility for all other players
-    const { sendPlayerListEntry, createSpawnPlayerPacket, createDestroyEntityPacket } = require('./packets');
     const players = getPlayers();
     for (const [eid, p] of players) {
         if (p.ws.readyState !== 1) continue;
@@ -185,8 +185,6 @@ function handleGamemode(player, args) {
 }
 
 function handleTime(player, args) {
-    const { getWorldTime, setWorldTime } = require('./world');
-    const { sendTimeUpdate } = require('./packets');
     const players = getPlayers();
 
     if (args.length === 0) {
@@ -254,7 +252,6 @@ function handleServer(player, args) {
     const subCommand = args[0].toLowerCase();
 
     if (subCommand === 'list') {
-        const config = require('./config');
         const servers = config.listServers();
         sendChatMessageToPlayer(player, '§6Available servers:');
         servers.forEach(server => {
@@ -278,7 +275,6 @@ function handleServer(player, args) {
     // Persist each player's state on the server they are leaving before
     // switching, so their position/inventory stay intact per server.
     const players = getPlayers();
-    const { savePlayerData, loadPlayerData, normalizeInventoryState } = require('./players');
     for (const p of players.values()) {
         if (p.username) {
             savePlayerData(p);
@@ -290,14 +286,12 @@ function handleServer(player, args) {
 
     // Load the target server's own config (world type, seed, gamemode, ...).
     // If it has no serverconfig.conf the current settings are kept.
-    const config = require('./config');
     config.reload(serverName);
 
     // Load new server
     initWorld(serverName);
 
     const spawn = getSpawnPosition();
-    const { sendRespawn, sendSpawnPosition, sendPlayerPositionLook, sendChunks, sendResetWorldPacket } = require('./packets');
 
     for (const p of players.values()) {
         // Apply the player's saved state for the new server, or fall back to
@@ -326,7 +320,6 @@ function handleServer(player, args) {
 
         // Forget which chunks were already sent so every chunk around the
         // player's (possibly far away) saved position is streamed fresh.
-        const { cleanupPlayerChunks } = require('./handlers');
         cleanupPlayerChunks(p.eid);
 
         // Send reset world packet to clear all chunks
@@ -376,6 +369,6 @@ function sendChatMessageToPlayer(player, message) {
     player.ws.send(makePacket(0x02, chatData.subarray(0, offset)));
 }
 
-module.exports = {
+export {
     handleCommand
 };

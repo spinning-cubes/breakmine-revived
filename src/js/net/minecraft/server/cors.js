@@ -12,7 +12,7 @@ const crypto = require('crypto');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
-const Logger = require('./logger');
+const Logger = require('./logger').default;
 
 const SECRETS_FILE = './data/secrets.json';
 

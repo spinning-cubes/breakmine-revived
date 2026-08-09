@@ -1,6 +1,6 @@
-const { addWorldChange, getBlockAt, getBlockMetadata } = require('./world.js');
-const { getPlayers } = require('./players.js');
-const { sendBlockChange } = require('./packets.js');
+import { addWorldChange, getBlockAt, getBlockMetadata } from './world.js';
+import { getPlayers } from './players.js';
+import { sendBlockChange } from './packets.js';
 
 // Fuel values: typeId -> burn ticks
 const FUEL_VALUES = {
@@ -145,4 +145,4 @@ function broadcastFurnaceChanges(players, changes) {
     }
 }
 
-module.exports = { tickAllFurnaces, broadcastFurnaceChanges };
+export { tickAllFurnaces, broadcastFurnaceChanges };

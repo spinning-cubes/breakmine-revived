@@ -1,4 +1,6 @@
+import { Buffer } from 'buffer';
 import BrowserFS from './Filesystem.js';
+import { inflate } from '../../lib/pako.js';
 
 const isNode = typeof window === 'undefined' && typeof process !== 'undefined';
 
@@ -23,8 +25,20 @@ function nodeFsUnavailable(methodName) {
     return new Error(`IsomorphicFilesystem.${methodName} is only supported in Node.js mode`);
 }
 
+// Normalize a browser-side path into a flat store key. Leading/trailing
+// slashes are stripped so '/worlds/main/world_data.bin' and
+// 'worlds/main/world_data.bin' address the same file, and '' / '.' both mean
+// the virtual root.
+function normalizeKey(filePath) {
+    return String(filePath == null || filePath === '' ? '' : filePath)
+        .replace(/^\/+/, '')
+        .replace(/\/+$/, '');
+}
+
 export class IsomorphicFilesystem {
     #browserFS = null;
+    #cache = new Map();      // key -> { kind: 'file', data: Uint8Array } | { kind: 'dir' }
+    #readyPromise = null;
 
     constructor(dbName = 'BrowserFileStoreDB', storeName = 'text_files') {
         if (!isNode) {
@@ -54,15 +68,102 @@ export class IsomorphicFilesystem {
         return nodeFs;
     }
 
+    // Browser backend: hydrate the in-memory cache from the persisted store.
+    // Only needed before the first server init; import-time sync reads run
+    // against an empty cache and fall back to defaults until ready() resolves.
+    async ready() {
+        if (isNode || !this.#browserFS) {
+            return;
+        }
+        if (this.#readyPromise) {
+            return this.#readyPromise;
+        }
+        this.#readyPromise = this.#initBrowser();
+        return this.#readyPromise;
+    }
+
+    async #initBrowser() {
+        try {
+            const keys = await this.#browserFS.listDir('');
+            for (const key of keys) {
+                try {
+                    const raw = await this.#browserFS.loadBinaryFile(key);
+                    if (raw === null || raw.length === 0) continue;
+                    // saveFile() stores deflate(text); saveBinaryFile() stores
+                    // the raw bytes. Inflate what we can, keep the rest.
+                    let bytes = raw;
+                    try {
+                        bytes = inflate(raw);
+                    } catch {
+                        bytes = raw;
+                    }
+                    this.#cache.set(normalizeKey(key), { kind: 'file', data: bytes });
+                } catch {
+                    // Skip unreadable entries.
+                }
+            }
+        } catch {
+            // No store available; start with an empty cache.
+        }
+        this.#cache.set('worlds', { kind: 'dir' });
+    }
+
+    // Lazily persist a cache entry to the async store (fire-and-forget).
+    #persist(key, entry) {
+        if (isNode || !this.#browserFS || entry.kind !== 'file') return;
+        const str = new TextDecoder().decode(entry.data);
+        let keepAsText = true;
+        try {
+            new TextEncoder().encode(str);
+        } catch {
+            keepAsText = false;
+        }
+        try {
+            if (keepAsText) {
+                this.#browserFS.saveFile(str, key).catch(() => {});
+            } else {
+                this.#browserFS.saveBinaryFile(entry.data, key).catch(() => {});
+            }
+        } catch {
+            // Ignore persistence failures; the in-memory copy still works.
+        }
+    }
+
+    #setFile(key, data) {
+        const bytes = data instanceof Uint8Array ? new Uint8Array(data) : new TextEncoder().encode(String(data));
+        this.#cache.set(key, { kind: 'file', data: bytes });
+        this.#persist(key, this.#cache.get(key));
+    }
+
+    #ensureParentDirs(key) {
+        const parts = key.split('/');
+        let cur = '';
+        for (let i = 0; i < parts.length - 1; i++) {
+            cur = cur ? cur + '/' + parts[i] : parts[i];
+            if (!this.#cache.has(cur)) {
+                this.#cache.set(cur, { kind: 'dir' });
+            }
+        }
+    }
+
+    #readSync(filePath, encoding) {
+        const key = normalizeKey(filePath);
+        const entry = this.#cache.get(key);
+        if (!entry || entry.kind !== 'file') {
+            throw new Error(`ENOENT: no such file or directory, open '${filePath}'`);
+        }
+        if (encoding === 'utf8' || encoding === 'utf-8') {
+            return new TextDecoder().decode(entry.data);
+        }
+        return Buffer.from(entry.data);
+    }
+
     async readFile(filePath, encoding = 'utf-8') {
         const nfs = await this.#getNodeFs();
         if (nfs) {
             return await nfs.readFile(this.#resolvePath(filePath), encoding);
         }
-        if (encoding === 'binary' || encoding === null) {
-            return await this.#browserFS.loadBinaryFile(filePath);
-        }
-        return await this.#browserFS.loadFile(filePath);
+        return this.#readSync(filePath, encoding === 'binary' || encoding === null ? null : encoding);
     }
 
     async writeFile(filePath, data) {
@@ -70,10 +171,7 @@ export class IsomorphicFilesystem {
         if (nfs) {
             return await nfs.writeFile(this.#resolvePath(filePath), data);
         }
-        if (typeof data === 'string') {
-            return await this.#browserFS.saveFile(data, filePath);
-        }
-        return await this.#browserFS.saveBinaryFile(data, filePath);
+        this.#setFile(normalizeKey(filePath), data);
     }
 
     async unlink(filePath) {
@@ -81,7 +179,10 @@ export class IsomorphicFilesystem {
         if (nfs) {
             return await nfs.unlink(this.#resolvePath(filePath));
         }
-        return await this.#browserFS.deleteFile(filePath);
+        this.#cache.delete(normalizeKey(filePath));
+        if (this.#browserFS) {
+            this.#browserFS.deleteFile(normalizeKey(filePath)).catch(() => {});
+        }
     }
 
     async exists(filePath) {
@@ -94,7 +195,7 @@ export class IsomorphicFilesystem {
                 return false;
             }
         }
-        return await this.#browserFS.fileExists(filePath);
+        return this.#cache.has(normalizeKey(filePath));
     }
 
     async stat(filePath) {
@@ -107,14 +208,14 @@ export class IsomorphicFilesystem {
                 isDirectory: () => stats.isDirectory()
             };
         }
-        const size = await this.#browserFS.getFileSize(filePath);
-        if (size === null) {
+        const entry = this.#cache.get(normalizeKey(filePath));
+        if (!entry) {
             throw new Error(`ENOENT: no such file or directory, stat '${filePath}'`);
         }
         return {
-            size,
-            isFile: () => true,
-            isDirectory: () => false
+            size: entry.kind === 'file' ? entry.data.length : 0,
+            isFile: () => entry.kind === 'file',
+            isDirectory: () => entry.kind === 'dir'
         };
     }
 
@@ -123,56 +224,103 @@ export class IsomorphicFilesystem {
         if (nfs) {
             return await nfs.readdir(this.#resolvePath(dirPath));
         }
-        return await this.#browserFS.listDir(dirPath);
+        return this.readdirSync(dirPath);
     }
 
     existsSync(filePath) {
         if (isNode && nodeFsSync) {
             return nodeFsSync.existsSync(this.#resolvePath(filePath));
         }
-        throw nodeFsUnavailable('existsSync');
+        const key = normalizeKey(filePath);
+        if (key === '') {
+            return true;
+        }
+        if (this.#cache.has(key)) {
+            return true;
+        }
+        // A path is "present" if it is an ancestor of a stored key.
+        const prefix = key + '/';
+        for (const stored of this.#cache.keys()) {
+            if (stored.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     readFileSync(filePath, encoding) {
         if (isNode && nodeFsSync) {
             return nodeFsSync.readFileSync(this.#resolvePath(filePath), encoding);
         }
-        throw nodeFsUnavailable('readFileSync');
+        return this.#readSync(filePath, encoding);
     }
 
     writeFileSync(filePath, data, options) {
         if (isNode && nodeFsSync) {
             return nodeFsSync.writeFileSync(this.#resolvePath(filePath), data, options);
         }
-        throw nodeFsUnavailable('writeFileSync');
+        this.#setFile(normalizeKey(filePath), data);
     }
 
     mkdirSync(dirPath, options) {
         if (isNode && nodeFsSync) {
             return nodeFsSync.mkdirSync(this.#resolvePath(dirPath), options);
         }
-        throw nodeFsUnavailable('mkdirSync');
+        this.#ensureParentDirs(normalizeKey(dirPath));
+        this.#cache.set(normalizeKey(dirPath), { kind: 'dir' });
     }
 
     readdirSync(dirPath = '', options) {
         if (isNode && nodeFsSync) {
             return nodeFsSync.readdirSync(this.#resolvePath(dirPath), options);
         }
-        throw nodeFsUnavailable('readdirSync');
+        const key = normalizeKey(dirPath);
+        const prefix = key === '' ? '' : key + '/';
+        const names = [];
+        for (const stored of this.#cache.keys()) {
+            if (!stored.startsWith(prefix) || stored === key) continue;
+            const rest = stored.slice(prefix.length);
+            if (rest.includes('/')) continue; // only direct children
+            const entry = this.#cache.get(stored);
+            if (options && options.withFileTypes) {
+                names.push({
+                    name: rest,
+                    isDirectory: () => entry.kind === 'dir',
+                    isFile: () => entry.kind === 'file',
+                    isSymbolicLink: () => false
+                });
+            } else {
+                names.push(rest);
+            }
+        }
+        return names;
     }
 
     unlinkSync(filePath) {
         if (isNode && nodeFsSync) {
             return nodeFsSync.unlinkSync(this.#resolvePath(filePath));
         }
-        throw nodeFsUnavailable('unlinkSync');
+        this.#cache.delete(normalizeKey(filePath));
+        if (this.#browserFS) {
+            this.#browserFS.deleteFile(normalizeKey(filePath)).catch(() => {});
+        }
     }
 
     renameSync(oldPath, newPath) {
         if (isNode && nodeFsSync) {
             return nodeFsSync.renameSync(this.#resolvePath(oldPath), this.#resolvePath(newPath));
         }
-        throw nodeFsUnavailable('renameSync');
+        const oldKey = normalizeKey(oldPath);
+        const newKey = normalizeKey(newPath);
+        const entry = this.#cache.get(oldKey);
+        if (entry) {
+            this.#cache.delete(oldKey);
+            this.#cache.set(newKey, entry);
+            this.#persist(newKey, entry);
+            if (this.#browserFS) {
+                this.#browserFS.deleteFile(oldKey).catch(() => {});
+            }
+        }
     }
 }
 

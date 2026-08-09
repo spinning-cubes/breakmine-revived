@@ -1,8 +1,8 @@
-const { IsomorphicFilesystem } = require('../client/fs/IsomorphicFilesystem.js');
-const fs = new IsomorphicFilesystem();
-const path = require('path');
+import fs from '../client/fs/ServerFs.js';
+import path from '../util/path.js';
 
-const PROJECT_ROOT = path.join(__dirname, '..', '..', '..', '..', '..');
+const MODULE_DIR = new URL('.', import.meta.url).pathname;
+const PROJECT_ROOT = path.join(MODULE_DIR, '..', '..', '..', '..', '..');
 const WORLDS_DIR = path.join(PROJECT_ROOT, 'worlds');
 
 const defaults = {
@@ -11,7 +11,7 @@ const defaults = {
     port: 6008,
     host: '0.0.0.0',
     default_gamemode: 'creative',
-    default_op: 'true',
+    default_op: true,
     op_player_list: [],
     motd: 'Brand new server',
     allowMods: false,
@@ -97,6 +97,9 @@ function loadConfig(serverName = 'main') {
 // override this at runtime, but the port/host from the selected server's
 // serverconfig.conf are what the listener binds to.
 function getRequestedServer() {
+    if (typeof process === 'undefined' || !Array.isArray(process.argv)) {
+        return null;
+    }
     const idx = process.argv.indexOf('--server');
     if (idx !== -1 && process.argv[idx + 1]) {
         return sanitizeServerName(process.argv[idx + 1]);
@@ -111,10 +114,9 @@ const requestedServer = getRequestedServer();
 const config = loadConfig(requestedServer || 'main');
 
 // Reload the config from the given server's directory, mutating this object
-// in place so every module holding a require('./config') reference sees the
-// new values. If the server directory has no serverconfig.conf the current
-// values are left untouched (a server without its own config inherits the
-// active one).
+// in place so every module holding a reference sees the new values. If the
+// server directory has no serverconfig.conf the current values are left
+// untouched (a server without its own config inherits the active one).
 function reloadConfig(serverName) {
     const target = sanitizeServerName(serverName);
 
@@ -162,4 +164,4 @@ config.reload = reloadConfig;
 config.requestedServer = requestedServer;
 config.listServers = listServers;
 
-module.exports = config;
+export default config;
