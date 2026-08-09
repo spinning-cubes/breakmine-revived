@@ -2,7 +2,7 @@
   "name": "breakmine",
   "version": "1.0.0",
   "description": "Minecraft in javascript",
-  "main": "main.js",
+  "main": "src/js/net/minecraft/server/main.js",
   "scripts": {
     "start": "electron .",
     "start-dev": "concurrently \"vite --config vite.http.config.js\" \"wait-on http://localhost:8000 && electron .\"",
