@@ -228,12 +228,14 @@ export default class GuiMultiplayer extends GuiScreen {
         this.buttonList.push(new GuiButton(this.minecraft, "Add Server", this.width / 2 + 4, this.height - 52, 150, 20, () => {
             this.minecraft.displayScreen(new GuiDirectConnect(this, true));
         }));
-        this.buttonList.push(new GuiButton(this.minecraft, "Tunnel", this.width / 2 + 84, this.height - 28, 70, 20, () => {
-            this.minecraft.displayScreen(new GuiDirectConnect(this, false, true));
-        }));
-        this.buttonList.push(new GuiButton(this.minecraft, "Cancel", this.width / 2 + 4, this.height - 28, 70, 20, () => {
+
+        this.buttonList.push(new GuiButton(this.minecraft, "Cancel", this.width / 2 + 84, this.height - 28, 70, 20, () => {
             this.minecraft.displayScreen(this.previousScreen);
         }));
+        this.buttonList.push(new GuiButton(this.minecraft, "Join Player", this.width / 2 + 4, this.height - 28, 70, 20, () => {
+            this.minecraft.displayScreen(new GuiDirectConnect(this, false, true));
+        }));
+
         this.buttonList.push(this.buttonSelect);
         this.buttonList.push(this.buttonRename);
         this.buttonList.push(this.buttonDelete); 

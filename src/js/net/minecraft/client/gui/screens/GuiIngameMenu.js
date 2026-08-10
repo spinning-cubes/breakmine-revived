@@ -1,6 +1,7 @@
 import GuiButton from "../widgets/GuiButton.js";
 import GuiScreen from "../GuiScreen.js";
 import GuiOptions from "./GuiOptions.js";
+import { isIntegratedRunning } from "../../integrated/IntegratedServer.js";
 
 export default class GuiIngameMenu extends GuiScreen {
 
@@ -21,9 +22,11 @@ export default class GuiIngameMenu extends GuiScreen {
             this.minecraft.displayScreen(new GuiOptions(this));
         }));
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Share World", this.width / 2 + 2, y + 24, 98, 20, () => {
+        const shareButton = new GuiButton(this.minecraft, "Share World", this.width / 2 + 2, y + 24, 98, 20, () => {
             this.minecraft.shareWorld();
-        }));
+        });
+        shareButton.setEnabled(isIntegratedRunning());
+        this.buttonList.push(shareButton);
 
         this.buttonList.push(new GuiButton(this.minecraft, "Save and Quit to Title", this.width / 2 - 100, y + 70, 200, 20, async () => {
             await this.minecraft.loadWorld(null);
