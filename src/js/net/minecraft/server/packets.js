@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import { writeLongBE } from './binary.js';
 import { makePacket, writeVarInt, writeString, broadcast, varIntSize } from './protocol.js';
 import { getPlayers, getPlayerCount } from './players.js';
 import { getWorldChanges, generateFlatChunkColumn, getWorldType, getSpawnPosition } from './world.js';
@@ -119,7 +120,7 @@ function sendResetWorldPacket(player) {
 function sendTimeUpdate(player, worldTime) {
     // Send packet 0x03 with world time (long, 8 bytes)
     const data = Buffer.alloc(8);
-    data.writeBigInt64BE(BigInt(worldTime), 0);
+    writeLongBE(worldTime, data, 0);
     player.ws.send(makePacket(0x03, data));
 }
 

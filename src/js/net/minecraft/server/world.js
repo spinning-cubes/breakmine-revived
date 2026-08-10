@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import { readLongBE, writeLongBE } from './binary.js';
 import fs from '../client/fs/ServerFs.js';
 import path from '../util/path.js';
 import Logger from './logger.js';
@@ -110,7 +111,7 @@ function initWorld(worldName = 'main') {
 
         if (hasWorldTime && data.length >= 8) {
             // Read world time (new format)
-            worldTime = Number(data.readBigInt64BE(offset));
+            worldTime = Number(readLongBE(data, offset));
             offset += 8;
         } else {
             // Old format, no world time
@@ -225,7 +226,7 @@ function saveWorld() {
     let offset = 0;
 
     // Write world time
-    buffer.writeBigInt64BE(BigInt(worldTime), offset);
+    writeLongBE(worldTime, buffer, offset);
     offset += 8;
 
     // Write number of block changes

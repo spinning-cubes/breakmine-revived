@@ -5,6 +5,7 @@
 // the main thread's LoopbackServer (see IsomorphicWebSocket.js) as
 // socket-connect / socket-message / socket-close messages.
 import { Buffer } from 'buffer';
+import { readLongBE } from '../../server/binary.js';
 import fs from '../fs/ServerFs.js';
 import { initServer, onConnection, stopServer } from '../../server/ServerRuntime.js';
 import * as serverWorld from '../../server/world.js';
@@ -182,7 +183,7 @@ function listServerWorlds() {
         if (fs.existsSync(dataPath)) {
             const data = fs.readFileSync(dataPath);
             if (data.length >= 8) {
-                time = Number(data.readBigInt64BE(0));
+                time = Number(readLongBE(data, 0));
             }
         }
 

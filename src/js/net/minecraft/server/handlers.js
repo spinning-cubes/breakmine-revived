@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import { readLongBE } from './binary.js';
 import { readVarInt, readString, broadcast, ensureReadable, MalformedPacketError } from './protocol.js';
 import { addPlayer, removePlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState, savePlayerData, isSpectator } from './players.js';
 import { addWorldChange, saveWorld, getBlockAt, getAllBlockInventoriesState, getSpawnPosition, deleteBlockInventory, getBlockInventories, getWorldTime, getBlockMetadata, setBlockInventory, getWorldChanges } from './world.js';
@@ -70,7 +71,7 @@ const playerChunks = new Map();
 
 // Helper function to unpack Protocol 47 (1.8) packed 64-bit Position types
 function readPosition(buffer, offset) {
-    const val = buffer.readBigInt64BE(offset);
+    const val = readLongBE(buffer, offset);
 
     // Protocol 47 Bit Allocations: X (26 MSBs), Z (26 LSBs), Y (12 bits in between)
     // We use BigInt bitwise arithmetic and shift them back to signed values
