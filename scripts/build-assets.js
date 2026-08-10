@@ -9,7 +9,9 @@ const MIME_TYPES = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.gif': 'image/gif',
-    '.webp': 'image/webp'
+    '.webp': 'image/webp',
+    '.ogg': 'audio/ogg',
+    '.mp3': 'audio/mpeg'
 };
 
 function walkDir(dir, fileList = []) {
@@ -43,4 +45,4 @@ for (const filePath of allFiles) {
 const fileContent = `// Auto-generated Base64 assets\nexport const base64Assets = ${JSON.stringify(assetMap, null, 2)};\n`;
 fs.writeFileSync(OUTPUT_FILE, fileContent);
 
-console.log(`Successfully converted ${Object.keys(assetMap).length} images to Base64 in src/resources.js`);
+console.log(`Successfully converted ${Object.keys(assetMap).length} assets to Base64 in src/resources.js`);
