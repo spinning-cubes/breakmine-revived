@@ -5,20 +5,29 @@ import { base64Assets } from "../../../../../resources.js";
 export default class SoundManager {
 
     constructor() {
-        this.audioLoader = new THREE.AudioLoader();
         this.audioListener = null;
-
         this.soundPool = {};
+
+        // Audio failed to initialize — all methods become no-ops.
+        this.disabled = false;
+
+        // Set once a sound fails to load (e.g. singlefile bundles ship no
+        // .ogg files) so we stop firing the remaining requests.
+        this._soundsUnavailable = false;
 
         // Preload click sound (never fatal if it fails)
         this.clickReady = false;
         this.clickAudio = null;
         try {
-            const clickAssetKey = 'sound/random/click.ogg';
-            const clickSrc = (typeof base64Assets !== 'undefined' && base64Assets[clickAssetKey])
-                ? base64Assets[clickAssetKey]
-                : 'src/resources/sound/random/click.ogg';
+            this.audioLoader = new THREE.AudioLoader();
+        } catch (e) {
+            console.warn('SoundManager: AudioLoader unavailable, disabling sounds:', e);
+            this.disabled = true;
+            this.audioLoader = null;
+        }
 
+        try {
+            const clickSrc = this.resolveAsset('sound/random/click.ogg');
             this.clickAudio = new Audio(clickSrc);
             this.clickAudio.addEventListener('canplaythrough', () => {
                 this.clickReady = true;
@@ -28,7 +37,15 @@ export default class SoundManager {
         }
     }
 
+    resolveAsset(assetKey) {
+        return (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
+            ? base64Assets[assetKey]
+            : `src/resources/${assetKey}`;
+    }
+
     create(worldRenderer) {
+        if (this.disabled) return;
+
         try {
             this.scene = worldRenderer.scene;
 
@@ -55,10 +72,15 @@ export default class SoundManager {
         } catch (e) {
             console.warn('SoundManager: Failed to initialize audio, disabling sounds:', e);
             this.audioListener = null;
+            this.disabled = true;
         }
     }
 
     loadSoundPool(name) {
+        if (this.disabled || this._soundsUnavailable) {
+            return;
+        }
+
         let pool = [];
         let amount = 4;
 
@@ -66,42 +88,37 @@ export default class SoundManager {
         let path = name.replace(".", "/");
         for (let i = 0; i < amount; i++) {
             const assetKey = `sound/${path}${i + 1}.ogg`;
-            const soundPath = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
-                ? base64Assets[assetKey]
-                : `src/resources/sound/${path}${i + 1}.ogg`;
-
+            let sound;
             try {
-                let sound = this.loadSound(soundPath);
-                if (sound) {
-                    pool.push(sound);
-                }
+                sound = this.loadSound(this.resolveAsset(assetKey));
             } catch (e) {
-                console.warn('Skipping sound file:', assetKey, e);
+                sound = null;
+            }
+            if (sound) {
+                pool.push(sound);
+            }
+            if (this._soundsUnavailable) {
+                return;
             }
         }
 
         // Fallback to unnumbered file if no numbered variants loaded
         if (pool.length === 0) {
             const assetKey = `sound/${path}.ogg`;
-            const soundPath = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
-                ? base64Assets[assetKey]
-                : `src/resources/sound/${path}.ogg`;
-
+            let sound;
             try {
-                let sound = this.loadSound(soundPath);
-                if (sound) {
-                    pool.push(sound);
-                }
+                sound = this.loadSound(this.resolveAsset(assetKey));
             } catch (e) {
-                console.warn('Skipping sound file:', assetKey, e);
+                sound = null;
+            }
+            if (sound) {
+                pool.push(sound);
             }
         }
 
         // Only register pool if we have valid sounds
-        if (pool.length > 0) {
+        if (pool.length > 0 && !this._soundsUnavailable) {
             this.soundPool[name] = pool;
-        } else {
-            console.warn('Failed to load any sounds for:', name);
         }
     }
 
@@ -121,24 +138,32 @@ export default class SoundManager {
 
             // Load sound with proper error handling
             this.audioLoader.load(path, buffer => {
+                if (this.disabled) return;
                 sound.setBuffer(buffer);
                 sound.hasBuffer = true;
                 this.scene.add(sound);
             }, progress => {
                 // Progress callback (optional)
             }, error => {
-                console.error('Failed to load sound:', path, error);
                 sound.hasBuffer = false;
+                if (!this._soundsUnavailable) {
+                    this._soundsUnavailable = true;
+                    console.warn('SoundManager: Sounds unavailable (not bundled or failed to load), disabling sound loading:', error && error.message || error);
+                }
             });
 
             return sound;
         } catch (e) {
-            console.error('Exception loading sound:', path, e);
+            console.warn('Exception loading sound:', path, e);
             return;
         }
     }
 
     playSound(name, x, y, z, volume, pitch) {
+        if (this.disabled || this._soundsUnavailable) {
+            return;
+        }
+
         let pool = this.soundPool[name];
 
         if (typeof pool === "undefined") {
@@ -159,43 +184,47 @@ export default class SoundManager {
                 return;
             }
 
-            // Resume audio context if suspended
-            if (sound.context.state === 'suspended') {
-                sound.context.resume();
+            try {
+                // Resume audio context if suspended
+                if (sound.context.state === 'suspended') {
+                    sound.context.resume();
+                }
+
+                // Stop previous sound
+                if (sound.isPlaying) {
+                    sound.stop();
+                }
+
+                // Update position
+                sound.position.set(x, y, z);
+
+                // Force panner position sync before playing (updateMatrixWorld skips when isPlaying is false)
+                sound.updateMatrixWorld(true);
+                let pos = new THREE.Vector3();
+                pos.setFromMatrixPosition(sound.matrixWorld);
+                sound.panner.positionX.setValueAtTime(pos.x, sound.context.currentTime);
+                sound.panner.positionY.setValueAtTime(pos.y, sound.context.currentTime);
+                sound.panner.positionZ.setValueAtTime(pos.z, sound.context.currentTime);
+
+                // Update volume and pitch
+                sound.setVolume(volume * 10);
+                sound.filters[0].frequency.setValueAtTime(12000 * pitch, sound.context.currentTime);
+
+                // Play sound
+                sound.offset = 0;
+                sound.play();
+            } catch (e) {
+                // Never let a sound failure break the game loop
             }
-
-            // Stop previous sound
-            if (sound.isPlaying) {
-                sound.stop();
-            }
-
-            // Update position
-            sound.position.set(x, y, z);
-
-            // Force panner position sync before playing (updateMatrixWorld skips when isPlaying is false)
-            sound.updateMatrixWorld(true);
-            let pos = new THREE.Vector3();
-            pos.setFromMatrixPosition(sound.matrixWorld);
-            sound.panner.positionX.setValueAtTime(pos.x, sound.context.currentTime);
-            sound.panner.positionY.setValueAtTime(pos.y, sound.context.currentTime);
-            sound.panner.positionZ.setValueAtTime(pos.z, sound.context.currentTime);
-
-            // Update volume and pitch
-            sound.setVolume(volume * 10);
-            sound.filters[0].frequency.setValueAtTime(12000 * pitch, sound.context.currentTime);
-
-            // Play sound
-            sound.offset = 0;
-            sound.play();
         }
     }
 
     isCreated() {
-        return !(this.audioListener === null);
+        return !this.disabled && this.audioListener !== null;
     }
 
     playGuiClick() {
-        if (!this.clickReady || !this.clickAudio) {
+        if (!this.clickReady || !this.clickAudio || this.disabled) {
             return;
         }
         try {
@@ -207,23 +236,21 @@ export default class SoundManager {
     }
 
     playSoundMono(name, volume = 1.0, pitch = 1.0, dontUseRandom = false) {
+        if (this.disabled || this._soundsUnavailable) {
+            return;
+        }
+
         let path = name.replace(".", "/");
         let soundSrc = null;
 
         if (!dontUseRandom) {
             // Try random numbered variant (1-5)
             let randomVariant = Math.floor(Math.random() * 5) + 1;
-            let assetKey = `sound/${path}${randomVariant}.ogg`;
-            soundSrc = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
-                ? base64Assets[assetKey]
-                : `src/resources/sound/${path}${randomVariant}.ogg`;
+            soundSrc = this.resolveAsset(`sound/${path}${randomVariant}.ogg`);
         }
 
         if (!soundSrc) {
-            let assetKey = `sound/${path}.ogg`;
-            soundSrc = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
-                ? base64Assets[assetKey]
-                : `src/resources/sound/${path}.ogg`;
+            soundSrc = this.resolveAsset(`sound/${path}.ogg`);
         }
 
         try {
