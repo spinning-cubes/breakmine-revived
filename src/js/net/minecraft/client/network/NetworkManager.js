@@ -41,7 +41,13 @@ export default class NetworkManager {
     }
 
     connect(address, port, proxy) {
-        let wsUrl = proxy ? proxy.url : `ws://${address}:${port}`;
+        let wsUrl;
+        if (typeof address === 'string' && address.startsWith('tunnel://')) {
+            wsUrl = address;
+            proxy = null;
+        } else {
+            wsUrl = proxy ? proxy.url : `ws://${address}:${port}`;
+        }
 
         this.address = address;
         this.port = port;

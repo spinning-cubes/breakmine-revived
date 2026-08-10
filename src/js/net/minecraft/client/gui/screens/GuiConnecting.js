@@ -15,22 +15,30 @@ export default class GuiConnecting extends GuiScreen {
         this.previousScreen = previousScreen;
         this.connecting = false;
         this.networkManager = null;
-        this.proxy = proxy || Minecraft.PROXY;
-        if (this.proxy != proxy) console.log("Using proxy: " + this.proxy.url + " instead of " + proxy.url);
 
-        // Use provided port or parse from address
-        if (port !== undefined) {
+        // Tunnel connections use a tunnel://<code> address and bypass proxies/ports
+        if (typeof address === 'string' && address.startsWith('tunnel://')) {
             this.address = address;
-            this.port = port;
+            this.port = 0;
+            this.proxy = null;
         } else {
-            // Split up address into host and port
-            if (address.includes(":")) {
-                let parts = address.split(":");
-                this.address = parts[0];
-                this.port = parseInt(parts[1]);
-            } else {
+            this.proxy = proxy || Minecraft.PROXY;
+            if (this.proxy != proxy) console.log("Using proxy: " + this.proxy.url + " instead of " + proxy.url);
+
+            // Use provided port or parse from address
+            if (port !== undefined) {
                 this.address = address;
-                this.port = 25565;
+                this.port = port;
+            } else {
+                // Split up address into host and port
+                if (address.includes(":")) {
+                    let parts = address.split(":");
+                    this.address = parts[0];
+                    this.port = parseInt(parts[1]);
+                } else {
+                    this.address = address;
+                    this.port = 25565;
+                }
             }
         }
     }

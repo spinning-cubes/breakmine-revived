@@ -1,5 +1,7 @@
 'use strict';
 
+import IsomorphicWebSocket from "./IsomorphicWebSocket.js";
+
 const isNode = typeof window === 'undefined' && typeof process !== 'undefined';
 
 let NativeWS;
@@ -21,7 +23,22 @@ if (isNode) {
 const CTRL_KEY     = '__tunnel_ctrl__';
 
 function defaultServerUrl() {
-    return `wss://${location.hostname}`;
+    return normalizeServerUrl(typeof location !== 'undefined' ? location.hostname : 'localhost');
+}
+
+/** Normalize a tunnel server URL/hostname into an absolute WebSocket URL. */
+function normalizeServerUrl(serverUrl) {
+    if (typeof serverUrl !== 'string' || serverUrl.trim() === '') return serverUrl;
+
+    let url = serverUrl.trim();
+
+    // Prepend scheme if missing (e.g. "tunnel.breakmine.com" -> "wss://tunnel.breakmine.com")
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url)) {
+        const proto = isNode ? 'ws' : (typeof location !== 'undefined' && location.protocol === 'https:' ? 'wss' : 'ws');
+        url = `${proto}://${url}`;
+    }
+
+    return url;
 }
 
 function isControlFrame(data) {
@@ -40,7 +57,7 @@ class TunnelLib {
 
     /** @param {string} [serverUrl] Falls back to static default, then auto-detect. */
     constructor(serverUrl) {
-        this.serverUrl = serverUrl || TunnelLib.defaultServerUrl || defaultServerUrl();
+        this.serverUrl = normalizeServerUrl(serverUrl || TunnelLib.defaultServerUrl || defaultServerUrl());
 
         /** @private */ this._ws       = null;
         /** @private */ this._targetWs  = null;
@@ -66,23 +83,21 @@ class TunnelLib {
         this._targetUrl = targetUrl;
         this._lazy      = lazy;
 
+        // Always try wss:// first, then fall back to ws://
+        const fallbacks = [];
+        if (this.serverUrl.startsWith('wss://')) {
+            fallbacks.push(this.serverUrl, this.serverUrl.replace('wss://', 'ws://'));
+        } else {
+            fallbacks.push(this.serverUrl.replace('ws://', 'wss://'), this.serverUrl);
+        }
+
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
-                this._ws?.close();
+                this._closeServer();
                 reject(new Error('[TunnelLib] Tunnel creation timed out'));
             }, 15_000);
 
-            this._ws = new NativeWS(this.serverUrl);
-
-            this._ws.onopen = () => {
-                // Send create handshake with options
-                this._ws.send(JSON.stringify({
-                    type: 'create',
-                    maxJoiners: maxJoiners > 0 ? maxJoiners : 0,
-                }));
-            };
-
-            this._ws.onmessage = (event) => {
+            const handleMessage = (event) => {
                 const raw = event.data;
 
                 /* ---- Handshake response ---- */
@@ -133,17 +148,51 @@ class TunnelLib {
                 this._forwardToTarget(raw);
             };
 
-            this._ws.onerror = () => {
-                if (this._code === null) {
+            const connectNext = () => {
+                const url = fallbacks.shift();
+                if (!url) {
                     clearTimeout(timer);
                     reject(new Error('[TunnelLib] Connection to tunnel server failed'));
+                    return;
                 }
+
+                let ws;
+                try {
+                    ws = new NativeWS(url);
+                } catch (err) {
+                    if (fallbacks.length > 0) {
+                        connectNext();
+                    } else {
+                        clearTimeout(timer);
+                        reject(err);
+                    }
+                    return;
+                }
+                this._ws = ws;
+                ws.binaryType = 'arraybuffer';
+
+                ws.onopen = () => {
+                    // Send create handshake with options
+                    ws.send(JSON.stringify({
+                        type: 'create',
+                        maxJoiners: maxJoiners > 0 ? maxJoiners : 0,
+                    }));
+                };
+                ws.onmessage = handleMessage;
+                ws.onerror = () => { /* 'close' will follow */ };
+                ws.onclose = () => {
+                    if (this._ws !== ws) return;
+                    if (this._code === null && fallbacks.length > 0) {
+                        this._ws = null;
+                        connectNext();
+                    } else {
+                        this._closeTarget();
+                        this._code = null;
+                    }
+                };
             };
 
-            this._ws.onclose = () => {
-                this._closeTarget();
-                this._code = null;
-            };
+            connectNext();
         });
     }
 
@@ -180,7 +229,7 @@ class TunnelLib {
         if (this._targetWs) return; // already connected
 
         try {
-            this._targetWs = new NativeWS(this._targetUrl);
+            this._targetWs = new IsomorphicWebSocket(this._targetUrl);
         } catch (err) {
             console.error('[TunnelLib] Target connect failed:', err.message);
             return;
@@ -194,7 +243,7 @@ class TunnelLib {
             this._targetWs = null;
             // Target gone → close the tunnel (which closes all joiners)
             if (this._ws && this._ws.readyState !== 3) {
-                this._ws.close(1001, 'Target closed');
+                this._ws.close(1000, 'Target closed');
             }
         };
 
@@ -221,6 +270,13 @@ class TunnelLib {
         if (this._targetWs) {
             this._targetWs.close();
             this._targetWs = null;
+        }
+    }
+
+    _closeServer() {
+        if (this._ws) {
+            this._ws.close();
+            this._ws = null;
         }
     }
 }

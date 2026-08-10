@@ -238,10 +238,17 @@ export class TunnelSocket extends EventTarget {
 
         // Resolve server URL
         const resolvedUrl = serverUrl || IsomorphicWebSocket.tunnelServerUrl || (() => {
-            if (isNode) return 'ws://localhost:6007';
-            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            return `${proto}//${location.hostname}:6007`;
+            const proto = isNode ? 'ws' : (location.protocol === 'https:' ? 'wss:' : 'ws');
+            return `${proto}://tunnel.breakmine.com`;
         })();
+
+        // Always try wss:// first, then fall back to ws://
+        const fallbacks = [];
+        if (resolvedUrl.startsWith('wss://')) {
+            fallbacks.push(resolvedUrl, resolvedUrl.replace('wss://', 'ws://'));
+        } else {
+            fallbacks.push(resolvedUrl.replace('ws://', 'wss://'), resolvedUrl);
+        }
 
         const WS = NativeWS || (typeof WebSocket !== 'undefined' ? WebSocket : null);
         if (!WS) {
@@ -255,74 +262,110 @@ export class TunnelSocket extends EventTarget {
             return;
         }
 
-        this._ws = new WS(resolvedUrl);
-        this._ws.binaryType = this.binaryType;
-
-        this._ws.onopen = () => {
-            // Send join handshake
-            this._ws.send(JSON.stringify({ type: 'join', code: this._code }));
-        };
-
-        this._ws.onmessage = (event) => {
-            if (!this._handshakeDone) {
-                let msg;
-                try {
-                    msg = JSON.parse(
-                        typeof event.data === 'string'
-                            ? event.data
-                            : new TextDecoder().decode(event.data),
-                    );
-                } catch { return; }
-
-                if (msg.type === 'joined') {
-                    this._handshakeDone = true;
-                    this._readyState = 1;
-                    const openEvent = new Event('open');
-                    if (typeof this.onopen === 'function') this.onopen(openEvent);
-                    this.dispatchEvent(openEvent);
-                    return;
-                }
-                if (msg.type === 'error') {
-                    this._readyState = 3;
-                    const errorEvent = new Event('error');
-                    if (typeof this.onerror === 'function') this.onerror(errorEvent);
-                    this.dispatchEvent(errorEvent);
-                    const closeEvent = new CloseEvent('close', {
-                        code: 1003,
-                        reason: msg.message || 'Tunnel error',
-                        wasClean: false,
-                    });
-                    if (typeof this.onclose === 'function') this.onclose(closeEvent);
-                    this.dispatchEvent(closeEvent);
-                    this._ws?.close();
-                    return;
-                }
+        const connectNext = () => {
+            const url = fallbacks.shift();
+            if (!url) {
+                this._readyState = 3;
+                const closeEv = new CloseEvent('close', { code: 1006, reason: 'All tunnel connection attempts failed', wasClean: false });
+                if (typeof this.onclose === 'function') this.onclose(closeEv);
+                this.dispatchEvent(closeEv);
                 return;
             }
 
-            // Relay: forward as a normal message event
-            const messageEvent = new MessageEvent('message', { data: event.data });
-            if (typeof this.onmessage === 'function') this.onmessage(messageEvent);
-            this.dispatchEvent(messageEvent);
+            let ws;
+            try {
+                ws = new WS(url);
+            } catch (err) {
+                if (fallbacks.length > 0) {
+                    connectNext();
+                    return;
+                }
+                this._readyState = 3;
+                const errorEvent = new Event('error');
+                if (typeof this.onerror === 'function') this.onerror(errorEvent);
+                this.dispatchEvent(errorEvent);
+                const closeEv = new CloseEvent('close', { code: 1006, reason: err.message, wasClean: false });
+                if (typeof this.onclose === 'function') this.onclose(closeEv);
+                this.dispatchEvent(closeEv);
+                return;
+            }
+            ws.binaryType = this.binaryType;
+            this._ws = ws;
+
+            ws.onopen = () => {
+                // Send join handshake
+                ws.send(JSON.stringify({ type: 'join', code: this._code }));
+            };
+
+            ws.onmessage = (event) => {
+                if (!this._handshakeDone) {
+                    let msg;
+                    try {
+                        msg = JSON.parse(
+                            typeof event.data === 'string'
+                                ? event.data
+                                : new TextDecoder().decode(event.data),
+                        );
+                    } catch { return; }
+
+                    if (msg.type === 'joined') {
+                        this._handshakeDone = true;
+                        this._readyState = 1;
+                        const openEvent = new Event('open');
+                        if (typeof this.onopen === 'function') this.onopen(openEvent);
+                        this.dispatchEvent(openEvent);
+                        return;
+                    }
+                    if (msg.type === 'error') {
+                        this._readyState = 3;
+                        const errorEvent = new Event('error');
+                        if (typeof this.onerror === 'function') this.onerror(errorEvent);
+                        this.dispatchEvent(errorEvent);
+                        const closeEvent = new CloseEvent('close', {
+                            code: 1003,
+                            reason: msg.message || 'Tunnel error',
+                            wasClean: false,
+                        });
+                        if (typeof this.onclose === 'function') this.onclose(closeEvent);
+                        this.dispatchEvent(closeEvent);
+                        this._ws?.close();
+                        return;
+                    }
+                    return;
+                }
+
+                // Relay: forward as a normal message event
+                const messageEvent = new MessageEvent('message', { data: event.data });
+                if (typeof this.onmessage === 'function') this.onmessage(messageEvent);
+                this.dispatchEvent(messageEvent);
+            };
+
+            ws.onclose = (event) => {
+                if (this._ws !== ws) return;
+                if (this._readyState === 3) return;
+                if (!this._handshakeDone && fallbacks.length > 0) {
+                    this._ws = null;
+                    connectNext();
+                    return;
+                }
+                this._readyState = 3;
+                const closeEvent = new CloseEvent('close', {
+                    code: event.code || 1006,
+                    reason: event.reason || '',
+                    wasClean: event.wasClean || false,
+                });
+                if (typeof this.onclose === 'function') this.onclose(closeEvent);
+                this.dispatchEvent(closeEvent);
+            };
+
+            ws.onerror = () => {
+                const errorEvent = new Event('error');
+                if (typeof this.onerror === 'function') this.onerror(errorEvent);
+                this.dispatchEvent(errorEvent);
+            };
         };
 
-        this._ws.onclose = (event) => {
-            if (this._readyState === 3) return;
-            this._readyState = 3;
-            const closeEvent = new CloseEvent('close', {
-                code: event.code || 1006,
-                reason: event.reason || '',
-                wasClean: event.wasClean || false,
-            });
-            if (typeof this.onclose === 'function') this.onclose(closeEvent);
-            this.dispatchEvent(closeEvent);
-        };
-
-        this._ws.onerror = () => {
-            const errorEvent = new Event('error');
-            if (typeof this.onerror === 'function') this.onerror(errorEvent);
-            this.dispatchEvent(errorEvent);
-        };
+        connectNext();
     }
 
     get readyState() {

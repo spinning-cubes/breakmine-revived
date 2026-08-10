@@ -6,10 +6,11 @@ import Minecraft from "../../Minecraft.js";
 
 export default class GuiDirectConnect extends GuiScreen {
 
-    constructor(previousScreen, addServer = false) {
+    constructor(previousScreen, addServer = false, tunnel = false) {
         super();
 
         this.addServer = addServer;
+        this.tunnel = tunnel;
         this.previousScreen = previousScreen;
     }
 
@@ -47,6 +48,8 @@ export default class GuiDirectConnect extends GuiScreen {
                 }).catch(error => {
                     console.error(error);
                 });
+            } else if (this.tunnel) {
+                this.minecraft.displayScreen(new GuiConnecting(this, `tunnel://${this.fieldAddress.text.trim()}`, undefined, null));
             } else {
                 let proxy = null;
                 let proxyText = this.fieldProxy.text.trim();
@@ -88,7 +91,7 @@ export default class GuiDirectConnect extends GuiScreen {
         }
 
         // Server address
-        this.drawString(stack, "Server Address", this.width / 2 - 100, y + 17, -6250336);
+        this.drawString(stack, this.tunnel ? "Join Code" : "Server Address", this.width / 2 - 100, y + 17, -6250336);
         
         // Server proxy
         //this.drawString(stack, "Server Proxy", this.width / 2 - 100, y + 17 + 38, -6250336);
