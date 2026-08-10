@@ -216,9 +216,139 @@ export class LoopbackSocket extends EventTarget {
     }
 }
 
+export class TunnelSocket extends EventTarget {
+    _readyState = 0; // CONNECTING
+    binaryType = 'arraybuffer';
+    onopen = null;
+    onmessage = null;
+    onerror = null;
+    onclose = null;
+
+    /**
+     * @param {string} code       The tunnel join code (e.g. "AB3X9Z")
+     * @param {string} [serverUrl] Full ws:// URL of the tunnel server.
+     *                            Auto-detected when omitted.
+     */
+    constructor(code, serverUrl) {
+        super();
+
+        this._ws = null;
+        this._handshakeDone = false;
+        this._code = code;
+
+        // Resolve server URL
+        const resolvedUrl = serverUrl || IsomorphicWebSocket.tunnelServerUrl || (() => {
+            if (isNode) return 'ws://localhost:6007';
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${proto}//${location.hostname}:6007`;
+        })();
+
+        const WS = NativeWS || (typeof WebSocket !== 'undefined' ? WebSocket : null);
+        if (!WS) {
+            this._readyState = 3;
+            const err = new Error('No native WebSocket available for tunnel connection');
+            this.onerror?.(err);
+            this.dispatchEvent(new Event('error'));
+            const closeEv = new CloseEvent('close', { code: 1006, reason: err.message, wasClean: false });
+            this.onclose?.(closeEv);
+            this.dispatchEvent(closeEv);
+            return;
+        }
+
+        this._ws = new WS(resolvedUrl);
+        this._ws.binaryType = this.binaryType;
+
+        this._ws.onopen = () => {
+            // Send join handshake
+            this._ws.send(JSON.stringify({ type: 'join', code: this._code }));
+        };
+
+        this._ws.onmessage = (event) => {
+            if (!this._handshakeDone) {
+                let msg;
+                try {
+                    msg = JSON.parse(
+                        typeof event.data === 'string'
+                            ? event.data
+                            : new TextDecoder().decode(event.data),
+                    );
+                } catch { return; }
+
+                if (msg.type === 'joined') {
+                    this._handshakeDone = true;
+                    this._readyState = 1;
+                    const openEvent = new Event('open');
+                    if (typeof this.onopen === 'function') this.onopen(openEvent);
+                    this.dispatchEvent(openEvent);
+                    return;
+                }
+                if (msg.type === 'error') {
+                    this._readyState = 3;
+                    const errorEvent = new Event('error');
+                    if (typeof this.onerror === 'function') this.onerror(errorEvent);
+                    this.dispatchEvent(errorEvent);
+                    const closeEvent = new CloseEvent('close', {
+                        code: 1003,
+                        reason: msg.message || 'Tunnel error',
+                        wasClean: false,
+                    });
+                    if (typeof this.onclose === 'function') this.onclose(closeEvent);
+                    this.dispatchEvent(closeEvent);
+                    this._ws?.close();
+                    return;
+                }
+                return;
+            }
+
+            // Relay: forward as a normal message event
+            const messageEvent = new MessageEvent('message', { data: event.data });
+            if (typeof this.onmessage === 'function') this.onmessage(messageEvent);
+            this.dispatchEvent(messageEvent);
+        };
+
+        this._ws.onclose = (event) => {
+            if (this._readyState === 3) return;
+            this._readyState = 3;
+            const closeEvent = new CloseEvent('close', {
+                code: event.code || 1006,
+                reason: event.reason || '',
+                wasClean: event.wasClean || false,
+            });
+            if (typeof this.onclose === 'function') this.onclose(closeEvent);
+            this.dispatchEvent(closeEvent);
+        };
+
+        this._ws.onerror = () => {
+            const errorEvent = new Event('error');
+            if (typeof this.onerror === 'function') this.onerror(errorEvent);
+            this.dispatchEvent(errorEvent);
+        };
+    }
+
+    get readyState() {
+        return this._readyState;
+    }
+
+    send(data) {
+        if (this._readyState !== 1) {
+            throw new Error('WebSocket is not open');
+        }
+        this._ws.send(data);
+    }
+
+    close(code = 1000, reason = '') {
+        if (this._readyState === 3) return;
+        this._readyState = 3;
+        if (this._ws) this._ws.close(code, reason);
+    }
+}
+
 export class IsomorphicWebSocket extends EventTarget {
     #socket = null;
     #binaryType = 'arraybuffer';
+    /** Global default tunnel server URL. Set once to override auto-detection. */
+    static tunnelServerUrl = null;
+
     #userOnOpen = null;
     #userOnMessage = null;
     #userOnError = null;
@@ -234,12 +364,19 @@ export class IsomorphicWebSocket extends EventTarget {
             url.startsWith('loopback://') || 
             url === 'loopback'
         );
+        const isUrlTunnel = typeof url === 'string' && url.startsWith('tunnel://');
         
         this.isLoopback = options.loopback || isUrlLoopback;
+        this.isTunnel = isUrlTunnel;
 
-        if (this.isLoopback) {
+        if (this.isTunnel) {
+            const code = url.replace('tunnel://', '');
+            const serverUrl = options.tunnelServerUrl || IsomorphicWebSocket.tunnelServerUrl;
+            this.#socket = new TunnelSocket(code, serverUrl);
+            this.#setupInternalForwarding();
+        } else if (this.isLoopback) {
             this.#socket = new LoopbackSocket('client');
-            this.#setupLoopbackForwarding();
+            this.#setupInternalForwarding();
             globalLoopbackServer.connectClient(this.#socket);
         } else {
             if (!NativeWS) {
@@ -275,11 +412,11 @@ export class IsomorphicWebSocket extends EventTarget {
     }
 
     get onopen() {
-        return this.isLoopback ? this.#socket.onopen : this.#userOnOpen;
+        return (this.isLoopback || this.isTunnel) ? this.#socket.onopen : this.#userOnOpen;
     }
 
     set onopen(fn) {
-        if (this.isLoopback) {
+        if (this.isLoopback || this.isTunnel) {
             this.#socket.onopen = fn;
         } else {
             this.#userOnOpen = fn;
@@ -287,11 +424,11 @@ export class IsomorphicWebSocket extends EventTarget {
     }
 
     get onmessage() {
-        return this.isLoopback ? this.#socket.onmessage : this.#userOnMessage;
+        return (this.isLoopback || this.isTunnel) ? this.#socket.onmessage : this.#userOnMessage;
     }
 
     set onmessage(fn) {
-        if (this.isLoopback) {
+        if (this.isLoopback || this.isTunnel) {
             this.#socket.onmessage = fn;
         } else {
             this.#userOnMessage = fn;
@@ -299,11 +436,11 @@ export class IsomorphicWebSocket extends EventTarget {
     }
 
     get onerror() {
-        return this.isLoopback ? this.#socket.onerror : this.#userOnError;
+        return (this.isLoopback || this.isTunnel) ? this.#socket.onerror : this.#userOnError;
     }
 
     set onerror(fn) {
-        if (this.isLoopback) {
+        if (this.isLoopback || this.isTunnel) {
             this.#socket.onerror = fn;
         } else {
             this.#userOnError = fn;
@@ -311,11 +448,11 @@ export class IsomorphicWebSocket extends EventTarget {
     }
 
     get onclose() {
-        return this.isLoopback ? this.#socket.onclose : this.#userOnClose;
+        return (this.isLoopback || this.isTunnel) ? this.#socket.onclose : this.#userOnClose;
     }
 
     set onclose(fn) {
-        if (this.isLoopback) {
+        if (this.isLoopback || this.isTunnel) {
             this.#socket.onclose = fn;
         } else {
             this.#userOnClose = fn;
@@ -353,7 +490,8 @@ export class IsomorphicWebSocket extends EventTarget {
         this.dispatchEvent(clonedEvent);
     }
 
-    #setupLoopbackForwarding() {
+    /** Forward events from LoopbackSocket or TunnelSocket → this (addEventListener). */
+    #setupInternalForwarding() {
         ['open', 'message', 'error', 'close'].forEach((event) => {
             this.#socket.addEventListener(event, (e) => this.#forwardEvent(e));
         });

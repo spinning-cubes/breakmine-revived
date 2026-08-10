@@ -84,6 +84,12 @@ export default class GuiOptions extends GuiScreen {
                         type: "text",
                         tooltip: "Default: api.breakmine.com\n§7Don't trust random API URLs!\n§7They could be stealing passwords! >:["
                     },
+                    {
+                        name: "Tunnel URL",
+                        settingKey: "tunnelServer",
+                        type: "text",
+                        tooltip: "Default: tunnel.breakmine.com\n§7Don't trust random Tunnel URLs!"
+                    },
                 ]
             }
         ];

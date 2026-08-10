@@ -17,8 +17,12 @@ export default class GuiIngameMenu extends GuiScreen {
             this.minecraft.displayScreen(null);
         }));
 
-        this.buttonList.push(new GuiButton(this.minecraft, "Options...", this.width / 2 - 100, y + 24, 200, 20, () => {
+        this.buttonList.push(new GuiButton(this.minecraft, "Options...", this.width / 2 - 100, y + 24, 98, 20, () => {
             this.minecraft.displayScreen(new GuiOptions(this));
+        }));
+
+        this.buttonList.push(new GuiButton(this.minecraft, "Share World", this.width / 2 + 2, y + 24, 98, 20, () => {
+            this.minecraft.shareWorld();
         }));
 
         this.buttonList.push(new GuiButton(this.minecraft, "Save and Quit to Title", this.width / 2 - 100, y + 70, 200, 20, async () => {

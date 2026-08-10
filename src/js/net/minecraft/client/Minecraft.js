@@ -56,6 +56,7 @@ import PlayerEntity from "./entity/PlayerEntity.js";
 import { Version } from "../../../../resources/version.js";
 import { createErrorWindow } from './gui/WindowDraggable.js';
 import * as AuthLib from "./network/AuthLib.js";
+import { TunnelLib } from "../util/TunnelLib.js";
 
 export default class Minecraft {
 
@@ -150,6 +151,8 @@ export default class Minecraft {
         // Create mod loader and expose it
         this.modLoader = new ModLoader(this);
 
+        this.tunnelLib = new TunnelLib(this.settings.tunnelServer);
+
         // Tools are registered in BlockRegistry.create() alongside blocks and items
 
         this.blockList = BlockRegistry.getAllBlocks();
@@ -208,6 +211,11 @@ export default class Minecraft {
 
         // Mixins
         this.addMixinHandlers();
+    }
+
+    async shareWorld() {
+        let code = await this.tunnelLib.createTunnel("ws://loopback");
+        this.addMessageToChat("Share code: " + code);
     }
     
     async initVersionChecker() {
