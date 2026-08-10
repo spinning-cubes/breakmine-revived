@@ -14,3 +14,4 @@ package-lock.json
 dist/
 serverconfig.conf
 current_world.txt
+src/resources.js
