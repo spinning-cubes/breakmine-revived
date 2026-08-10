@@ -6,13 +6,13 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const path = require('path');
-const { IsomorphicFilesystem } = require('../client/fs/IsomorphicFilesystem.js');
+const { IsomorphicFilesystem } = require('./src/js/net/minecraft/client/fs/IsomorphicFilesystem.js');
 const fs = new IsomorphicFilesystem();
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
-const Logger = require('./logger').default;
+const Logger = require('./src/js/net/minecraft/server/logger.js').default;
 
 const SECRETS_FILE = './data/secrets.json';
 
