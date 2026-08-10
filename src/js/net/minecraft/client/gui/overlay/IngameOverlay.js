@@ -363,9 +363,10 @@ export default class IngameOverlay extends Gui {
 
         let midLines = [];
 
-        if (true) {
+        if (false) {
             midLines = [
-                "Intergrated Server @ 20TPS"
+                "Intergrated Server @ 20TPS",
+                ""
             ];
         }
 
