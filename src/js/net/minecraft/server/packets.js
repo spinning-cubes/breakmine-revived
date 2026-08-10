@@ -154,7 +154,7 @@ function sendBlockChange(ws, x, y, z, blockState) {
     let packedPos = (xPacked << 38n) | (yPacked << 26n) | zPacked;
 
     // Write as unsigned 64-bit
-    data.writeBigUInt64BE(packedPos, offset); offset += 8;
+    writeLongBE(packedPos, data, offset); offset += 8;
     offset += writeVarInt(data, blockState, offset);
 
     ws.send(makePacket(0x23, data.subarray(0, offset)));
@@ -171,7 +171,7 @@ function sendSignTextUpdate(ws, x, y, z, text) {
     let zPacked = BigInt(z) & ((1n << 26n) - 1n);
     let packedPos = (xPacked << 38n) | (yPacked << 26n) | zPacked;
 
-    data.writeBigUInt64BE(packedPos, offset); offset += 8;
+    writeLongBE(packedPos, data, offset); offset += 8;
     offset += writeString(data, text, offset);
 
     ws.send(makePacket(0x49, data.subarray(0, offset)));

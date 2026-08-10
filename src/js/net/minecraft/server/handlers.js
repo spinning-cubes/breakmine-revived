@@ -59,6 +59,16 @@ function isSolidBlock(blockId) {
 
 let log = Logger;
 
+// A failed world save (disk full, sandboxed FS, ...) must never take down the
+// connection or interrupt gameplay — log it and continue.
+function safeSaveWorld() {
+    try {
+        saveWorld();
+    } catch (e) {
+        log.error('Server', 'Failed to save world: ' + (e && e.message));
+    }
+}
+
 function canSee(viewer, target) {
     if (isSpectator(target)) {
         return isSpectator(viewer);
@@ -125,15 +135,18 @@ function handlePacket(player, buffer) {
         const who = player.username || 'unknown';
         if (err instanceof MalformedPacketError) {
             log.warn('Server', `Rejected malformed packet from ${who}: ${err.message}`);
-        } else {
-            log.error('Server', `Error handling packet from ${who}: ${err.message}`);
-        }
-        try {
-            if (player.ws && player.ws.readyState === 1) {
-                player.ws.close();
+            // Protocol violations are unrecoverable — drop the connection.
+            try {
+                if (player.ws && player.ws.readyState === 1) {
+                    player.ws.close();
+                }
+            } catch (e) {
+                // Ignore errors while closing the broken connection.
             }
-        } catch (e) {
-            // Ignore errors while closing the broken connection.
+        } else {
+            // Internal/gameplay errors (a failed world save, a block handler
+            // edge case, ...) must not disconnect the player. Log and carry on.
+            log.error('Server', `Error handling packet from ${who}: ${err.message}`);
         }
     }
 }
@@ -522,7 +535,7 @@ function handlePlayerDigging(player, buffer, offset) {
         serverWorld.scheduleNeighborTicks(x, y, z);
         serverWorld.notifyNeighborBlockChange(x, y, z);
 
-        saveWorld();
+        safeSaveWorld();
 
         const players = getPlayers();
         const blockState = (blockId << 4) | 0; // No metadata for broken blocks
@@ -548,7 +561,7 @@ function handleUpdateSignText(player, buffer, offset) {
 
     const blockKey = `${x},${y},${z}`;
     setBlockInventory(blockKey, { text: text });
-    saveWorld();
+    safeSaveWorld();
 
     // Broadcast sign text update to all players via packet
     const players = getPlayers();
@@ -705,7 +718,7 @@ function handleBlockPlacement(player, buffer, offset) {
         serverWorld.scheduleNeighborTicks(placeX, placeY, placeZ);
         serverWorld.notifyNeighborBlockChange(placeX, placeY, placeZ);
 
-        saveWorld();
+        safeSaveWorld();
 
         const blockStates = [[placeX, placeY, placeZ, (blockId << 4) | metadata]];
         if (doorTop) {
