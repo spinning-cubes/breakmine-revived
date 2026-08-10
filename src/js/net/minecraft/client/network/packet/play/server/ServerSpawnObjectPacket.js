@@ -12,6 +12,7 @@ export default class ServerSpawnObjectPacket extends Packet {
         this.pitch = 0;
         this.yaw = 0;
         this.objectData = 0;
+        this.pickupDelay = 0;
         this.velocityX = 0;
         this.velocityY = 0;
         this.velocityZ = 0;
@@ -26,6 +27,7 @@ export default class ServerSpawnObjectPacket extends Packet {
         this.pitch = buffer.readByte();
         this.yaw = buffer.readByte();
         this.objectData = buffer.readInt();
+        this.pickupDelay = buffer.readByte();
         if (this.objectData > 0) {
             this.velocityX = buffer.readShort();
             this.velocityY = buffer.readShort();
@@ -59,6 +61,10 @@ export default class ServerSpawnObjectPacket extends Packet {
 
     getObjectData() {
         return this.objectData;
+    }
+
+    getPickupDelay() {
+        return this.pickupDelay;
     }
 
     getVelocityX() {

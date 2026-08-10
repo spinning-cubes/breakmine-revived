@@ -7,7 +7,7 @@ export default class CaveGenerator extends Generator {
     constructor(world, seed) {
         super(world, seed);
 
-        this.chunkRange = 16;
+        this.chunkRange = 8;
         this.STONE_ID = BlockRegistry.STONE.getId();
         this.DIRT_ID = BlockRegistry.DIRT.getId();
         this.GRASS_ID = BlockRegistry.GRASS.getId();
@@ -191,14 +191,14 @@ export default class CaveGenerator extends Generator {
                 continue;
             }
 
-            distanceToCenterX = Math.floor(absoluteX - value) - originChunkX * 16 - 1;
-            let layerX = (Math.floor(absoluteX + value) - originChunkX * 16) + 1;
+            distanceToCenterX = (absoluteX - value | 0) - originChunkX * 16 - 1;
+            let layerX = ((absoluteX + value | 0) - originChunkX * 16) + 1;
 
-            distanceToCenterY = Math.floor(absoluteY - valueWithStrength) - 1;
-            let layerY = Math.floor(absoluteY + valueWithStrength) + 1;
+            distanceToCenterY = (absoluteY - valueWithStrength | 0) - 1;
+            let layerY = (absoluteY + valueWithStrength | 0) + 1;
 
-            progressInvert = Math.floor(absoluteZ - value) - originChunkZ * 16 - 1;
-            let layerZ = (Math.floor(absoluteZ + value) - originChunkZ * 16) + 1;
+            progressInvert = (absoluteZ - value | 0) - originChunkZ * 16 - 1;
+            let layerZ = ((absoluteZ + value | 0) - originChunkZ * 16) + 1;
 
             distanceToCenterX = Math.max(distanceToCenterX, 0);
             layerX = Math.min(layerX, 16);
@@ -207,26 +207,29 @@ export default class CaveGenerator extends Generator {
             progressInvert = Math.max(progressInvert, 0);
             layerZ = Math.min(layerZ, 16);
 
+            // Skip if bounding box doesn't intersect the chunk
+            if (distanceToCenterX >= layerX || progressInvert >= layerZ || distanceToCenterY >= layerY) {
+                continue;
+            }
+
             let isWaterCave = false;
 
             // Check for water
-            for (let x = Math.floor(distanceToCenterX); !isWaterCave && x < layerX; x++) {
-                for (let z = Math.floor(progressInvert); !isWaterCave && z < layerZ; z++) {
+            for (let x = distanceToCenterX; !isWaterCave && x < layerX; x++) {
+                for (let z = progressInvert; !isWaterCave && z < layerZ; z++) {
                     for (let y = layerY + 1; !isWaterCave && y >= distanceToCenterY - 1; y--) {
                         if (y < 0 || y >= 256) {
                             continue;
                         }
 
-                        // Get current block
-                        let typeId = primer.get(x, y, z)
+                        let typeId = primer.get(x, y, z);
 
-                        // Check if we have water in here
-                        if (typeId === this.WATER_ID || typeId === this.WATER_ID) { // TODO one of them WATER MOVING
+                        if (typeId === this.WATER_ID) {
                             isWaterCave = true;
                         }
 
                         if (y !== distanceToCenterY - 1 && x !== distanceToCenterX && x !== layerX - 1 && z !== progressInvert && z !== layerZ - 1) {
-                            y = Math.floor(distanceToCenterY);
+                            y = distanceToCenterY;
                         }
                     }
                 }
@@ -236,11 +239,11 @@ export default class CaveGenerator extends Generator {
             }
 
             // For each block on layer x
-            for (let x = Math.floor(distanceToCenterX); x < layerX; x++) {
+            for (let x = distanceToCenterX; x < layerX; x++) {
                 let offsetX = (((x + originChunkX * 16) + 0.5) - absoluteX) / value;
 
                 // For each block on layer z
-                for (let z = Math.floor(progressInvert); z < layerZ; z++) {
+                for (let z = progressInvert; z < layerZ; z++) {
                     let offsetZ = (((z + originChunkZ * 16) + 0.5) - absoluteZ) / value;
 
                     let totalY = layerY;

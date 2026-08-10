@@ -223,7 +223,14 @@ export default class GameWindow {
         this.registerListener(this.wrapper, 'wheel', event => {
             event.stopPropagation();
             let delta = Math.sign(event.deltaY);
-            this.minecraft.onMouseScroll(delta);
+            
+            // Handle scroll on current screen if open
+            let currentScreen = this.minecraft.currentScreen;
+            if (currentScreen !== null) {
+                currentScreen.onScroll(event.x / this.scaleFactor, event.y / this.scaleFactor, delta);
+            } else {
+                this.minecraft.onMouseScroll(delta);
+            }
         });
     }
 

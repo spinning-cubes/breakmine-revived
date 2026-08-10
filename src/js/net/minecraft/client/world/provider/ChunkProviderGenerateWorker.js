@@ -1,7 +1,5 @@
 import ChunkProvider from "./ChunkProvider.js";
 import Chunk from "../Chunk.js";
-import ChunkSection from "../ChunkSection.js";
-import EnumSkyBlock from "../../../util/EnumSkyBlock.js";
 import Random from "../../../util/Random.js";
 import Long from "../../../../../../../libraries/long.js";
 
@@ -46,20 +44,7 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
                         this.chunks.set(key, chunk);
                         this.world.group.add(chunk.group);
 
-                        this.world.updateLight(EnumSkyBlock.SKY,
-                            chunk.x * ChunkSection.SIZE, 0,
-                            chunk.z * ChunkSection.SIZE,
-                            chunk.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-                            ChunkSection.SIZE * 16,
-                            chunk.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-                        );
-                        this.world.updateLight(EnumSkyBlock.BLOCK,
-                            chunk.x * ChunkSection.SIZE, 0,
-                            chunk.z * ChunkSection.SIZE,
-                            chunk.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-                            ChunkSection.SIZE * 16,
-                            chunk.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-                        );
+                        this.world.updateChunkLight(chunk);
                     } catch (err) {
                         console.error("Failed to deserialize chunk", result.x, result.z, err);
                     }
@@ -189,20 +174,7 @@ export default class ChunkProviderGenerateWorker extends ChunkProvider {
         this.chunks.set(index, chunk);
         this.world.group.add(chunk.group);
 
-        this.world.updateLight(EnumSkyBlock.SKY,
-            chunk.x * ChunkSection.SIZE, 0,
-            chunk.z * ChunkSection.SIZE,
-            chunk.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-            ChunkSection.SIZE * 16,
-            chunk.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-        );
-        this.world.updateLight(EnumSkyBlock.BLOCK,
-            chunk.x * ChunkSection.SIZE, 0,
-            chunk.z * ChunkSection.SIZE,
-            chunk.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-            ChunkSection.SIZE * 16,
-            chunk.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-        );
+        this.world.updateChunkLight(chunk);
 
         return chunk;
     }

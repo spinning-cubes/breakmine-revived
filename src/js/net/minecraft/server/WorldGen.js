@@ -276,42 +276,48 @@ function flatBlockId(worldY) {
     return 0;                                // Air
 }
 
-function blockStateAt(worldX, worldY, worldZ, worldChanges, blocks) {
-    const blockState = worldChanges.get(worldX + ',' + worldY + ',' + worldZ);
-    if (blockState !== undefined) {
-        return blockState;
-    }
-
-    let blockId;
-    if (blocks) {
-        blockId = blocks[((worldY & 255) << 8) | ((worldZ & 15) << 4) | (worldX & 15)];
-    } else {
-        blockId = flatBlockId(worldY);
-    }
-    return (blockId << 4) | 0;
-}
-
 // Build the full chunk data buffer (same format the server always sent for
 // flat worlds) for the configured world type and seed.
 function generateChunkColumn(chunkX, chunkZ, worldChanges) {
     const buffer = Buffer.alloc(SECTION_SIZE * SECTION_COUNT + 256);
     const blocks = getColumnBlocks(chunkX, chunkZ);
 
+    // Pre-index this chunk's block changes by their flat position in the block
+    // array. The serialization loop below runs 65k times per chunk; probing the
+    // global map with a freshly built "x,y,z" string for every single block was
+    // the single biggest CPU cost on the main thread during world load.
+    const chunkChanges = new Map();
+    if (worldChanges && worldChanges.size > 0) {
+        const x0 = chunkX * 16;
+        const z0 = chunkZ * 16;
+        for (const [coords, blockState] of worldChanges.entries()) {
+            const comma1 = coords.indexOf(',');
+            const comma2 = coords.indexOf(',', comma1 + 1);
+            const x = parseInt(coords, 10);
+            const y = parseInt(coords.slice(comma1 + 1), 10);
+            const z = parseInt(coords.slice(comma2 + 1), 10);
+            if (x < x0 || x >= x0 + 16 || z < z0 || z >= z0 + 16 || y < 0 || y > 255) continue;
+            chunkChanges.set((y << 8) | ((z & 15) << 4) | (x & 15), blockState);
+        }
+    }
+
     for (let sectionIndex = 0; sectionIndex < SECTION_COUNT; sectionIndex++) {
         const sectionOffset = sectionIndex * SECTION_SIZE;
         const baseY = sectionIndex * 16;
 
         for (let y = 0; y < 16; y++) {
+            const worldY = baseY + y;
+            const yBase = worldY << 8;
             for (let z = 0; z < 16; z++) {
+                const zBase = (z << 4);
                 for (let x = 0; x < 16; x++) {
-                    const localIndex = ((y << 8) | (z << 4) | x) * 2;
-                    const worldY = baseY + y;
-                    const worldX = chunkX * 16 + x;
-                    const worldZ = chunkZ * 16 + z;
-                    buffer.writeUInt16LE(
-                        blockStateAt(worldX, worldY, worldZ, worldChanges, blocks),
-                        sectionOffset + localIndex
-                    );
+                    const localIndex = (y << 8) | zBase | x;
+                    const blockIndex = yBase | zBase | x;
+                    let blockState = chunkChanges.get(blockIndex);
+                    if (blockState === undefined) {
+                        blockState = blocks ? (blocks[blockIndex] << 4) : (flatBlockId(worldY) << 4);
+                    }
+                    buffer.writeUInt16LE(blockState, sectionOffset + localIndex * 2);
                 }
             }
         }

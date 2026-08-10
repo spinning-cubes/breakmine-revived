@@ -1,4 +1,15 @@
 import { deflate, inflate } from "../../lib/pako.js";
+
+// `window` does not exist in a Web Worker; both IndexedDB and localStorage are
+// available as globals there instead. These helpers work everywhere.
+function getIndexedDB() {
+    return (typeof indexedDB !== 'undefined' && indexedDB) ? indexedDB : null;
+}
+
+function getLocalStorage() {
+    return (typeof localStorage !== 'undefined' && localStorage) ? localStorage : null;
+}
+
 function toBase64(u8) {
     let binary = '';
     const chunkSize = 8192;
@@ -22,18 +33,18 @@ export default class FileSystem {
         this.dbName = dbName;
         this.storeName = storeName;
         this.db = null;
-        this.localStoragePrefix = 'bts-'; 
-        if (!window.indexedDB) {
+        this.localStoragePrefix = 'bts-';
+        if (!getIndexedDB()) {
             console.warn("No IndexedDB support! Using LocalStorage.");
         }
     }
 
     async _getDb() {
-        if (!window.indexedDB) return null;
+        if (!getIndexedDB()) return null;
         if (this.db) return this.db;
 
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, 1);
+            const request = getIndexedDB().open(this.dbName, 1);
 
             request.onerror = (event) => {
                 console.error("IndexedDB error: ", event.target.error);
@@ -62,7 +73,8 @@ export default class FileSystem {
     async fileExists(filename) {
         const lsKey = this.localStoragePrefix + filename;
 
-        if (localStorage.getItem(lsKey) !== null) {
+        const ls = getLocalStorage();
+        if (ls && ls.getItem(lsKey) !== null) {
             return true;
         }
 
@@ -88,7 +100,8 @@ export default class FileSystem {
         const lsKey = this.localStoragePrefix + filename;
         let fileData = null;
 
-        fileData = localStorage.getItem(lsKey);
+        const ls = getLocalStorage();
+        fileData = ls ? ls.getItem(lsKey) : null;
         
         if (fileData !== null) {
             return fileData.length;
@@ -150,22 +163,24 @@ export default class FileSystem {
 
         const lsKey = this.localStoragePrefix + filename;
 
+        const ls = getLocalStorage();
         try {
-            localStorage.setItem(lsKey, base64Text);
-            
-            await this._deleteFileFromIndexedDB(filename); 
+            if (!ls) throw new Error('localStorage unavailable');
+            ls.setItem(lsKey, base64Text);
+
+            await this._deleteFileFromIndexedDB(filename);
             return;
 
         } catch (e) {
             console.warn(`LocalStorage quota exceeded or failed for '${filename}'`);
             console.warn(`Using IndexedDB instead`);
-            
+
             const store = await this._getTransactionStore('readwrite');
             if (!store) {
                 return Promise.reject(new Error("Save failed! IndexedDB not available"));
             }
-            
-            localStorage.removeItem(lsKey); 
+
+            if (ls) ls.removeItem(lsKey);
 
             return new Promise((resolve, reject) => {
                 const fileRecord = {
@@ -204,20 +219,22 @@ export default class FileSystem {
 
         const lsKey = this.localStoragePrefix + filename;
 
+        const ls = getLocalStorage();
         try {
-            localStorage.setItem(lsKey, base64Data);
+            if (!ls) throw new Error('localStorage unavailable');
+            ls.setItem(lsKey, base64Data);
             await this._deleteFileFromIndexedDB(filename);
             return;
         } catch (e) {
             console.warn(`LocalStorage quota exceeded or failed for '${filename}'`);
             console.warn(`Using IndexedDB instead`);
-            
+
             const store = await this._getTransactionStore('readwrite');
             if (!store) {
                 return Promise.reject(new Error("Save failed! IndexedDB not available"));
             }
-            
-            localStorage.removeItem(lsKey);
+
+            if (ls) ls.removeItem(lsKey);
 
             return new Promise((resolve, reject) => {
                 const fileRecord = {
@@ -243,8 +260,9 @@ export default class FileSystem {
         const lsKey = this.localStoragePrefix + filename;
         let fileData = null;
 
-        fileData = localStorage.getItem(lsKey);
-        
+        const ls = getLocalStorage();
+        fileData = ls ? ls.getItem(lsKey) : null;
+
         if (fileData === null) {
             const store = await this._getTransactionStore('readonly');
             if (store) {
@@ -283,8 +301,9 @@ export default class FileSystem {
         const lsKey = this.localStoragePrefix + filename;
         let fileData = null;
 
-        fileData = localStorage.getItem(lsKey);
-        
+        const ls = getLocalStorage();
+        fileData = ls ? ls.getItem(lsKey) : null;
+
         if (fileData === null) {
             const store = await this._getTransactionStore('readonly');
             if (store) {
@@ -308,7 +327,8 @@ export default class FileSystem {
     }
 
     async deleteFile(filename) {
-        localStorage.removeItem(this.localStoragePrefix + filename);
+        const ls = getLocalStorage();
+        if (ls) ls.removeItem(this.localStoragePrefix + filename);
         await this._deleteFileFromIndexedDB(filename);
     }
 
@@ -326,12 +346,15 @@ export default class FileSystem {
     }
 
     _listDirLocalStorage(prefix, filesSet) {
+        const ls = getLocalStorage();
+        if (!ls) return;
+
         const lsPrefix = this.localStoragePrefix;
-        
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            
-            if (key.startsWith(lsPrefix)) {
+
+        for (let i = 0; i < ls.length; i++) {
+            const key = ls.key(i);
+
+            if (key && key.startsWith(lsPrefix)) {
                 const fileName = key.substring(lsPrefix.length);
                 if (fileName.startsWith(prefix)) {
                     filesSet.add(fileName);

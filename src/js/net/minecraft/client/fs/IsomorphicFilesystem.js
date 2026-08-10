@@ -2,7 +2,12 @@ import { Buffer } from 'buffer';
 import BrowserFS from './Filesystem.js';
 import { inflate } from '../../lib/pako.js';
 
-const isNode = typeof window === 'undefined' && typeof process !== 'undefined';
+// Node.js detection that stays false inside a Web Worker even if the bundle
+// polyfills a global `process` (real Node always exposes process.versions.node).
+const isNode =
+    typeof process !== 'undefined' &&
+    !!process.versions &&
+    !!process.versions.node;
 
 let nodeFs = null;
 let nodeFsSync = null;
@@ -80,6 +85,23 @@ export class IsomorphicFilesystem {
         }
         this.#readyPromise = this.#initBrowser();
         return this.#readyPromise;
+    }
+
+    // Re-hydrate the in-memory cache from the persisted store. Used when files
+    // may have been written by another filesystem instance (e.g. the main
+    // thread imports/exports worlds while the integrated server runs in a
+    // worker, or a freshly stopped worker must re-read main-thread changes).
+    async refresh() {
+        if (isNode || !this.#browserFS) return;
+        if (this.#readyPromise) {
+            try {
+                await this.#readyPromise;
+            } catch (e) {
+                // Ignore a failed initial load; retry below.
+            }
+        }
+        this.#cache.clear();
+        await this.#initBrowser();
     }
 
     async #initBrowser() {

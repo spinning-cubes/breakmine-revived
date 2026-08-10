@@ -73,12 +73,13 @@ export default class World {
         
         this.cloudOffset = 0;
 
-        // Update lights async
+        // Update lights async. Time-budget the drain so a large backlog (e.g.
+        // the burst of chunks sent when a world loads) can never block the main
+        // thread for a whole frame; leftover regions drain on later ticks.
         let scope = this;
         this.lightUpdateInterval = setInterval(function () {
-            let i = scope.minecraft.loadingScreen === null ? 1000 : 100000;
-            while (scope.lightUpdateQueue.length >= 10 && i > 0) {
-                i--;
+            const deadline = performance.now() + 8;
+            while (scope.lightUpdateQueue.length > 0 && performance.now() < deadline) {
                 scope.lightUpdateQueue.shift().updateBlockLightning(scope);
             }
         }, 50);
@@ -330,22 +331,14 @@ export default class World {
     }
 
     updateLights() {
-        let scope = this;
-
-        if (this.lightUpdateQueue.length < 10) {
-            // Update lights in queue
-            let i = 10;
-            while (scope.lightUpdateQueue.length > 0) {
-                if (i <= 0) {
-                    return true;
-                }
-
-                let meta = scope.lightUpdateQueue.shift();
-                meta.updateBlockLightning(scope);
-                i--;
-            }
+        // Drain a bounded slice of the queue per call so onRender can pace the
+        // work across frames; returns true while more light updates remain.
+        let processed = 0;
+        while (this.lightUpdateQueue.length > 0 && processed < 4) {
+            processed++;
+            this.lightUpdateQueue.shift().updateBlockLightning(this);
         }
-        return false;
+        return this.lightUpdateQueue.length > 0;
     }
 
     updateLight(sourceType, x1, y1, z1, x2, y2, z2, notifyNeighbor = true) {
@@ -383,7 +376,7 @@ export default class World {
             return;
         }
 
-        // Add light update region to queue
+        // Add light update region to queue.
         if (this.lightUpdateQueue.length < 9999) {
             this.lightUpdateQueue.push(new MetadataChunkBlock(sourceType, x1, y1, z1, x2, y2, z2));
         }
@@ -392,6 +385,91 @@ export default class World {
         if (this.lightUpdateQueue.length > 10000) {
             this.lightUpdateQueue = [];
         }
+    }
+
+    /**
+     * Compute the sky lightmap of a chunk directly, column by column, without
+     * relaxation. Sky light enters from above: blocks at or above the heightmap
+     * get 15, and below ground it attenuates by each block's opacity. Fresh
+     * chunks start with the "uncomputed" sky marker (14) everywhere, which
+     * makes neighbor-based propagation crawl one level at a time; this pass
+     * establishes near-final values instantly, and the flood from updateLight()
+     * then fixes horizontal exposure at cave openings and cliffs.
+     */
+    updateChunkSkyLight(chunk) {
+        if (!chunk || !chunk.loaded) return;
+
+        const worldX = chunk.x * ChunkSection.SIZE;
+        const worldZ = chunk.z * ChunkSection.SIZE;
+
+        for (let lx = 0; lx < ChunkSection.SIZE; lx++) {
+            for (let lz = 0; lz < ChunkSection.SIZE; lz++) {
+                const height = chunk.getHeightAt(lx, lz);
+                let light = 15;
+                for (let y = World.TOTAL_HEIGHT - 1; y >= 0; y--) {
+                    if (y < height) {
+                        const typeId = this.getBlockAt(worldX + lx, y, worldZ + lz);
+                        const block = Block.getById(typeId);
+                        let opacity = block === null || typeId === 0 ? 0 : Math.round(block.getOpacity() * 255);
+                        if (opacity === 0) {
+                            opacity = 1;
+                        }
+                        light -= opacity;
+                        if (light < 0) {
+                            light = 0;
+                        }
+                    } else {
+                        light = 15;
+                    }
+                    if (light !== this.getSavedLightValue(EnumSkyBlock.SKY, worldX + lx, y, worldZ + lz)) {
+                        // fillChunk already marked every section modified, so a
+                        // direct section write skips the redundant rebuild flags.
+                        chunk.getSection(y >> 4).setLightAt(EnumSkyBlock.SKY, lx, y & 15, lz, light);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * The server sends a light placeholder (0xFF) for every block, so a
+     * freshly-filled chunk has block light = 15 everywhere. If the flood ran
+     * on that, light would have to "decay" 15 -> 0 through the whole chunk one
+     * level at a time (an enormous amount of work, a freeze, and wrong results
+     * when capped). Block light is recomputed from scratch anyway, so just
+     * zero it before the flood runs.
+     */
+    resetChunkBlockLight(chunk) {
+        const sectionCount = World.TOTAL_HEIGHT / ChunkSection.SIZE;
+        for (let layer = 0; layer < sectionCount; layer++) {
+            const section = chunk.getSection(layer);
+            for (let k = 0; k < ChunkSection.SIZE * ChunkSection.SIZE * ChunkSection.SIZE; k++) {
+                section.setLightAt(EnumSkyBlock.BLOCK, k & 15, (k >> 8) & 15, (k >> 4) & 15, 0);
+            }
+        }
+    }
+
+    /**
+     * Recompute the lightmaps of a chunk and its loaded orthogonal neighbors.
+     * Chunks are added in arbitrary order, so a chunk loaded after its
+     * neighbors must refresh their boundary columns too (their saved light
+     * was computed without this chunk's terrain/light present).
+     */
+    updateChunkLight(chunk) {
+        if (!chunk || !chunk.loaded) return;
+
+        this.updateChunkSkyLight(chunk);
+        this.resetChunkBlockLight(chunk);
+
+        // Recompute this chunk's light in a single queued pass. The flood
+        // spreads through loaded neighbors on its own (light changes push into
+        // adjacent chunks), so requeueing every loaded neighbor here only
+        // multiplied the queue - and the main-thread stall - while chunks
+        // streamed in.
+        const x1 = chunk.x * ChunkSection.SIZE;
+        const z1 = chunk.z * ChunkSection.SIZE;
+        this.updateLight(EnumSkyBlock.SKY, x1, 0, z1, x1 + ChunkSection.SIZE - 1, World.TOTAL_HEIGHT - 1, z1 + ChunkSection.SIZE - 1);
+        this.updateLight(EnumSkyBlock.BLOCK, x1, 0, z1, x1 + ChunkSection.SIZE - 1, World.TOTAL_HEIGHT - 1, z1 + ChunkSection.SIZE - 1);
     }
 
     blockExists(x, y, z) {
@@ -404,28 +482,6 @@ export default class World {
 
     chunkExists(chunkX, chunkZ) {
         return this.chunkProvider !== null && this.chunkProvider.chunkExists(chunkX, chunkZ);
-    }
-
-    neighborLightPropagationChanged(sourceType, x, y, z, level) {
-        if (!this.blockExists(x, y, z)) {
-            return;
-        }
-        if (sourceType === EnumSkyBlock.SKY) {
-            if (this.isAboveGround(x, y, z)) {
-                level = 15;
-            }
-        } else if (sourceType === EnumSkyBlock.BLOCK) {
-            let typeId = this.getBlockAt(x, y, z);
-            let block = Block.getById(typeId);
-            let blockLight = typeId === 0 ? 0 : block.getLightValue(this, x, y, z);
-
-            if (blockLight > level) {
-                level = blockLight;
-            }
-        }
-        if (this.getSavedLightValue(sourceType, x, y, z) !== level) {
-            this.updateLight(sourceType, x, y, z, x, y, z);
-        }
     }
 
     /**

@@ -419,22 +419,10 @@ export default class Chunk {
         this.setModifiedAllSections();
 
         if (this.loaded) {
-            this.world.updateLight(EnumSkyBlock.SKY,
-                this.x * ChunkSection.SIZE,
-                0,
-                this.z * ChunkSection.SIZE,
-                this.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-                World.TOTAL_HEIGHT,
-                this.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-            );
-            this.world.updateLight(EnumSkyBlock.BLOCK,
-                this.x * ChunkSection.SIZE,
-                0,
-                this.z * ChunkSection.SIZE,
-                this.x * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-                World.TOTAL_HEIGHT,
-                this.z * ChunkSection.SIZE + ChunkSection.SIZE - 1,
-            );
+            // Recompute this chunk's lightmaps and those of its already-loaded
+            // neighbors, so chunk borders stay consistent no matter the order
+            // chunks arrive in.
+            this.world.updateChunkLight(this);
         }
     }
 

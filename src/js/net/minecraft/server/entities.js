@@ -1,7 +1,7 @@
 let nextItemId = 1000;
 const itemEntities = new Map();
 
-function addItemEntity(blockId, x, y, z, motionX, motionY, motionZ, droppedBy) {
+function addItemEntity(blockId, x, y, z, motionX, motionY, motionZ, droppedBy, hasPickupDelay = false) {
     const id = nextItemId++;
     const entity = {
         id,
@@ -14,6 +14,7 @@ function addItemEntity(blockId, x, y, z, motionX, motionY, motionZ, droppedBy) {
         motionY: motionY || 0,
         motionZ: motionZ || 0,
         droppedBy,
+        hasPickupDelay: !!hasPickupDelay,
         spawnTime: Date.now()
     };
     itemEntities.set(id, entity);

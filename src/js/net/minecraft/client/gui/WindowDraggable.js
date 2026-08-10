@@ -196,7 +196,7 @@ class DraggableWindow {
     dragMoveGlobal = this.dragMove.bind(this);
     dragEndGlobal = this.dragEnd.bind(this);
 
-    static create({ title, content, startX = 50, startY = 50, container, allowClose }) {
+    static create({ title, content, startX = 50, startY = 50, container, allowClose, onScroll }) {
         const windowId = `window-${Date.now()}-${Math.floor(Math.random() * 100)}`;
 
         let windowHtml = `<div class="window" id="${windowId}" style="width: 700px">
@@ -230,6 +230,19 @@ class DraggableWindow {
 
         const instance = new DraggableWindow(windowEl, dragHandleEl, startX, startY);
 
+        // Add scrollwheel support
+        if (onScroll && typeof onScroll === 'function') {
+            windowEl.addEventListener('wheel', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const delta = Math.sign(event.deltaY);
+                const rect = windowEl.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+                onScroll(mouseX, mouseY, delta);
+            }, { passive: false });
+        }
+
         windowEl.querySelectorAll('.title-bar-controls').forEach(parent => {
             Array.from(parent.children).forEach(btn => {
                 console.log(btn);
@@ -247,7 +260,7 @@ class DraggableWindow {
 
 // Logger
 
-export function createWindow(name, content2, style = "padding: 4px;", allowClose = false) {
+export function createWindow(name, content2, style = "padding: 4px;", allowClose = false, onScroll = null) {
     const content = `
             <div style="${style}">
                 ${content2}
@@ -260,12 +273,13 @@ export function createWindow(name, content2, style = "padding: 4px;", allowClose
         startX: 0,
         startY: 0,
         container: document.body,
-        allowClose: allowClose
+        allowClose: allowClose,
+        onScroll: onScroll
     });
 }
 
-export function createErrorWindow(errorshort, msg, allowClose = false) {
-    createWindow(`${errorshort}`, `<span style="color: black; font-family: sans-serif; max-width: 500px;">${msg}</span>`, "padding: 0px;", allowClose);
+export function createErrorWindow(errorshort, msg, allowClose = false, onScroll = null) {
+    createWindow(`${errorshort}`, `<span style="color: black; font-family: sans-serif; max-width: 500px;">${msg}</span>`, "padding: 0px;", allowClose, onScroll);
 }
 
 //createErrorWindow("SyntaxError", "");

@@ -182,6 +182,14 @@ export default class GuiScreen extends Gui {
         }
     }
 
+    // Default no-op. Subclasses (e.g. GuiWorldSlotContainer) override this to
+    // handle mouse wheel scrolling. `amount` is the wheel delta sign:
+    //   positive => scroll up (content moves down)
+    //   negative => scroll down (content moves up)
+    mouseScrolled(mouseX, mouseY, amount) {
+
+    }
+
     drawDefaultBackground(stack) {
         if (this.minecraft.isInGame()) {
             // Render transparent background

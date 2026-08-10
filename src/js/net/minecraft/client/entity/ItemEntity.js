@@ -27,6 +27,11 @@ export default class ItemEntity extends Entity {
         this.fallTime = 0;
 
         this.tickCount = 0;
+
+        // Only items dropped via the Q key (or flagged by the server) keep the
+        // pickup delay; items from block breaking are collectible immediately.
+        this.hasPickupDelay = false;
+
         this.initRenderer(); 
     }
 
@@ -37,8 +42,9 @@ export default class ItemEntity extends Entity {
 
         this.tickCount += 1;
 
-        // Only allow pickup after 3 seconds (60 ticks)
-        if (this.tickCount >= 60) {
+        // Only allow pickup after 3 seconds (60 ticks) when the item was
+        // dropped with the Q key; everything else is instantly collectible.
+        if (!this.hasPickupDelay || this.tickCount >= 60) {
             // Check distance to player (target head level)
             let player = this.minecraft.player;
             let targetY = player.y + 1.2;

@@ -1129,7 +1129,8 @@ export default class Minecraft {
 
             // Update lights (limit iterations to prevent freezing)
             let lightIterations = 0;
-            while (this.world.updateLights() && lightIterations < 100) {
+            const lightDeadline = performance.now() + 6;
+            while (this.world.updateLights() && lightIterations < 500 && performance.now() < lightDeadline) {
                 lightIterations++;
             }
 
@@ -1563,12 +1564,15 @@ export default class Minecraft {
                 let itemStack = this.player.inventory.getItemInSelectedSlot();
 
                 if (this.isSingleplayer()) {
-                    // Singleplayer: create entity locally
-                    this.world.addEntity(new ItemEntity(this, this.world, itemStack.typeId, this.player.x, this.player.y, this.player.z));
+                    // Singleplayer: create entity locally. Items dropped with Q
+                    // keep the pickup delay so they aren't instantly re-picked.
+                    let itemEntity = new ItemEntity(this, this.world, itemStack.typeId, this.player.x, this.player.y, this.player.z);
+                    itemEntity.hasPickupDelay = true;
+                    this.world.addEntity(itemEntity);
                 } else {
                     // Multiplayer: tell server to spawn item for all players at
                     // the player's position
-                    this.playerController.getNetworkHandler().sendPacket(new ClientDropItemPacket(itemStack.typeId, this.player.x, this.player.y, this.player.z));
+                    this.playerController.getNetworkHandler().sendPacket(new ClientDropItemPacket(itemStack.typeId, this.player.x, this.player.y, this.player.z, true));
                 }
 
                 // Play drop sound

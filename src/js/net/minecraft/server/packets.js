@@ -294,6 +294,7 @@ function createSpawnObjectPacket(entity) {
     data.writeUInt8(0, offset); offset += 1;  // Pitch
     data.writeUInt8(0, offset); offset += 1;  // Yaw
     data.writeInt32BE(entity.blockId, offset); offset += 4;  // Object data (blockId for items)
+    data.writeUInt8(entity.hasPickupDelay ? 1 : 0, offset); offset += 1;  // Pickup delay (Q-drop)
     data.writeUInt16BE(0, offset); offset += 2;  // Velocity X
     data.writeUInt16BE(0, offset); offset += 2;  // Velocity Y
     data.writeUInt16BE(0, offset); offset += 2;  // Velocity Z

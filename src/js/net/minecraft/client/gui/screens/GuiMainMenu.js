@@ -14,6 +14,7 @@ import GuiMods from "./GuiMods.js";
 import { SplashTexts } from "../../../../../../resources/splashes.js";
 import GuiYesNo from "./GuiYesNo.js";
 import { Version } from "../../../../../../resources/version.js";
+import GuiTooltip from "../widgets/GuiTooltip.js";
 
 export default class GuiMainMenu extends GuiScreen {
 
@@ -52,10 +53,6 @@ export default class GuiMainMenu extends GuiScreen {
         let btntemp = new GuiButton(this.minecraft, "Multiplayer", this.width / 2 - 100, y + 24, 200, 20, () => {
             this.minecraft.displayScreen(new GuiMultiplayer(this));
         }).setEnabled(this.minecraft.settings.loggedIn);
-        if (!this.minecraft.settings.loggedIn) {
-            //btntemp.setTooltip("§4Development build, no login needed.");
-            btntemp.setTooltip("You must be logged in\n§7Don't worry, it's free!");
-        }
         this.buttonList.push(btntemp);
 
         this.buttonList.push(new GuiButton(this.minecraft, "Mods", this.width / 2 - 100, y + 24 * 2, 200, 20, () => {
@@ -76,7 +73,10 @@ export default class GuiMainMenu extends GuiScreen {
         this.buttonList.push(new GuiButton(this.minecraft, "Quit Game", this.width / 2 + 2, y + 96 + 12, 98, 20, () => {
             this.minecraft.stop();
         }).setEnabled(false));
-        
+
+        if (!this.minecraft.settings.loggedIn) {
+            this.buttonList.push(new GuiTooltip(this.minecraft, "You must be logged in\n§7Don't worry, it's free!", this.width / 2 - 100, y + 24, 200, 20));
+        }
 
         this.initPanoramaRenderer();
     }

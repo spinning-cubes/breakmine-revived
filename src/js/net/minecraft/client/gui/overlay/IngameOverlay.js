@@ -358,7 +358,18 @@ export default class IngameOverlay extends Gui {
             fps + " fps (" + chunkUpdates + " chunk updates) T: " + this.minecraft.maxFps,
             "C: " + visibleChunks + "/" + loadedChunks + " D: " + viewDistance + ", L: " + lightUpdates,
             "E: " + visibleEntities + "/" + entities + ", P: " + particles,
-            "",
+            ""
+        ];
+
+        let midLines = [];
+
+        if (true) {
+            midLines = [
+                "Intergrated Server @ 20TPS"
+            ];
+        }
+
+        let afterLines = [
             "XYZ: " + fixedX + " / " + fixedY + " / " + fixedZ,
             "Block: " + blockX + " " + blockY + " " + blockZ,
             "Chunk: " + chunkX + " " + chunkY + " " + chunkZ + " in " + inChunkX + " " + inChunkY + " " + inChunkZ,
@@ -370,10 +381,10 @@ export default class IngameOverlay extends Gui {
             "Time: " + world.time % 24000 + " (Day " + Math.floor(world.time / 24000) + ")",
             "Cursor: " + this.minecraft.window.focusState.getName(),
             "",
-            "Seed: " + `${this.minecraft.isSingleplayer() ? world.getSeed() : "(not availible in Multiplayer)"}`
-        ]
+            "Seed: " + `${this.minecraft.isSingleplayer() ? world.getSeed() : "(not available in Multiplayer)"}`
+        ];
 
-        // cool seed: -5529091579467429620
+        lines.push(...midLines, ...afterLines);
 
         // Hit result
         let hit = worldRenderer.lastHitResult;

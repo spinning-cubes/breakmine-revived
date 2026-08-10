@@ -38,36 +38,14 @@ export default class GameSettings {
     }
 
     load() {
-        for (let prop in this) {
-            let nameEQ = prop + "=";
-            let ca = document.cookie.split(';');
-            for (let i = 0; i < ca.length; i++) {
-                let c = ca[i];
-                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) === 0) {
-                    let value = c.substring(nameEQ.length, c.length);
-                    if (value.match(/^[0-9]+$/)) {
-                        value = parseInt(value);
-                    }
-                    if (value === 'true') {
-                        value = true;
-                    }
-                    if (value === 'false') {
-                        value = false;
-                    }
-                    if (value === 'null') {
-                        value = null;
-                    }
-                    this[prop] = value;
-                }
-            }
-        }
+        const saved = localStorage.getItem('breakmine_settings');
+        if (!saved) return;
+        const data = JSON.parse(saved);
+        Object.assign(this, data);
     }
 
     save() {
-        for (let prop in this) {
-            document.cookie = prop + "=" + this[prop] + "; path=/; expires=Fri, 31 Dec 9999 23:59:59 GMT";
-        }
+        localStorage.setItem('breakmine_settings', JSON.stringify(this));
     }
 
 }

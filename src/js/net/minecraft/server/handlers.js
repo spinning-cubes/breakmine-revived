@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer';
 import { readVarInt, readString, broadcast, ensureReadable, MalformedPacketError } from './protocol.js';
-import { addPlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState, savePlayerData, isSpectator } from './players.js';
+import { addPlayer, removePlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState, savePlayerData, isSpectator } from './players.js';
 import { addWorldChange, saveWorld, getBlockAt, getAllBlockInventoriesState, getSpawnPosition, deleteBlockInventory, getBlockInventories, getWorldTime, getBlockMetadata, setBlockInventory, getWorldChanges } from './world.js';
 import { addItemEntity, removeItemEntity, getItemEntity, getAllItemEntities } from './entities.js';
 import { handleCommand } from './commands.js';
@@ -202,13 +202,22 @@ function handleLoginPacket(player, packetId, buffer, offset) {
         }
 
         const existingPlayer = findPlayerByUsername(username);
-        if (existingPlayer && false) {
-            const reason = `§cA player with the name \"${username}\" is already online.`;
-            if (player.ws.readyState === 1) {
-                player.ws.send(createDisconnectPacket(reason));
-                player.ws.close();
+        if (existingPlayer) {
+            // A stale player object left behind by a previous connection or
+            // session must not survive the rejoin: if it stays in the player
+            // list the client sees a duplicate of itself (a clone that mirrors
+            // movement and chat). Close its socket and remove it so the new
+            // connection below is the only player with this username.
+            if (existingPlayer.ws && existingPlayer.ws.readyState === 1) {
+                existingPlayer.ws.close();
             }
-            return;
+            if (existingPlayer.eid !== null) {
+                removePlayer(existingPlayer);
+                cleanupPlayerChunks(existingPlayer.eid);
+                // Mark it so the socket's own 'close' handler (which guards on
+                // player.eid) skips the redundant second removal.
+                existingPlayer.eid = null;
+            }
         }
 
         player.protocolState = 'play';
@@ -743,7 +752,7 @@ function broadcastAnimation(player) {
 }
 
 function handleDropItem(player, buffer, offset) {
-    ensureReadable(buffer, offset, 14);
+    ensureReadable(buffer, offset, 15);
     const blockId = buffer.readInt16BE(offset);
 
     // The client sends the exact spawn position: the broken block's position
@@ -753,12 +762,15 @@ function handleDropItem(player, buffer, offset) {
     const spawnY = buffer.readInt32BE(offset + 6) + 0.5;
     const spawnZ = buffer.readInt32BE(offset + 10) + 0.5;
 
+    // Only Q-drops keep the pickup delay on the client.
+    const hasPickupDelay = buffer.readUInt8(offset + 14) === 1;
+
     // Motion: pop upward with a little random drift
     const motionX = (Math.random() - 0.5) * 0.15;
     const motionY = 0.2;
     const motionZ = (Math.random() - 0.5) * 0.15;
 
-    const entity = addItemEntity(blockId, spawnX, spawnY, spawnZ, motionX, motionY, motionZ, player.eid);
+    const entity = addItemEntity(blockId, spawnX, spawnY, spawnZ, motionX, motionY, motionZ, player.eid, hasPickupDelay);
 
     // Broadcast spawn to all players
     const packet = createSpawnObjectPacket(entity);

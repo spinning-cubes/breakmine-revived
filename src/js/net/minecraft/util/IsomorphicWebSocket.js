@@ -19,6 +19,9 @@ if (isNode) {
 
 export class LoopbackServer {
     #listeners = new Set();
+    #worker = null;
+    #nextSocketId = 1;
+    #relays = new Map();
 
     onConnection(callback) {
         this.#listeners.add(callback);
@@ -28,7 +31,60 @@ export class LoopbackServer {
         this.#listeners.delete(callback);
     }
 
+    // When an integrated-server worker is attached, new client connections
+    // are forwarded to it instead of being handled in-process: the server's
+    // connection handler runs inside the worker, and both sides of the socket
+    // traffic are relayed as socket-connect / socket-message / socket-close
+    // postMessages (see handleWorkerMessage and integrated.worker.js).
+    attachWorker(worker) {
+        this.#worker = worker;
+    }
+
+    #post(message, transfer) {
+        if (!this.#worker) return;
+        if (transfer) {
+            this.#worker.postMessage(message, transfer);
+        } else {
+            this.#worker.postMessage(message);
+        }
+    }
+
     connectClient(clientSocket) {
+        if (this.#worker) {
+            const socketId = this.#nextSocketId++;
+            const serverSocket = new LoopbackSocket('server');
+
+            clientSocket._pair(serverSocket);
+            serverSocket._pair(clientSocket);
+
+            // Client -> worker.
+            serverSocket.onmessage = (event) => {
+                const data = event && event.data;
+                if (typeof data === 'string') {
+                    this.#post({ type: 'socket-message', socketId, data, isBinary: false });
+                    return;
+                }
+                let payload = data;
+                if (data instanceof ArrayBuffer) {
+                    payload = data;
+                } else if (ArrayBuffer.isView(data)) {
+                    payload = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+                } else {
+                    this.#post({ type: 'socket-message', socketId, data: String(data), isBinary: false });
+                    return;
+                }
+                this.#post({ type: 'socket-message', socketId, data: payload, isBinary: true }, [payload]);
+            };
+            serverSocket.onclose = () => {
+                this.#relays.delete(socketId);
+                this.#post({ type: 'socket-close', socketId });
+            };
+
+            this.#relays.set(socketId, { client: clientSocket, server: serverSocket });
+            this.#post({ type: 'socket-connect', socketId });
+            return;
+        }
+
         const serverSocket = new LoopbackSocket('server');
 
         clientSocket._pair(serverSocket);
@@ -46,6 +102,50 @@ export class LoopbackServer {
             }
             clientSocket.dispatchEvent(openEvent);
         }, 0);
+    }
+
+    // Worker -> client: open/message/close events for relayed connections.
+    handleWorkerMessage(msg) {
+        if (!msg || typeof msg !== 'object') return;
+
+        if (msg.type === 'socket-open') {
+            const relay = this.#relays.get(msg.socketId);
+            if (!relay) return;
+            relay.server._readyState = 1;
+            relay.client._readyState = 1;
+
+            const openEvent = new Event('open');
+            if (typeof relay.client.onopen === 'function') {
+                relay.client.onopen(openEvent);
+            }
+            relay.client.dispatchEvent(openEvent);
+            return;
+        }
+
+        if (msg.type === 'socket-message') {
+            const relay = this.#relays.get(msg.socketId);
+            if (!relay) return;
+            const messageEvent = new MessageEvent('message', { data: msg.data });
+            if (typeof relay.client.onmessage === 'function') {
+                relay.client.onmessage(messageEvent);
+            }
+            relay.client.dispatchEvent(messageEvent);
+            return;
+        }
+
+        if (msg.type === 'socket-close') {
+            const relay = this.#relays.get(msg.socketId);
+            if (!relay) return;
+            this.#relays.delete(msg.socketId);
+            relay.client._readyState = 3;
+            relay.server._readyState = 3;
+
+            const closeEvent = new CloseEvent('close', { code: msg.code || 1000, reason: msg.reason || '' });
+            if (typeof relay.client.onclose === 'function') {
+                relay.client.onclose(closeEvent);
+            }
+            relay.client.dispatchEvent(closeEvent);
+        }
     }
 }
 

@@ -293,6 +293,7 @@ export default class NetworkPlayHandler extends PacketHandler {
 
             let entity = new ItemEntity(this.minecraft, world, blockId, x, y, z);
             entity.id = packet.getEntityId();
+            entity.hasPickupDelay = packet.getPickupDelay() === 1;
             world.addEntity(entity);
         }
     }

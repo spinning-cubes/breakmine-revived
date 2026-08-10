@@ -158,6 +158,7 @@ export default class GuiTextField extends GuiButton {
 
         if (key === "KeyA" && this.controlPressed) {
             this.text = ""; // TODO: Select all
+            this.cursorPosition = 0;
             return;
         }
 

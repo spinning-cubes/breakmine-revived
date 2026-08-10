@@ -176,6 +176,10 @@ export default class Gui {
 
     }
 
+    onScroll(mouseX, mouseY, amount) {
+
+    }
+
     static colorize(image, r, g, b) {
         const imageSize = image.width;
 
