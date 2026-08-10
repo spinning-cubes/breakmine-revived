@@ -169,7 +169,7 @@ class TunnelServer {
 
                     tunnelCode = code;
                     const maxJoiners = (typeof msg.maxJoiners === 'number' && msg.maxJoiners > 0)
-                        ? msg.maxJoiners : 1;
+                        ? msg.maxJoiners : 5;
 
                     this.tunnels.set(code, {
                         provider: ws,

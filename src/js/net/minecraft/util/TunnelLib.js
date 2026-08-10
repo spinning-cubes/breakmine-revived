@@ -64,6 +64,7 @@ class TunnelLib {
         /** @private */ this._code      = null;
         /** @private */ this._targetUrl = null;
         /** @private */ this._lazy      = true;
+        /** @private */ this._closingTarget = false;
         /** @private */ this._onPeerJoin   = null;
         /** @private */ this._onPeerLeave  = null;
     }
@@ -76,10 +77,10 @@ class TunnelLib {
      * @param {object} [opts]
      * @param {boolean} [opts.lazy=true]       Connect to target only when a peer
      *                                         joins.  Set `false` to connect eagerly.
-     * @param {number}  [opts.maxJoiners=1]    Max simultaneous joiners (0 = unlimited).
+     * @param {number}  [opts.maxJoiners=5]    Max simultaneous joiners (0 = unlimited).
      * @returns {Promise<string>}  The short join code (e.g. `"AB3X9Z"`).
      */
-    createTunnel(targetUrl, { lazy = true, maxJoiners = 1 } = {}) {
+    createTunnel(targetUrl, { lazy = true, maxJoiners = 5 } = {}) {
         this._targetUrl = targetUrl;
         this._lazy      = lazy;
 
@@ -227,6 +228,7 @@ class TunnelLib {
     /** Open a WebSocket to the target and wire up bidirectional relay. */
     _connectTarget() {
         if (this._targetWs) return; // already connected
+        this._closingTarget = false;
 
         try {
             this._targetWs = new IsomorphicWebSocket(this._targetUrl);
@@ -241,7 +243,10 @@ class TunnelLib {
 
         this._targetWs.onclose = () => {
             this._targetWs = null;
-            // Target gone → close the tunnel (which closes all joiners)
+            // If we closed the target ourselves (e.g. the last peer left while
+            // lazy), keep the tunnel alive so the join slot stays open. Only a
+            // genuine target failure tears the tunnel down.
+            if (this._closingTarget) return;
             if (this._ws && this._ws.readyState !== 3) {
                 this._ws.close(1000, 'Target closed');
             }
@@ -268,6 +273,7 @@ class TunnelLib {
 
     _closeTarget() {
         if (this._targetWs) {
+            this._closingTarget = true;
             this._targetWs.close();
             this._targetWs = null;
         }
