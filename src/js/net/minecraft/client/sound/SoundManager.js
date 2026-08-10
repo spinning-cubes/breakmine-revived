@@ -1,6 +1,7 @@
 import Block from "../world/block/Block.js";
 import * as THREE from "../../../../../../libraries/three.module.js";
 import { base64Assets } from "../../../../../resources.js";
+import { clickSound } from "../../../../assetManifest.js";
 
 export default class SoundManager {
 
@@ -27,7 +28,7 @@ export default class SoundManager {
         }
 
         try {
-            const clickSrc = this.resolveAsset('sound/random/click.ogg');
+            const clickSrc = this.resolveAsset(clickSound);
             this.clickAudio = new Audio(clickSrc);
             this.clickAudio.addEventListener('canplaythrough', () => {
                 this.clickReady = true;

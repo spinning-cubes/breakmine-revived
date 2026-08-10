@@ -9,8 +9,8 @@
     "devs:https": "vite --host",
     "devs:http": "vite --host --config vite.http.config.js",
     "devs:all": "concurrently \"npm run devs:https\" \"npm run devs:http\"",
-    "build": "vite build",
-    "build:single": "node scripts/build-assets.js && vite build --config vite.singlehtml.config.js",
+    "build": "node scripts/build-assets.js && vite build",
+    "build:single": "node scripts/build-assets.js --include-music && vite build --config vite.singlehtml.config.js",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1",
     "server": "node server.js"

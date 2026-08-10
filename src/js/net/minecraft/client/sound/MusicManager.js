@@ -1,4 +1,5 @@
 import { base64Assets } from "../../../../../resources.js";
+import { musicTracks } from "../../../../assetManifest.js";
 
 export default class MusicManager {
 
@@ -21,47 +22,39 @@ export default class MusicManager {
         this.fadeTime = 2000;
         this.gapTime = 5000;
 
-        this.loadTracks();
+        this._loadedCategories = new Set();
+
+        // Only the menu tracks are loaded eagerly at boot (the "core" asset
+        // package). Game/creative/nether/end tracks are fetched lazily the
+        // first time their category is played, so the initial bundle stays
+        // small when music is served as separate files.
+        this.loadTracks('menu');
     }
 
-    loadTracks() {
-        const load = (relativePath) => {
+    loadTracks(category) {
+        if (this._loadedCategories.has(category)) {
+            return;
+        }
+
+        const tracks = musicTracks[category];
+        if (!tracks) {
+            return;
+        }
+
+        const list = this.getTrackList(category);
+        for (const relativePath of tracks) {
             const assetKey = relativePath.replace(/^src\/resources\//, '');
             const src = (typeof base64Assets !== 'undefined' && base64Assets[assetKey])
                 ? base64Assets[assetKey]
-                : relativePath;
+                : `src/resources/${assetKey}`;
 
             const audio = new Audio(src);
             audio.volume = 0;
             audio.preload = 'auto';
-            return audio;
-        };
-
-        // Menu tracks
-        for (let i = 1; i <= 4; i++) {
-            this.menuTracks.push(load('src/resources/sound/music/menu/menu' + i + '.ogg'));
+            list.push(audio);
         }
 
-        // Overworld game tracks
-        const gameNames = ['calm1', 'calm2', 'calm3', 'hal1', 'hal2', 'hal3', 'hal4', 'nuance1', 'nuance2', 'piano1', 'piano2', 'piano3'];
-        for (const name of gameNames) {
-            this.gameTracks.push(load('src/resources/sound/music/game/' + name + '.ogg'));
-        }
-
-        // Creative tracks
-        for (let i = 1; i <= 6; i++) {
-            this.creativeTracks.push(load('src/resources/sound/music/game/creative/creative' + i + '.ogg'));
-        }
-
-        // Nether tracks
-        for (let i = 1; i <= 4; i++) {
-            this.netherTracks.push(load('src/resources/sound/music/game/nether/nether' + i + '.ogg'));
-        }
-
-        // End tracks
-        this.endTracks.push(load('src/resources/sound/music/game/end/boss.ogg'));
-        this.endTracks.push(load('src/resources/sound/music/game/end/credits.ogg'));
-        this.endTracks.push(load('src/resources/sound/music/game/end/end.ogg'));
+        this._loadedCategories.add(category);
     }
 
     getTrackList(category) {
@@ -84,6 +77,9 @@ export default class MusicManager {
         }
 
         this.stopMusic();
+
+        // Lazy-load the category's tracks on first play (menu is preloaded).
+        this.loadTracks(category);
 
         const list = this.getTrackList(category);
         if (list.length === 0) return;
