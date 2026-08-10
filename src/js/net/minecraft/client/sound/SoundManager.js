@@ -10,40 +10,52 @@ export default class SoundManager {
 
         this.soundPool = {};
 
-        // Preload click sound
+        // Preload click sound (never fatal if it fails)
         this.clickReady = false;
-        const clickAssetKey = 'sound/random/click.ogg';
-        const clickSrc = (typeof base64Assets !== 'undefined' && base64Assets[clickAssetKey])
-            ? base64Assets[clickAssetKey]
-            : 'src/resources/sound/random/click.ogg';
+        this.clickAudio = null;
+        try {
+            const clickAssetKey = 'sound/random/click.ogg';
+            const clickSrc = (typeof base64Assets !== 'undefined' && base64Assets[clickAssetKey])
+                ? base64Assets[clickAssetKey]
+                : 'src/resources/sound/random/click.ogg';
 
-        this.clickAudio = new Audio(clickSrc);
-        this.clickAudio.addEventListener('canplaythrough', () => {
-            this.clickReady = true;
-        }, { once: true });
+            this.clickAudio = new Audio(clickSrc);
+            this.clickAudio.addEventListener('canplaythrough', () => {
+                this.clickReady = true;
+            }, { once: true });
+        } catch (e) {
+            console.warn('SoundManager: Failed to preload click sound:', e);
+        }
     }
 
     create(worldRenderer) {
-        this.scene = worldRenderer.scene;
+        try {
+            this.scene = worldRenderer.scene;
 
-        this.audioListener = new THREE.AudioListener();
-        worldRenderer.camera.add(this.audioListener);
+            this.audioListener = new THREE.AudioListener();
+            worldRenderer.camera.add(this.audioListener);
 
-        // Resume audio context (browsers suspend it until user interaction)
-        if (this.audioListener.context.state === 'suspended') {
-            this.audioListener.context.resume();
+            // Resume audio context (browsers suspend it until user interaction)
+            if (this.audioListener.context.state === 'suspended') {
+                this.audioListener.context.resume().catch(err => {
+                    console.warn('SoundManager: Failed to resume audio context:', err);
+                });
+            }
+
+            // Load initial sound pool
+            for (let i in Block.sounds) {
+                let sound = Block.sounds[i];
+
+                // Load sound types
+                this.loadSoundPool(sound.getStepSound());
+            }
+
+            // Preload item pickup sound
+            this.loadSoundPool("random.pop");
+        } catch (e) {
+            console.warn('SoundManager: Failed to initialize audio, disabling sounds:', e);
+            this.audioListener = null;
         }
-
-        // Load initial sound pool
-        for (let i in Block.sounds) {
-            let sound = Block.sounds[i];
-
-            // Load sound types
-            this.loadSoundPool(sound.getStepSound());
-        }
-
-        // Preload item pickup sound
-        this.loadSoundPool("random.pop");
     }
 
     loadSoundPool(name) {
@@ -98,16 +110,16 @@ export default class SoundManager {
             return;
         }
 
-        // Create sound
-        let sound = new THREE.PositionalAudio(this.audioListener);
-        sound.setRefDistance(0.1);
-        sound.setRolloffFactor(6);
-        sound.setFilter(sound.context.createBiquadFilter());
-        sound.setVolume(1.0);
-        sound.hasBuffer = false;
-
-        // Load sound with proper error handling
         try {
+            // Create sound
+            let sound = new THREE.PositionalAudio(this.audioListener);
+            sound.setRefDistance(0.1);
+            sound.setRolloffFactor(6);
+            sound.setFilter(sound.context.createBiquadFilter());
+            sound.setVolume(1.0);
+            sound.hasBuffer = false;
+
+            // Load sound with proper error handling
             this.audioLoader.load(path, buffer => {
                 sound.setBuffer(buffer);
                 sound.hasBuffer = true;
@@ -118,12 +130,12 @@ export default class SoundManager {
                 console.error('Failed to load sound:', path, error);
                 sound.hasBuffer = false;
             });
+
+            return sound;
         } catch (e) {
             console.error('Exception loading sound:', path, e);
-            sound.hasBuffer = false;
+            return;
         }
-
-        return sound;
     }
 
     playSound(name, x, y, z, volume, pitch) {
@@ -183,11 +195,15 @@ export default class SoundManager {
     }
 
     playGuiClick() {
-        if (!this.clickReady) {
+        if (!this.clickReady || !this.clickAudio) {
             return;
         }
-        this.clickAudio.currentTime = 0;
-        this.clickAudio.play();
+        try {
+            this.clickAudio.currentTime = 0;
+            this.clickAudio.play();
+        } catch (e) {
+            console.warn('Failed to play click sound:', e);
+        }
     }
 
     playSoundMono(name, volume = 1.0, pitch = 1.0, dontUseRandom = false) {
