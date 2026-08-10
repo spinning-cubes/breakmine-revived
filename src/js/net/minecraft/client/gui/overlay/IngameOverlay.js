@@ -48,6 +48,18 @@ export default class IngameOverlay extends Gui {
             this.renderCrosshair(stack, this.window.width / 2, this.window.height / 2)
         }
 
+        let fps = Math.floor(this.minecraft.fps);
+        if (this.minecraft.settings.showFps === true || this.minecraft.settings.showVersion === true) {
+            if (this.minecraft.settings.showFps === true && this.minecraft.settings.showVersion === false) {
+                this.drawString(stack, fps.toString() + " fps", 2, 2, 0xffffffff, true, false);
+            } else if (this.minecraft.settings.showFps === false && this.minecraft.settings.showVersion === true) {
+                this.drawString(stack, "Breakmine " + Minecraft.VERSION, 2, 2, 0xffffffff, true, false);
+            } else {
+                this.drawString(stack, "Breakmine " + Minecraft.VERSION, 2, 2, 0xffffffff, true, false);
+                this.drawString(stack, fps.toString() + " fps", 2, 2 + FontRenderer.FONT_HEIGHT * 1, 0xffffffff, true, false);
+            }
+        }
+
         // Render hotbar (hidden in spectator)
         if (!this.minecraft.player.spectator) {
             this.renderHotbar(stack, this.window.width / 2 - 91, this.window.height - 22);

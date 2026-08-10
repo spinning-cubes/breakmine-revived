@@ -69,6 +69,16 @@ export default class GuiOptions extends GuiScreen {
                         type: "toggle"
                     },
                     {
+                        name: "FPS Overlay",
+                        settingKey: "showFps",
+                        type: "toggle"
+                    },
+                    {
+                        name: "Version Overlay",
+                        settingKey: "showVersion",
+                        type: "toggle"
+                    },
+                    {
                         name: "API URL",
                         settingKey: "apiUrl",
                         type: "text",

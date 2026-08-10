@@ -26,6 +26,8 @@ export default class GameSettings {
         this.proxyAddress = '';
         this.safePlacing = false;
         this.proxy = '';
+        this.showFps = false;
+        this.showVersion = false;
 
         this.tvmode = false;
 
