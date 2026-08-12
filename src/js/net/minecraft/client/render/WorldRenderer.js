@@ -14,6 +14,8 @@ import * as THREE from "../../../../../../libraries/three.module.js";
 import TranslucentMeshBatcher from "./TranslucentMeshBatcher.js";
 import GuiFunctions from "../gui/screens/GuiFunctions.js";
 import SignTextRenderer from "./SignTextRenderer.js";
+import LightTextureManager from "./LightTextureManager.js";
+import LightPropagator from "./LightPropagator.js";
 
 export default class WorldRenderer {
 
@@ -24,7 +26,12 @@ export default class WorldRenderer {
         this.window = window;
         this.chunkSectionUpdateQueue = [];
 
-        this.tessellator = new Tessellator();
+        // Initialize dynamic lighting system
+        this.useDynamicLighting = minecraft.settings.dynamicLights;
+        this.lightTextureManager = new LightTextureManager(256);
+        this.lightPropagator = null;
+
+        this.tessellator = new Tessellator(this.useDynamicLighting);
 
         // Create world camera first (needed for window size update)
         this.camera = new THREE.PerspectiveCamera(0, 1, 0.001, 1000);
@@ -111,9 +118,6 @@ export default class WorldRenderer {
 
         this.lastHitResult = null;
 
-        // Create sky
-        this.generateSky();
-
         // Create block hit box (will be updated dynamically based on block bounding boxes)
         this.blockHitBox = new THREE.Group();
         this.blockHitBoxMaterial = new THREE.LineBasicMaterial({
@@ -191,10 +195,32 @@ export default class WorldRenderer {
         // Initialize the batcher, passing the scene and the material
         this.translucentBatcher = new TranslucentMeshBatcher(this.scene, this.translucentMaterial);
 
+        // Create sky
+        this.generateSky();
+
         // Initialize texture atlas asynchronously
         this.initialize().catch(error => {
             console.error("Failed to initialize WorldRenderer:", error);
         });
+
+        // Setup dynamic lighting if enabled
+        if (this.useDynamicLighting) {
+            this.setupDynamicLighting();
+        }
+    }
+
+    setupDynamicLighting() {
+        // Set up light texture for tessellator
+        this.tessellator.setLightTexture(this.lightTextureManager.getTexture());
+        this.tessellator.setLightTextureScale(this.lightTextureManager.getScale());
+        
+        // Initialize light propagator when world is available
+        if (this.minecraft.world) {
+            this.lightPropagator = new LightPropagator(this.minecraft.world);
+            
+            // Initialize light texture with base world lighting
+            this.lightTextureManager.initializeFromWorld(this.minecraft.world);
+        }
     }
 
     async initialize() {

@@ -2,14 +2,79 @@ import * as THREE from "../../../../../../libraries/three.module.js";
 
 export default class Tessellator {
 
-    constructor() {
-        this.material = new THREE.MeshBasicMaterial({
-            side: THREE.FrontSide,
-            transparent: true,
-            depthTest: true,
-            depthWrite: true,
-            vertexColors: true
-        });
+    constructor(useDynamicLighting = false) {
+        this.useDynamicLighting = useDynamicLighting;
+        
+        if (useDynamicLighting) {
+            // Use custom shader material for dynamic lighting
+            this.material = new THREE.ShaderMaterial({
+                uniforms: {
+                    map: { value: null },
+                    lightTexture: { value: null },
+                    chunkOffset: { value: new THREE.Vector3(0, 0, 0) },
+                    lightTextureScale: { value: 1.0 }
+                },
+                vertexShader: `
+                    attribute vec3 position;
+                    attribute vec2 uv;
+                    attribute vec4 color;
+                    
+                    uniform mat4 modelViewMatrix;
+                    uniform mat4 projectionMatrix;
+                    
+                    varying vec2 vUv;
+                    varying vec4 vColor;
+                    varying vec3 vWorldPosition;
+                    
+                    void main() {
+                        vUv = uv;
+                        vColor = color;
+                        vWorldPosition = position;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    precision mediump float;
+                    
+                    uniform sampler2D map;
+                    uniform sampler3D lightTexture;
+                    uniform vec3 chunkOffset;
+                    uniform float lightTextureScale;
+                    
+                    varying vec2 vUv;
+                    varying vec4 vColor;
+                    varying vec3 vWorldPosition;
+                    
+                    void main() {
+                        vec4 texColor = texture2D(map, vUv);
+                        
+                        // Calculate light texture coordinates
+                        vec3 lightUV = (vWorldPosition + chunkOffset) * lightTextureScale;
+                        
+                        // Sample dynamic light from 3D texture
+                        vec3 dynamicLight = texture3D(lightTexture, lightUV).rgb;
+                        
+                        // Combine vertex color with dynamic light
+                        vec3 finalColor = vColor.rgb * dynamicLight;
+                        
+                        gl_FragColor = vec4(finalColor, texColor.a * vColor.a);
+                    }
+                `,
+                side: THREE.FrontSide,
+                transparent: true,
+                depthTest: true,
+                depthWrite: true
+            });
+        } else {
+            // Use basic material for backward compatibility
+            this.material = new THREE.MeshBasicMaterial({
+                side: THREE.FrontSide,
+                transparent: true,
+                depthTest: true,
+                depthWrite: true,
+                vertexColors: true
+            });
+        }
 
         this.red = 0;
         this.green = 0;
@@ -26,7 +91,29 @@ export default class Tessellator {
     }
 
     bindTexture(texture) {
-        this.material.map = texture;
+        if (this.useDynamicLighting) {
+            this.material.uniforms.map.value = texture;
+        } else {
+            this.material.map = texture;
+        }
+    }
+
+    setLightTexture(lightTexture) {
+        if (this.useDynamicLighting) {
+            this.material.uniforms.lightTexture.value = lightTexture;
+        }
+    }
+
+    setChunkOffset(x, y, z) {
+        if (this.useDynamicLighting) {
+            this.material.uniforms.chunkOffset.value.set(x, y, z);
+        }
+    }
+
+    setLightTextureScale(scale) {
+        if (this.useDynamicLighting) {
+            this.material.uniforms.lightTextureScale.value = scale;
+        }
     }
 
     startDrawing() {
