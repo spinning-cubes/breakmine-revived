@@ -14,7 +14,7 @@
 //
 // The seed may be a number, a signed long string (e.g. "-5529091579467429620")
 // or a non-numeric string (hashed like the client's create-world screen).
-import { Buffer } from 'buffer';
+import { Buffer } from '../../../../../libraries/buffer.js';
 import config from './config.js';
 import { BlockRegistry } from '../client/world/block/BlockRegistry.js';
 import WorldGenerator from '../client/world/generator/WorldGenerator.js';

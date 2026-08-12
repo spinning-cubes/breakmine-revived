@@ -4,7 +4,7 @@
 // talks to this worker over postMessage; socket traffic is forwarded through
 // the main thread's LoopbackServer (see IsomorphicWebSocket.js) as
 // socket-connect / socket-message / socket-close messages.
-import { Buffer } from 'buffer';
+import { Buffer } from '../../../../../../libraries/buffer.js';
 import { readLongBE } from '../../server/binary.js';
 import fs from '../fs/ServerFs.js';
 import { initServer, onConnection, stopServer } from '../../server/ServerRuntime.js';

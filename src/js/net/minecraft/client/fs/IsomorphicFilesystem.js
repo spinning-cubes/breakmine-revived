@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+import { Buffer } from '../../../../../../libraries/buffer.js';
 import BrowserFS from './Filesystem.js';
 import { inflate } from '../../lib/pako.js';
 

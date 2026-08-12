@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+import { Buffer } from '../../../../../libraries/buffer.js';
 import Logger from './logger.js';
 import { sendChatMessage, sendPlayerPositionLook, createEntityTeleportPacket, sendPlayerListEntry, createSpawnPlayerPacket, createDestroyEntityPacket, sendTimeUpdate, sendRespawn, sendSpawnPosition, sendChunks, sendResetWorldPacket } from './packets.js';
 import { broadcast, writeString, makePacket } from './protocol.js';

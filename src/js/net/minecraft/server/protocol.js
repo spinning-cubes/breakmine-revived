@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+import { Buffer } from '../../../../../libraries/buffer.js';
 
 // Thrown when a packet is malformed or shorter than the protocol requires.
 // Callers catch this to reject the connection instead of letting the process

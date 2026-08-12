@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+import { Buffer } from '../../../../../libraries/buffer.js';
 import { readLongBE } from './binary.js';
 import { readVarInt, readString, broadcast, ensureReadable, MalformedPacketError } from './protocol.js';
 import { addPlayer, removePlayer, getPlayers, updatePosition, loadPlayerData, findPlayerByUsername, normalizeInventoryState, savePlayerData, isSpectator } from './players.js';

@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+import { Buffer } from '../../../../../libraries/buffer.js';
 import { writeLongBE } from './binary.js';
 import { makePacket, writeVarInt, writeString, broadcast, varIntSize } from './protocol.js';
 import { getPlayers, getPlayerCount } from './players.js';

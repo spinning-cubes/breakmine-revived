@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer';
+import { Buffer } from '../../../../../libraries/buffer.js';
 import { readLongBE, writeLongBE } from './binary.js';
 import fs from '../client/fs/ServerFs.js';
 import path from '../util/path.js';
