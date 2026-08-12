@@ -362,6 +362,34 @@ export default class GuiTexturePacks extends GuiScreen {
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
+    // Forward drag/release so the scrollbar thumb can be dragged.
+    mouseDragged(mouseX, mouseY, mouseButton) {
+        if (this.texturePackSlotContainer) {
+            this.texturePackSlotContainer.mouseDragged(mouseX, mouseY, mouseButton);
+        }
+        super.mouseDragged(mouseX, mouseY, mouseButton);
+    }
+
+    mouseReleased(mouseX, mouseY, mouseButton) {
+        if (this.texturePackSlotContainer) {
+            this.texturePackSlotContainer.mouseReleased(mouseX, mouseY, mouseButton);
+        }
+        super.mouseReleased(mouseX, mouseY, mouseButton);
+    }
+
+    mouseScrolled(mouseX, mouseY, amount) {
+        if (this.texturePackSlotContainer) {
+            this.texturePackSlotContainer.mouseScrolled(mouseX, mouseY, amount);
+        }
+        super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    onScroll(mouseX, mouseY, amount) {
+        if (this.texturePackSlotContainer) {
+            this.texturePackSlotContainer.mouseScrolled(mouseX, mouseY, amount);
+        }
+    }
+
     onClose() {
 
     }

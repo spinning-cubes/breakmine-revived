@@ -27,11 +27,7 @@ export default class GuiDirectConnect extends GuiScreen {
         this.fieldAddress = new GuiTextField(this.width / 2 - 100, y + 30, 200, 20);
         this.fieldProxy = new GuiTextField(this.width / 2 - 100, y + 67, 200, 20);
         this.fieldAddress.maxLength = 30;
-        //this.fieldAddress.setText(this.minecraft.settings.serverAddress);
-        //this.fieldAddress.tooltip = "Some proxies might ignore this";
-        //this.fieldProxy.setText(this.minecraft.settings.proxy);
         this.buttonList.push(this.fieldAddress);
-        //this.buttonList.push(this.fieldProxy);
 
         let btnTxt = this.addServer ? "Add Server" : "Connect";
         this.buttonList.push(new GuiButton(this.minecraft, btnTxt, this.width / 2 - 155, y + 110, 150, 20, () => {
@@ -81,7 +77,7 @@ export default class GuiDirectConnect extends GuiScreen {
         this.drawDefaultBackground(stack);
 
         // Title
-        this.drawCenteredString(stack, this.addServer ? "Add a server" : "Connect to a server", this.width / 2, 50);
+        this.drawCenteredString(stack, this.tunnel ? "Join someone's world" : (this.addServer ? "Add a server" : "Connect to a server"), this.width / 2, 50);
 
         let y = this.height / 2 - 50;
 
@@ -93,9 +89,6 @@ export default class GuiDirectConnect extends GuiScreen {
         // Server address
         this.drawString(stack, this.tunnel ? "Join Code" : "Server Address", this.width / 2 - 100, y + 17, -6250336);
         
-        // Server proxy
-        //this.drawString(stack, "Server Proxy", this.width / 2 - 100, y + 17 + 38, -6250336);
-
         super.drawScreen(stack, mouseX, mouseY, partialTicks);
     }
 

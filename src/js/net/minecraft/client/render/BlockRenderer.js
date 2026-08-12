@@ -52,6 +52,9 @@ export default class BlockRenderer {
                     case BlockRenderType.SIGN:
                         this.renderSign(world, block, x, y, z);
                         break;
+                    case BlockRenderType.DECORATION:
+                        this.renderDecoration(world, block, x, y, z);
+                        break;
                 }
             }
         }
@@ -285,6 +288,70 @@ export default class BlockRenderer {
         }
 
         this.addFace(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, red, green, blue, rotation);
+    }
+
+    renderDecoration(world, block, x, y, z) {
+        let chunkX = x >> 4;
+        let chunkY = y >> 4;
+        let chunkZ = z >> 4;
+
+        // UV mapping from the texture atlas
+        let textureName = block.getTextureForFace(EnumBlockFace.NORTH, 0, x, y, z, world);
+        let minU, maxU, minV, maxV;
+        if (this.worldRenderer.textureAtlas && this.worldRenderer.textureAtlas.isLoaded()) {
+            let uvs = this.worldRenderer.textureAtlas.getUVs(textureName);
+            minU = uvs.minU;
+            maxU = uvs.maxU;
+            minV = uvs.minV;
+            maxV = uvs.maxV;
+        } else {
+            let textureIndex = block.getTextureForFace(EnumBlockFace.NORTH, 0, x, y, z, world);
+            minU = (textureIndex % 16) / 16.0;
+            maxU = minU + (16 / 256);
+            minV = Math.floor(textureIndex / 16) / 16.0;
+            maxV = minV + (16 / 256);
+        }
+
+        // Flip V
+        minV = 1 - minV;
+        maxV = 1 - maxV;
+
+        // Get color multiplier
+        let color = block.getColor(world, x, y, z, EnumBlockFace.NORTH);
+        let red = (color >> 16 & 255) / 255.0;
+        let green = (color >> 8 & 255) / 255.0;
+        let blue = (color & 255) / 255.0;
+
+        // Classic lightning (full brightness, no directional shading for a cross)
+        if (world === null) {
+            this.tessellator.setColor(red, green, blue);
+        } else {
+            let level = this.getEffectiveLightLevel(world, x, y, z);
+            let brightness = 0.9 / 15.0 * level + 0.1;
+            this.tessellator.setColor(red * brightness, green * brightness, blue * brightness);
+        }
+
+        // Two crossed squares in the block's X shape
+        this.addDecorationQuad(chunkX, chunkY, chunkZ, x, y, z, x + 1, y + 1, z + 1, minU, minV, maxU, maxV);
+        this.addDecorationQuad(chunkX, chunkY, chunkZ, x + 1, y, z, x, y + 1, z + 1, minU, minV, maxU, maxV);
+    }
+
+    addDecorationQuad(chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV) {
+        let cx = chunkX << 4;
+        let cy = chunkY << 4;
+        let cz = chunkZ << 4;
+
+        // Forward winding (front side of the quad)
+        this.tessellator.addVertexWithUV(minX - cx, minY - cy, minZ - cz, minU, maxV);
+        this.tessellator.addVertexWithUV(maxX - cx, minY - cy, maxZ - cz, maxU, maxV);
+        this.tessellator.addVertexWithUV(maxX - cx, maxY - cy, maxZ - cz, maxU, minV);
+        this.tessellator.addVertexWithUV(minX - cx, maxY - cy, minZ - cz, minU, minV);
+
+        // Reversed winding so the quad is visible from both sides
+        this.tessellator.addVertexWithUV(minX - cx, minY - cy, minZ - cz, minU, maxV);
+        this.tessellator.addVertexWithUV(minX - cx, maxY - cy, minZ - cz, minU, minV);
+        this.tessellator.addVertexWithUV(maxX - cx, maxY - cy, maxZ - cz, maxU, minV);
+        this.tessellator.addVertexWithUV(maxX - cx, minY - cy, maxZ - cz, maxU, maxV);
     }
 
     addFace(world, face, ambientOcclusion, chunkX, chunkY, chunkZ, minX, minY, minZ, maxX, maxY, maxZ, minU, minV, maxU, maxV, red = 1, green = 1, blue = 1, rotation = 0) {

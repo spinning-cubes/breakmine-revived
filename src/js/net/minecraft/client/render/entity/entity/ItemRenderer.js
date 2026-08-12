@@ -84,7 +84,7 @@ export default class ItemRenderer extends EntityRenderer {
         // Set mesh transformations
         if (this.mesh) {
             this.mesh.position.set(0, 0.2, 0);
-            if (entity.getBlock()?.getRenderType() === BlockRenderType.ITEM) {
+            if (entity.getBlock()?.getRenderType() === BlockRenderType.ITEM || entity.getBlock()?.getRenderType() === BlockRenderType.DECORATION) {
                 this.mesh.scale.set(0.4, 0.4, 0.4);
             } else if (entity.getBlock() instanceof BlockTorch) {
                 this.mesh.scale.set(0.4, 0.4, 0.4);

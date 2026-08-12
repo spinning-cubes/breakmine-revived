@@ -38,6 +38,12 @@ export default class ItemRenderer {
         this.canvas2d = document.createElement('canvas');
         this.ctx2d = this.canvas2d.getContext('2d');
         this.ctx2d.imageSmoothingEnabled = false;
+
+        this.tintCanvas = document.createElement('canvas');
+        this.tintCanvas.width = 16;
+        this.tintCanvas.height = 16;
+        this.tintCtx = this.tintCanvas.getContext('2d');
+        this.tintCtx.imageSmoothingEnabled = false;
     }
 
     render(partialTicks) {
@@ -152,9 +158,32 @@ export default class ItemRenderer {
             sh = spriteSize;
         }
 
+        let color = block.getColor(null, 0, 0, 0, EnumBlockFace.NORTH);
+        let isTinted = color !== 0xffffff;
+
         this.ctx2d.save();
         this.ctx2d.globalAlpha = Math.min(1, Math.max(0, brightness));
-        this.ctx2d.drawImage(image, sx, sy, sw, sh, x - 8, y - 8, 16, 16);
+
+        if (isTinted) {
+            let red = color >> 16 & 255;
+            let green = color >> 8 & 255;
+            let blue = color & 255;
+
+            let tctx = this.tintCtx;
+            tctx.globalCompositeOperation = 'source-over';
+            tctx.globalAlpha = 1;
+            tctx.clearRect(0, 0, 16, 16);
+            tctx.drawImage(image, sx, sy, sw, sh, 0, 0, 16, 16);
+            tctx.globalCompositeOperation = 'multiply';
+            tctx.fillStyle = `rgb(${red},${green},${blue})`;
+            tctx.fillRect(0, 0, 16, 16);
+            tctx.globalCompositeOperation = 'destination-in';
+            tctx.drawImage(image, sx, sy, sw, sh, 0, 0, 16, 16);
+
+            this.ctx2d.drawImage(this.tintCanvas, x - 8, y - 8);
+        } else {
+            this.ctx2d.drawImage(image, sx, sy, sw, sh, x - 8, y - 8, 16, 16);
+        }
         this.ctx2d.restore();
     }
 

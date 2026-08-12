@@ -3,4 +3,5 @@ export default class BlockRenderType {
     static TORCH = 1;
     static ITEM = 2;
     static SIGN = 3;
+    static DECORATION = 4;
 }

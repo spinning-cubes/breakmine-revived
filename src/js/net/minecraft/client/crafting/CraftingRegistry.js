@@ -95,10 +95,53 @@ export default class CraftingRegistry {
         this.registerShapedRecipe(BlockRegistry.BRICK_SLAB.id, 6, 3, 1, [
             BlockRegistry.BRICK.id, BlockRegistry.BRICK.id, BlockRegistry.BRICK.id
         ])
+        this.registerShapelessRecipe(BlockRegistry.CLAY.id, 1, [
+            BlockRegistry.ITEM_CLAY_BALL.id, BlockRegistry.ITEM_CLAY_BALL.id,
+            BlockRegistry.ITEM_CLAY_BALL.id, BlockRegistry.ITEM_CLAY_BALL.id
+        ]);
+        this.registerDyeRecipes();
+        this.registerConcretePowderRecipes();
         this.registerWoodRecipes();
         this.registerOreRecipes();
         this.registerBluestoneRecipes();
         this.registerToolRecipes();
+    }
+
+    static registerDyeRecipes() {
+        const B = BlockRegistry;
+        const recipes = [
+            [B.FLOWER_ROSE, 'ITEM_RED_DYE'],
+            [B.FLOWER_DANDELION, 'ITEM_YELLOW_DYE'],
+            [B.FLOWER_BLUE_ORCHID, 'ITEM_LIGHT_BLUE_DYE'],
+            [B.FLOWER_ALLIUM, 'ITEM_MAGENTA_DYE'],
+            [B.FLOWER_AZURE_BLUET, 'ITEM_LIGHT_GRAY_DYE'],
+            [B.FLOWER_RED_TULIP, 'ITEM_RED_DYE'],
+            [B.FLOWER_ORANGE_TULIP, 'ITEM_ORANGE_DYE'],
+            [B.FLOWER_WHITE_TULIP, 'ITEM_LIGHT_GRAY_DYE'],
+            [B.FLOWER_PINK_TULIP, 'ITEM_PINK_DYE'],
+            [B.FLOWER_OXEYE_DAISY, 'ITEM_LIGHT_GRAY_DYE'],
+            [B.FLOWER_CORNFLOWER, 'ITEM_BLUE_DYE'],
+            [B.FLOWER_WITHER_ROSE, 'ITEM_BLACK_DYE'],
+            [B.GRASS_PLANT, 'ITEM_GREEN_DYE'],
+        ];
+        for (const [plant, dye] of recipes) {
+            this.registerShapelessRecipe(B[dye].id, 1, [plant.id]);
+        }
+    }
+
+    static registerConcretePowderRecipes() {
+        const B = BlockRegistry;
+        const SAND = B.SAND.id;
+        const GRAVEL = B.GRAVEL.id;
+        const colors = ['white', 'orange', 'magenta', 'light_blue', 'yellow', 'lime', 'pink', 'gray', 'light_gray', 'cyan', 'purple', 'blue', 'brown', 'green', 'red', 'black'];
+        for (const color of colors) {
+            const key = color.toUpperCase().replace(/-/g, '_');
+            this.registerShapelessRecipe(B[`${key}_CONCRETE_POWDER`].id, 1, [
+                SAND, SAND, SAND, SAND,
+                GRAVEL, GRAVEL, GRAVEL, GRAVEL,
+                B[`ITEM_${key}_DYE`].id,
+            ]);
+        }
     }
 
     static registerToolRecipes() {

@@ -32,6 +32,26 @@ export default class WorldGenerator extends Generator {
         this.SAPPHIRE_ORE_ID = BlockRegistry.SAPPHIRE_ORE.getId();
         this.BLUESTONE_ORE_ID = BlockRegistry.BLUESTONE_ORE.getId();
 
+        this.COMMON_FLOWER_IDS = [
+            BlockRegistry.FLOWER_ROSE.getId(),
+            BlockRegistry.FLOWER_DANDELION.getId(),
+            BlockRegistry.FLOWER_RED_TULIP.getId(),
+            BlockRegistry.FLOWER_ORANGE_TULIP.getId(),
+            BlockRegistry.FLOWER_WHITE_TULIP.getId(),
+            BlockRegistry.FLOWER_PINK_TULIP.getId(),
+        ];
+        this.RARE_FLOWER_IDS = [
+            BlockRegistry.FLOWER_BLUE_ORCHID.getId(),
+            BlockRegistry.FLOWER_ALLIUM.getId(),
+            BlockRegistry.FLOWER_AZURE_BLUET.getId(),
+            BlockRegistry.FLOWER_OXEYE_DAISY.getId(),
+            BlockRegistry.FLOWER_CORNFLOWER.getId(),
+            BlockRegistry.FLOWER_WITHER_ROSE.getId(),
+        ];
+        this.GRASS_PLANT_ID = BlockRegistry.GRASS_PLANT.getId();
+        this.LOG_ID = BlockRegistry.LOG.getId();
+        this.LEAVE_ID = BlockRegistry.LEAVE.getId();
+
         this.caveGenerator = new CaveGenerator(world, seed);
 
         this.terrainGenerator4 = new NoiseGeneratorOctaves(this.random, 16);
@@ -119,6 +139,109 @@ export default class WorldGenerator extends Generator {
                 if (typeIdBelow !== this.STONE_ID) continue;
 
                 houseGenerator.generateAtBlock(totalX, totalY, totalZ);
+            }
+        }
+
+        // Flowers & grass plants: generate in distinct patches
+        // Flower patches are larger and more concentrated
+        let flowerPatches = this.random.nextInt(2); // 0-1 patches instead of 1-2
+        for (let i = 0; i < flowerPatches; i++) {
+            let patchX = absoluteX + this.random.nextInt(16);
+            let patchZ = absoluteZ + this.random.nextInt(16);
+            let patchCount = 3 + this.random.nextInt(5); // Reduced from 5-8 to 3-7
+
+            // Determine patch type: single-type (70%) or double-type (30%)
+            let isDoubleType = this.random.nextInt(10) < 3;
+            
+            // Select flower type(s) for this patch
+            let flowerType1, flowerType2;
+            if (this.random.nextInt(4) < 3) {
+                // 75% chance for common flower
+                flowerType1 = this.COMMON_FLOWER_IDS[this.random.nextInt(this.COMMON_FLOWER_IDS.length)];
+            } else {
+                // 25% chance for rare flower
+                flowerType1 = this.RARE_FLOWER_IDS[this.random.nextInt(this.RARE_FLOWER_IDS.length)];
+            }
+            
+            if (isDoubleType) {
+                if (this.random.nextInt(4) < 3) {
+                    flowerType2 = this.COMMON_FLOWER_IDS[this.random.nextInt(this.COMMON_FLOWER_IDS.length)];
+                } else {
+                    flowerType2 = this.RARE_FLOWER_IDS[this.random.nextInt(this.RARE_FLOWER_IDS.length)];
+                }
+            }
+
+            for (let j = 0; j < patchCount; j++) {
+                let plantX = patchX + this.random.nextInt(7) - 3;
+                let plantZ = patchZ + this.random.nextInt(7) - 3;
+                let plantY = this.world.getHeightAt(plantX, plantZ);
+
+                if (plantY <= 0 || plantY >= 256) continue;
+                if (this.world.getBlockAt(plantX, plantY - 1, plantZ) !== this.GRASS_ID) continue;
+                // Prevent generating inside tree blocks
+                if (this.world.getBlockAt(plantX, plantY, plantZ) !== 0) continue;
+
+                let plantId;
+                if (isDoubleType && this.random.nextInt(2) === 0) {
+                    plantId = flowerType2;
+                } else {
+                    plantId = flowerType1;
+                }
+
+                // Withered roses only generate near stone
+                let witherRoseId = BlockRegistry.FLOWER_WITHER_ROSE.getId();
+                if (plantId === witherRoseId) {
+                    // Check for stone nearby
+                    let hasNearbyStone = false;
+                    for (let dx = -2; dx <= 2; dx++) {
+                        for (let dz = -2; dz <= 2; dz++) {
+                            for (let dy = -2; dy <= 1; dy++) {
+                                let checkX = plantX + dx;
+                                let checkY = plantY + dy;
+                                let checkZ = plantZ + dz;
+                                if (this.world.getBlockAt(checkX, checkY, checkZ) === this.STONE_ID) {
+                                    hasNearbyStone = true;
+                                    break;
+                                }
+                            }
+                            if (hasNearbyStone) break;
+                        }
+                        if (hasNearbyStone) break;
+                    }
+                    if (!hasNearbyStone) {
+                        // Try the other flower type if available
+                        if (isDoubleType) {
+                            plantId = (plantId === flowerType1) ? flowerType2 : flowerType1;
+                            // Re-check if the alternate is also wither rose
+                            if (plantId === witherRoseId) continue;
+                        } else {
+                            continue; // Skip withered rose if no stone nearby
+                        }
+                    }
+                }
+
+                this.world.setBlockAt(plantX, plantY, plantZ, plantId);
+            }
+        }
+
+        // Grass patches are separate and more scattered
+        let grassPatches = 2 + this.random.nextInt(3);
+        for (let i = 0; i < grassPatches; i++) {
+            let patchX = absoluteX + this.random.nextInt(16);
+            let patchZ = absoluteZ + this.random.nextInt(16);
+            let patchCount = 3 + this.random.nextInt(5);
+
+            for (let j = 0; j < patchCount; j++) {
+                let plantX = patchX + this.random.nextInt(5) - 2;
+                let plantZ = patchZ + this.random.nextInt(5) - 2;
+                let plantY = this.world.getHeightAt(plantX, plantZ);
+
+                if (plantY <= 0 || plantY >= 256) continue;
+                if (this.world.getBlockAt(plantX, plantY - 1, plantZ) !== this.GRASS_ID) continue;
+                // Prevent generating inside tree blocks
+                if (this.world.getBlockAt(plantX, plantY, plantZ) !== 0) continue;
+
+                this.world.setBlockAt(plantX, plantY, plantZ, this.GRASS_PLANT_ID);
             }
         }
     }

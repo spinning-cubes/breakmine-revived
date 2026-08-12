@@ -28,6 +28,8 @@ export default class GuiWorldSlotContainer extends GuiScreen {
 
         this.slotHeight = 36;
         this.slotSpacing = 2;
+        this.slotX = parentGui.width / 2 - 110;
+        this.slotWidth = 220;
         this.top = 32;
         this.bottom = parentGui.height - 64;
         this.amountScrolled = 0;
@@ -125,7 +127,7 @@ export default class GuiWorldSlotContainer extends GuiScreen {
 
         const listTop = this.top;
         const listBottom = this.bottom;
-        const slotWidth = 220;
+        const slotWidth = this.slotWidth;
         this.parentGui.drawBackground(stack, this.parentGui.getTexture("gui/background.png"), this.parentGui.width, this.parentGui.height);
 
         stack.save();
@@ -143,7 +145,7 @@ export default class GuiWorldSlotContainer extends GuiScreen {
             const slotHeight = this.slotHeight;
             const slotTop = currentY + (i * (slotHeight + this.slotSpacing));
             const slotBottom = slotTop + slotHeight;
-            const slotLeft = this.parentGui.width / 2 - 110;
+            const slotLeft = this.slotX;
             const slotRight = slotLeft + slotWidth;
 
             if (slotBottom >= listTop && slotTop <= listBottom) {
@@ -211,8 +213,8 @@ export default class GuiWorldSlotContainer extends GuiScreen {
 
     getSlotIndexAt(mouseX, mouseY) {
         if (mouseY < this.top || mouseY > this.bottom) return -1;
-        const slotLeft = this.parentGui.width / 2 - 110;
-        const slotWidth = 220;
+        const slotLeft = this.slotX;
+        const slotWidth = this.slotWidth;
         if (mouseX < slotLeft || mouseX > slotLeft + slotWidth) return -1;
 
         const startY = this.top + 7 - this.amountScrolled;

@@ -18,18 +18,6 @@ export default class BlockGrass extends Block {
     getPreferredToolType() {
         return 'shovel';
     }
-    
-    onBlockPlaced(world, x, y, z, face) {
-        world.scheduleBlockTick(x, y, z, 120);
-    }
-
-    onBlockTick(world, x, y, z) {
-        if (world.isSolidBlockAt(x, y + 1, z)) {
-            world.setBlockAt(x, y, z, BlockRegistry.DIRT.id);
-        } else {
-            world.scheduleBlockTick(x, y, z, 60);
-        }
-    }
 
     getColor(world, x, y, z, face) {
         // Only top face has a biome color

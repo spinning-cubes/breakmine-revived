@@ -168,6 +168,27 @@ export default class GuiMods extends GuiScreen {
         }
     }
 
+    // Forward drag/release so the scrollbar thumb can be dragged.
+    mouseDragged(mouseX, mouseY, mouseButton) {
+        if (this.modSlotContainer) {
+            this.modSlotContainer.mouseDragged(mouseX, mouseY, mouseButton);
+        }
+        super.mouseDragged(mouseX, mouseY, mouseButton);
+    }
+
+    mouseReleased(mouseX, mouseY, mouseButton) {
+        if (this.modSlotContainer) {
+            this.modSlotContainer.mouseReleased(mouseX, mouseY, mouseButton);
+        }
+        super.mouseReleased(mouseX, mouseY, mouseButton);
+    }
+
+    onScroll(mouseX, mouseY, amount) {
+        if (this.modSlotContainer) {
+            this.modSlotContainer.mouseScrolled(mouseX, mouseY, amount);
+        }
+    }
+
     keyTyped(key, character) {
         if (key === "Escape") {
             this.goBack();

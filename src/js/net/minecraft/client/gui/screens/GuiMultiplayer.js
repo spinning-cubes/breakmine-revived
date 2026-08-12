@@ -257,6 +257,28 @@ export default class GuiMultiplayer extends GuiScreen {
         super.mouseClicked(mouseX, mouseY, mouseButton); 
     }
 
+    // Forward drag/release so the scrollbar thumb can be dragged.
+    mouseDragged(mouseX, mouseY, mouseButton) {
+        this.worldSlotContainer.mouseDragged(mouseX, mouseY, mouseButton);
+        super.mouseDragged(mouseX, mouseY, mouseButton);
+    }
+
+    mouseReleased(mouseX, mouseY, mouseButton) {
+        this.worldSlotContainer.mouseReleased(mouseX, mouseY, mouseButton);
+        super.mouseReleased(mouseX, mouseY, mouseButton);
+    }
+
+    // Forward mouse wheel events to the list (handled by the container).
+    // `amount` is the raw wheel delta; sign indicates direction.
+    mouseScrolled(mouseX, mouseY, amount) {
+        this.worldSlotContainer.mouseScrolled(mouseX, mouseY, amount);
+        super.mouseScrolled(mouseX, mouseY, amount);
+    }
+
+    onScroll(mouseX, mouseY, amount) {
+        this.worldSlotContainer.mouseScrolled(mouseX, mouseY, amount);
+    }
+
     onClose() {
 
     }

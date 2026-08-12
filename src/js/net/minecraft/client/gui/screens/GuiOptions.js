@@ -90,6 +90,12 @@ export default class GuiOptions extends GuiScreen {
                         type: "text",
                         tooltip: "Default: tunnel.breakmine.com\n§7Don't trust random Tunnel URLs!"
                     },
+                    {
+                        name: "Dynamic Lighting",
+                        settingKey: "dynamicLights",
+                        type: "toggle",
+                        tooltip: "This feature can cause lag and\nis still in development."
+                    },
                 ]
             }
         ];

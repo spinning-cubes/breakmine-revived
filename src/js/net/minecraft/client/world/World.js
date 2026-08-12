@@ -46,6 +46,12 @@ export default class World {
         // Store interval ID for cleanup
         this.lightUpdateInterval = null;
 
+        // Dynamic lighting tracking
+        this.lastPlayerX = null;
+        this.lastPlayerY = null;
+        this.lastPlayerZ = null;
+        this.dynamicLightUpdateInterval = null;
+
         const textureLoader = new THREE.TextureLoader();
         this.cloudTexture = textureLoader.load('src/resources/terrain/clouds.png', () => {
             texture.wrapS = THREE.RepeatWrapping;
@@ -83,6 +89,13 @@ export default class World {
                 scope.lightUpdateQueue.shift().updateBlockLightning(scope);
             }
         }, 50);
+
+        // Dynamic lighting update interval - update chunks every 0.5s
+        this.dynamicLightUpdateInterval = setInterval(function () {
+            if (scope.minecraft.settings.dynamicLights && scope.minecraft.player) {
+                scope.updateDynamicLighting();
+            }
+        }, 500);
     }
 
     getSeed() {
@@ -97,6 +110,12 @@ export default class World {
         if (this.lightUpdateInterval !== null) {
             clearInterval(this.lightUpdateInterval);
             this.lightUpdateInterval = null;
+        }
+
+        // Clear dynamic lighting update interval
+        if (this.dynamicLightUpdateInterval !== null) {
+            clearInterval(this.dynamicLightUpdateInterval);
+            this.dynamicLightUpdateInterval = null;
         }
     }
 
@@ -518,15 +537,6 @@ export default class World {
     isAboveGround(x, y, z) {
         let chunk = this.getChunkAt(x >> 4, z >> 4)
         return chunk.isAboveGround(x & 15, y, z & 15);
-    }
-
-    getTotalLightAt(x, y, z) {
-        if (!this.blockExists(x, y, z)) {
-            return 15;
-        }
-
-        let section = this.getChunkSectionAt(x >> 4, y >> 4, z >> 4)
-        return section.getTotalLightAt(x & 15, y & 15, z & 15);
     }
 
     getSavedLightValue(sourceType, x, y, z) {
@@ -1218,6 +1228,114 @@ export default class World {
     getLightBrightness(x, y, z) {
         let level = this.getTotalLightAt(x, y, z);
         return Math.max(level / 15, 0.1);
+    }
+
+    getItemLightValue(itemTypeId) {
+        if (!this.minecraft.settings.dynamicLights) {
+            return 0;
+        }
+
+        // Check if item is a light-emitting block
+        const block = Block.getById(itemTypeId);
+        if (block) {
+            return block.getLightValue(this, 0, 0, 0);
+        }
+
+        return 0;
+    }
+
+    updateDynamicLighting() {
+        if (!this.minecraft.player) return;
+
+        const player = this.minecraft.player;
+        const playerX = Math.floor(player.x);
+        const playerY = Math.floor(player.y);
+        const playerZ = Math.floor(player.z);
+
+        // Check if player moved at all
+        if (playerX !== this.lastPlayerX || playerY !== this.lastPlayerY || playerZ !== this.lastPlayerZ) {
+            this.lastPlayerX = playerX;
+            this.lastPlayerY = playerY;
+            this.lastPlayerZ = playerZ;
+            this.markChunksAroundPlayerDirty();
+        }
+    }
+
+    markChunksAroundPlayerDirty() {
+        if (!this.minecraft.player || !this.chunkProvider) return;
+
+        const player = this.minecraft.player;
+        const playerChunkX = Math.floor(player.x) >> 4;
+        const playerChunkZ = Math.floor(player.z) >> 4;
+        const playerSectionY = Math.floor(player.y) >> 4;
+        const lightRadius = 1; // Update neighboring chunks
+
+        // Mark only affected sections in chunks around player
+        for (let dx = -lightRadius; dx <= lightRadius; dx++) {
+            for (let dz = -lightRadius; dz <= lightRadius; dz++) {
+                const chunkX = playerChunkX + dx;
+                const chunkZ = playerChunkZ + dz;
+
+                const chunk = this.chunkProvider.getChunkAt(chunkX, chunkZ);
+                if (chunk) {
+                    // Only mark sections that could be affected by light (current + adjacent)
+                    // Light radius is 8 blocks, so it can affect current section and adjacent ones
+                    const sectionsToUpdate = [playerSectionY - 1, playerSectionY, playerSectionY + 1];
+                    
+                    for (let sectionY of sectionsToUpdate) {
+                        if (sectionY >= 0 && sectionY < 16) {
+                            const section = chunk.sections[sectionY];
+                            if (section && !section.isEmpty()) {
+                                section.isModified = true;
+                                // Queue for rebuild via WorldRenderer
+                                if (this.minecraft.worldRenderer && 
+                                    !this.minecraft.worldRenderer.chunkSectionUpdateQueue.includes(section)) {
+                                    this.minecraft.worldRenderer.chunkSectionUpdateQueue.push(section);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    getTotalLightAt(x, y, z) {
+        if (!this.blockExists(x, y, z)) {
+            return 15;
+        }
+
+        let section = this.getChunkSectionAt(x >> 4, y >> 4, z >> 4);
+        let baseLight = section.getTotalLightAt(x & 15, y & 15, z & 15);
+
+        // Add dynamic lighting from held items if enabled
+        if (this.minecraft.settings.dynamicLights && this.minecraft.player) {
+            const player = this.minecraft.player;
+            const playerX = Math.floor(player.x);
+            const playerY = Math.floor(player.y);
+            const playerZ = Math.floor(player.z);
+
+            // Check if this position is near the player
+            const dx = x - playerX;
+            const dy = y - playerY;
+            const dz = z - playerZ;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (distance < 8) { // Dynamic light radius
+                // Get held item light value
+                const heldItem = player.inventory.getItemInSelectedSlot();
+                const itemLight = this.getItemLightValue(heldItem.getType());
+
+                if (itemLight > 0) {
+                    // Calculate falloff based on distance
+                    const falloff = Math.max(0, 1 - (distance / 8));
+                    const dynamicLight = Math.floor(itemLight * falloff);
+                    baseLight = Math.max(baseLight, dynamicLight);
+                }
+            }
+        }
+
+        return baseLight;
     }
 
     getSkyColorByTemp(temperature) {

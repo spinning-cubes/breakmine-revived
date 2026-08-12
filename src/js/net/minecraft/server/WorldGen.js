@@ -1,22 +1,5 @@
-// Server-side world generation.
-//
-// The server is authoritative for multiplayer terrain: clients render exactly
-// what the server sends (ChunkProviderClient has no local generator). This
-// module reuses the *same* generator classes the client uses for single-player
-// worlds (src/js/net/minecraft/client/world/generator/WorldGenerator.js) so
-// server terrain matches what the client would generate for the same
-// seed/world type.
-//
-// Supported world types:
-//   flat     - classic flat layer (bedrock, stone, dirt, grass). Seed ignored.
-//   normal   - noise-based rolling terrain with caves, ores, bedrock.
-//   amplified - normal terrain with taller, steeper mountains.
-//
-// The seed may be a number, a signed long string (e.g. "-5529091579467429620")
-// or a non-numeric string (hashed like the client's create-world screen).
 import { Buffer } from '../../../../../libraries/buffer.js';
 import config from './config.js';
-import { BlockRegistry } from '../client/world/block/BlockRegistry.js';
 import WorldGenerator from '../client/world/generator/WorldGenerator.js';
 import Primer from '../client/world/generator/Primer.js';
 import Random from '../util/Random.js';
@@ -28,9 +11,6 @@ let RandomClass = Random;
 
 const VALID_TYPES = ['flat', 'normal', 'amplified'];
 
-// Chunk section layout (must stay in sync with what packets.js sends):
-// 16 sections x (4096 block states * 2 bytes + 2048 block light + 2048 sky
-// light) followed by 256 biome bytes.
 const SECTION_COUNT = 16;
 const BLOCK_STATE_SIZE = 4096 * 2;
 const NIBBLE_SIZE = 2048;
@@ -45,8 +25,6 @@ function getWorldType() {
     return normalizeWorldType(config.worldType);
 }
 
-// Convert a serverconfig seed to the Long the client would derive for the
-// same input (mirrors GuiCreateWorld.setSeed).
 function seedToLong(seedText) {
     const seed = String(seedText);
     if (seed.length === 0) {
@@ -88,8 +66,6 @@ function getGenerator() {
     return cachedGenerator;
 }
 
-// Lightweight chunk that only stores block ids, mirroring the (y<<8)|(z<<4)|x
-// layout used by the client ChunkSection so Primer works unchanged.
 class ServerChunk {
     constructor() {
         this.blocks = new Uint8Array(16 * 256 * 16);
@@ -104,9 +80,6 @@ class ServerChunk {
     }
 }
 
-// Generate the raw base-terrain column for a chunk (terrain + caves + ores,
-// no population). Deterministic: the RNG is seeded explicitly, so output never
-// depends on the order chunks are generated.
 function generateBaseBlocks(chunkX, chunkZ) {
     const generator = getGenerator();
     if (!generator || !PrimerClass) return null;
@@ -144,12 +117,6 @@ function getBaseBlocks(chunkX, chunkZ) {
     return blocks;
 }
 
-// Read/write facade the client's tree/house generators use during population.
-// Reads always see pure base terrain so a chunk's structures are identical no
-// matter when or in what order it is generated. Writes are clamped to the
-// target chunk so each chunk owns exactly the structure blocks that fall
-// inside it; the chunk a structure is centered on reproduces the matching
-// part, so trees spanning chunk borders line up exactly.
 class PopulateWorldStub {
     constructor() {
         this.blocks = null;  // final blocks of the chunk being built
@@ -186,9 +153,6 @@ class PopulateWorldStub {
     }
 }
 
-// Population needs its own generator instance: it shares the RNG with the
-// terrain generator in the client, but here base terrain can be regenerated
-// on demand mid-population, which would corrupt the population RNG stream.
 let cachedPopulateGenerator = null;
 let cachedPopulateGeneratorKey = null;
 
@@ -211,10 +175,6 @@ function getPopulateGenerator() {
 
 const populateStub = new PopulateWorldStub();
 
-// Generate the final block-id column for a chunk: base terrain plus the
-// population phase (trees, underground houses). To match the client, each
-// chunk re-runs the population of its 1-ring neighborhood and keeps the
-// structure blocks that fall inside it.
 function generateBlocks(chunkX, chunkZ) {
     const base = getBaseBlocks(chunkX, chunkZ);
     if (!base) return null;
@@ -241,10 +201,6 @@ function generateBlocks(chunkX, chunkZ) {
     return blocks;
 }
 
-// Cache recently generated columns. Terrain never changes at runtime, so a
-// small LRU is enough to avoid regenerating chunks for every block lookup.
-// Cache entries are keyed by generator (world type + seed) plus chunk coords
-// so changing the config mid-flight can never serve stale terrain.
 const blockCache = new Map();
 const BLOCK_CACHE_MAX = 64;
 
@@ -282,10 +238,6 @@ function generateChunkColumn(chunkX, chunkZ, worldChanges) {
     const buffer = Buffer.alloc(SECTION_SIZE * SECTION_COUNT + 256);
     const blocks = getColumnBlocks(chunkX, chunkZ);
 
-    // Pre-index this chunk's block changes by their flat position in the block
-    // array. The serialization loop below runs 65k times per chunk; probing the
-    // global map with a freshly built "x,y,z" string for every single block was
-    // the single biggest CPU cost on the main thread during world load.
     const chunkChanges = new Map();
     if (worldChanges && worldChanges.size > 0) {
         const x0 = chunkX * 16;
@@ -360,14 +312,6 @@ function getSurfaceTop(x, z, blocks) {
     return 0;
 }
 
-// Find a safe spawn position. A naive "top of the (0,0) column" can land the
-// player inside a cave when a cave mouth carves the surface at spawn: the
-// column's highest block becomes the cave floor. Instead, scan a grid around
-// (0,0) and pick the column with the highest surface (a hilltop or flat
-// surface). A cave floor is by definition lower than its rim, so the local
-// maximum is never a cave floor (and is never an ocean floor when land is
-// nearby, since the sea surface sits below any land). Closest column wins
-// ties so spawn stays as near (0,0) as possible.
 function getSpawnPosition() {
     if (getWorldType() === 'flat') {
         return { x: 0, y: 10, z: 0 };

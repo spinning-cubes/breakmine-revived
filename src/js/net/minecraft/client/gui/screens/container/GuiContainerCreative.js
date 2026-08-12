@@ -23,6 +23,8 @@ export default class GuiContainerCreative extends GuiContainer {
 
         this.isScrolling = false;
         this.currentScroll = 0;
+        this._lastScrollTime = 0;
+        this._scrollCooldownMs = 100;
         
         // Start selected tab at index 1
         this.selectedTabIndex = 1;
@@ -361,16 +363,19 @@ export default class GuiContainerCreative extends GuiContainer {
         this.container.dirty = true;
     }
 
+    onScroll(mouseX, mouseY, amount) {
+        return this.mouseScroll(mouseX, mouseY, amount);
+    }
+
     mouseScroll(mouseX, mouseY, direction) {
-        // direction: 1 for up, -1 for down
-        const scrollAmount = 3;
-        if (direction > 0) {
-            this.scrollOffset = Math.max(0, this.scrollOffset - scrollAmount);
-        } else {
-            this.scrollOffset = Math.min(this.maxScroll, this.scrollOffset + scrollAmount);
+        const now = Date.now();
+        if (now - this._lastScrollTime < this._scrollCooldownMs) {
+            return false;
         }
-        
-        this.container.scrollTo(this.scrollOffset / Math.max(1, this.maxScroll));
+        this._lastScrollTime = now;
+
+        // direction: positive => scroll down, negative => scroll up
+        this.scrollToRow(this.scrollOffset + (direction > 0 ? 1 : -1));
         return true;
     }
 

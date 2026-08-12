@@ -1,0 +1,57 @@
+import Block from "../Block.js";
+import ItemEntity from "../../../entity/ItemEntity.js";
+import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
+import BlockRenderType from "../../../../util/BlockRenderType.js";
+
+export default class BlockFlower extends Block {
+
+    constructor(id, textureSlotId, textureName, name) {
+        super(id, textureSlotId);
+        this.description = name;
+        this.textureName = textureName;
+        this.hardness = 0.0;
+        this.sound = Block.sounds.grass;
+        this.inventoryTab = EnumCreativeInventoryTab.DECORATION;
+    }
+
+    getRenderType() {
+        return BlockRenderType.DECORATION;
+    }
+
+    getTextureForFace(face) {
+        return this.textureName;
+    }
+
+    getDrop(world, x, y, z) {
+        return [this.id, 1];
+    }
+
+    isSolid() {
+        return false;
+    }
+
+    isTranslucent() {
+        return true;
+    }
+
+    getOpacity() {
+        return 0.0;
+    }
+
+    onBlockPlaced(world, x, y, z, face) {
+        world.scheduleBlockTick(x, y, z, 1);
+    }
+
+    onBlockTick(world, x, y, z) {
+        if (!world.isSolidBlockAt(x, y - 1, z)) {
+            this.breakWithDrop(world, x, y, z);
+        }
+    }
+
+    breakWithDrop(world, x, y, z) {
+        world.setBlockAt(x, y, z, 0);
+        if (world.minecraft) {
+            world.addEntity(new ItemEntity(world.minecraft, world, this.id, x, y, z));
+        }
+    }
+}

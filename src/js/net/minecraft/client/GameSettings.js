@@ -29,6 +29,7 @@ export default class GameSettings {
         this.proxy = '';
         this.showFps = false;
         this.showVersion = false;
+        this.dynamicLights = false;
 
         this.tvmode = false;
 

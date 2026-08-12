@@ -38,6 +38,12 @@ import BlockFence from "./type/BlockFence.js";
 import BlockWoodPanel from "./type/BlockWoodPanel.js";
 import SoundGrass from "./sound/SoundGrass.js";
 import BlockWool from "./type/BlockWool.js";
+import BlockConcrete from "./type/BlockConcrete.js";
+import BlockConcretePowder from "./type/BlockConcretePowder.js";
+import BlockClay from "./type/BlockClay.js";
+import BlockTerracotta from "./type/BlockTerracotta.js";
+import BlockFlower from "./type/BlockFlower.js";
+import BlockGrassPlant from "./type/BlockGrassPlant.js";
 import BlockLava from "./type/BlockLava.js";
 import BlockLogic from "./type/BlockLogic.js";
 import BlockMossyCobblestone from "./type/BlockMossyCobblestone.js";
@@ -245,24 +251,123 @@ export class BlockRegistry {
         BlockRegistry.LAVA = new BlockLava(55, 0);
         BlockRegistry.LOGIC = new BlockLogic(56, 0);
 
-        // --- WOOL BLOCKS ---
+        // --- COLORED BLOCKS (grouped by color) ---
+        BlockRegistry.CLAY = new BlockClay(138, 0, "clay", "Clay");
+        BlockRegistry.TERRACOTTA = new BlockTerracotta(139, 0, "terracotta", "Terracotta");
+
+        // White
         BlockRegistry.WHITE_WOOL = new BlockWool(38, 0, "white_wool", "White Wool");
+        BlockRegistry.WHITE_CONCRETE = new BlockConcrete(122, 0, "white_concrete", "White Concrete");
+        BlockRegistry.WHITE_CONCRETE_POWDER = new BlockConcretePowder(218, 0, "white_concrete_powder", "White Concrete Powder", 122);
+        BlockRegistry.WHITE_TERRACOTTA = new BlockTerracotta(140, 0, "white_terracotta", "White Terracotta");
+
+        // Orange
         BlockRegistry.ORANGE_WOOL = new BlockWool(39, 0, "orange_wool", "Orange Wool");
+        BlockRegistry.ORANGE_CONCRETE = new BlockConcrete(123, 0, "orange_concrete", "Orange Concrete");
+        BlockRegistry.ORANGE_CONCRETE_POWDER = new BlockConcretePowder(219, 0, "orange_concrete_powder", "Orange Concrete Powder", 123);
+        BlockRegistry.ORANGE_TERRACOTTA = new BlockTerracotta(141, 0, "orange_terracotta", "Orange Terracotta");
+
+        // Magenta
         BlockRegistry.MAGENTA_WOOL = new BlockWool(40, 0, "magenta_wool", "Magenta Wool");
+        BlockRegistry.MAGENTA_CONCRETE = new BlockConcrete(124, 0, "magenta_concrete", "Magenta Concrete");
+        BlockRegistry.MAGENTA_CONCRETE_POWDER = new BlockConcretePowder(220, 0, "magenta_concrete_powder", "Magenta Concrete Powder", 124);
+        BlockRegistry.MAGENTA_TERRACOTTA = new BlockTerracotta(142, 0, "magenta_terracotta", "Magenta Terracotta");
+
+        // Light Blue
         BlockRegistry.LIGHT_BLUE_WOOL = new BlockWool(41, 0, "light_blue_wool", "Light Blue Wool");
+        BlockRegistry.LIGHT_BLUE_CONCRETE = new BlockConcrete(125, 0, "light_blue_concrete", "Light Blue Concrete");
+        BlockRegistry.LIGHT_BLUE_CONCRETE_POWDER = new BlockConcretePowder(221, 0, "light_blue_concrete_powder", "Light Blue Concrete Powder", 125);
+        BlockRegistry.LIGHT_BLUE_TERRACOTTA = new BlockTerracotta(143, 0, "light_blue_terracotta", "Light Blue Terracotta");
+
+        // Yellow
         BlockRegistry.YELLOW_WOOL = new BlockWool(42, 0, "yellow_wool", "Yellow Wool");
+        BlockRegistry.YELLOW_CONCRETE = new BlockConcrete(126, 0, "yellow_concrete", "Yellow Concrete");
+        BlockRegistry.YELLOW_CONCRETE_POWDER = new BlockConcretePowder(222, 0, "yellow_concrete_powder", "Yellow Concrete Powder", 126);
+        BlockRegistry.YELLOW_TERRACOTTA = new BlockTerracotta(144, 0, "yellow_terracotta", "Yellow Terracotta");
+
+        // Lime
         BlockRegistry.LIME_WOOL = new BlockWool(43, 0, "lime_wool", "Lime Wool");
+        BlockRegistry.LIME_CONCRETE = new BlockConcrete(127, 0, "lime_concrete", "Lime Concrete");
+        BlockRegistry.LIME_CONCRETE_POWDER = new BlockConcretePowder(223, 0, "lime_concrete_powder", "Lime Concrete Powder", 127);
+        BlockRegistry.LIME_TERRACOTTA = new BlockTerracotta(145, 0, "lime_terracotta", "Lime Terracotta");
+
+        // Pink
         BlockRegistry.PINK_WOOL = new BlockWool(44, 0, "pink_wool", "Pink Wool");
+        BlockRegistry.PINK_CONCRETE = new BlockConcrete(128, 0, "pink_concrete", "Pink Concrete");
+        BlockRegistry.PINK_CONCRETE_POWDER = new BlockConcretePowder(224, 0, "pink_concrete_powder", "Pink Concrete Powder", 128);
+        BlockRegistry.PINK_TERRACOTTA = new BlockTerracotta(146, 0, "pink_terracotta", "Pink Terracotta");
+
+        // Gray
         BlockRegistry.GRAY_WOOL = new BlockWool(45, 0, "gray_wool", "Gray Wool");
+        BlockRegistry.GRAY_CONCRETE = new BlockConcrete(129, 0, "gray_concrete", "Gray Concrete");
+        BlockRegistry.GRAY_CONCRETE_POWDER = new BlockConcretePowder(225, 0, "gray_concrete_powder", "Gray Concrete Powder", 129);
+        BlockRegistry.GRAY_TERRACOTTA = new BlockTerracotta(147, 0, "gray_terracotta", "Gray Terracotta");
+
+        // Light Gray
         BlockRegistry.LIGHT_GRAY_WOOL = new BlockWool(46, 0, "light_gray_wool", "Light Gray Wool");
+        BlockRegistry.LIGHT_GRAY_CONCRETE = new BlockConcrete(130, 0, "light_gray_concrete", "Light Gray Concrete");
+        BlockRegistry.LIGHT_GRAY_CONCRETE_POWDER = new BlockConcretePowder(226, 0, "light_gray_concrete_powder", "Light Gray Concrete Powder", 130);
+        BlockRegistry.LIGHT_GRAY_TERRACOTTA = new BlockTerracotta(148, 0, "light_gray_terracotta", "Light Gray Terracotta");
+
+        // Cyan
         BlockRegistry.CYAN_WOOL = new BlockWool(47, 0, "cyan_wool", "Cyan Wool");
+        BlockRegistry.CYAN_CONCRETE = new BlockConcrete(131, 0, "cyan_concrete", "Cyan Concrete");
+        BlockRegistry.CYAN_CONCRETE_POWDER = new BlockConcretePowder(227, 0, "cyan_concrete_powder", "Cyan Concrete Powder", 131);
+        BlockRegistry.CYAN_TERRACOTTA = new BlockTerracotta(149, 0, "cyan_terracotta", "Cyan Terracotta");
+
+        // Purple
         BlockRegistry.PURPLE_WOOL = new BlockWool(48, 0, "purple_wool", "Purple Wool");
+        BlockRegistry.PURPLE_CONCRETE = new BlockConcrete(132, 0, "purple_concrete", "Purple Concrete");
+        BlockRegistry.PURPLE_CONCRETE_POWDER = new BlockConcretePowder(228, 0, "purple_concrete_powder", "Purple Concrete Powder", 132);
+        BlockRegistry.PURPLE_TERRACOTTA = new BlockTerracotta(182, 0, "purple_terracotta", "Purple Terracotta");
+
+        // Blue
         BlockRegistry.BLUE_WOOL = new BlockWool(49, 0, "blue_wool", "Blue Wool");
+        BlockRegistry.BLUE_CONCRETE = new BlockConcrete(133, 0, "blue_concrete", "Blue Concrete");
+        BlockRegistry.BLUE_CONCRETE_POWDER = new BlockConcretePowder(229, 0, "blue_concrete_powder", "Blue Concrete Powder", 133);
+        BlockRegistry.BLUE_TERRACOTTA = new BlockTerracotta(183, 0, "blue_terracotta", "Blue Terracotta");
+
+        // Brown
         BlockRegistry.BROWN_WOOL = new BlockWool(54, 0, "brown_wool", "Brown Wool");
+        BlockRegistry.BROWN_CONCRETE = new BlockConcrete(134, 0, "brown_concrete", "Brown Concrete");
+        BlockRegistry.BROWN_CONCRETE_POWDER = new BlockConcretePowder(230, 0, "brown_concrete_powder", "Brown Concrete Powder", 134);
+        BlockRegistry.BROWN_TERRACOTTA = new BlockTerracotta(184, 0, "brown_terracotta", "Brown Terracotta");
+
+        // Green
         BlockRegistry.GREEN_WOOL = new BlockWool(51, 0, "green_wool", "Green Wool");
+        BlockRegistry.GREEN_CONCRETE = new BlockConcrete(135, 0, "green_concrete", "Green Concrete");
+        BlockRegistry.GREEN_CONCRETE_POWDER = new BlockConcretePowder(231, 0, "green_concrete_powder", "Green Concrete Powder", 135);
+        BlockRegistry.GREEN_TERRACOTTA = new BlockTerracotta(185, 0, "green_terracotta", "Green Terracotta");
+
+        // Red
         BlockRegistry.RED_WOOL = new BlockWool(52, 0, "red_wool", "Red Wool");
+        BlockRegistry.RED_CONCRETE = new BlockConcrete(136, 0, "red_concrete", "Red Concrete");
+        BlockRegistry.RED_CONCRETE_POWDER = new BlockConcretePowder(232, 0, "red_concrete_powder", "Red Concrete Powder", 136);
+        BlockRegistry.RED_TERRACOTTA = new BlockTerracotta(186, 0, "red_terracotta", "Red Terracotta");
+
+        // Black
         BlockRegistry.BLACK_WOOL = new BlockWool(53, 0, "black_wool", "Black Wool");
+        BlockRegistry.BLACK_CONCRETE = new BlockConcrete(137, 0, "black_concrete", "Black Concrete");
+        BlockRegistry.BLACK_CONCRETE_POWDER = new BlockConcretePowder(233, 0, "black_concrete_powder", "Black Concrete Powder", 137);
+        BlockRegistry.BLACK_TERRACOTTA = new BlockTerracotta(187, 0, "black_terracotta", "Black Terracotta");
+
+        // Tan
         BlockRegistry.TAN_WOOL = new BlockWool(57, 0, "tan_wool", "Tan Wool");
+
+        // --- FLOWERS ---
+        BlockRegistry.FLOWER_ROSE = new BlockFlower(189, 0, "poppy", "Rose");
+        BlockRegistry.FLOWER_DANDELION = new BlockFlower(190, 0, "dandelion", "Dandelion");
+        BlockRegistry.FLOWER_BLUE_ORCHID = new BlockFlower(191, 0, "blue_orchid", "Blue Orchid");
+        BlockRegistry.FLOWER_ALLIUM = new BlockFlower(192, 0, "allium", "Allium");
+        BlockRegistry.FLOWER_AZURE_BLUET = new BlockFlower(193, 0, "azure_bluet", "Azure Bluet");
+        BlockRegistry.FLOWER_RED_TULIP = new BlockFlower(194, 0, "red_tulip", "Red Tulip");
+        BlockRegistry.FLOWER_ORANGE_TULIP = new BlockFlower(195, 0, "orange_tulip", "Orange Tulip");
+        BlockRegistry.FLOWER_WHITE_TULIP = new BlockFlower(196, 0, "white_tulip", "White Tulip");
+        BlockRegistry.FLOWER_PINK_TULIP = new BlockFlower(197, 0, "pink_tulip", "Pink Tulip");
+        BlockRegistry.FLOWER_OXEYE_DAISY = new BlockFlower(198, 0, "oxeye_daisy", "Oxeye Daisy");
+        BlockRegistry.FLOWER_CORNFLOWER = new BlockFlower(199, 0, "cornflower", "Cornflower");
+        BlockRegistry.FLOWER_WITHER_ROSE = new BlockFlower(200, 0, "wither_rose", "Wither Rose");
+        BlockRegistry.GRASS_PLANT = new BlockGrassPlant(201, 0, "grass", "Grass Plant");
 
         // --- ITEMS & TOOLS ---
         BlockRegistry.ITEM_APPLE = new ItemApple(83, 14);
@@ -274,6 +379,29 @@ export class BlockRegistry {
         BlockRegistry.ITEM_DIAMOND = new ItemGeneric(88, 'diamond', 'Diamond');
         BlockRegistry.ITEM_EMERALD = new ItemGeneric(89, 'emerald', 'Emerald');
         BlockRegistry.ITEM_GOLD = new ItemGeneric(90, 'gold_ingot', 'Gold Ingot');
+        BlockRegistry.ITEM_CLAY_BALL = new ItemGeneric(188, 'clay_ball', 'Clay Ball');
+
+        const dyeColors = [
+            [202, 'white_dye', 'White Dye'],
+            [203, 'orange_dye', 'Orange Dye'],
+            [204, 'magenta_dye', 'Magenta Dye'],
+            [205, 'light_blue_dye', 'Light Blue Dye'],
+            [206, 'yellow_dye', 'Yellow Dye'],
+            [207, 'lime_dye', 'Lime Dye'],
+            [208, 'pink_dye', 'Pink Dye'],
+            [209, 'gray_dye', 'Gray Dye'],
+            [210, 'light_gray_dye', 'Light Gray Dye'],
+            [211, 'cyan_dye', 'Cyan Dye'],
+            [212, 'purple_dye', 'Purple Dye'],
+            [213, 'blue_dye', 'Blue Dye'],
+            [214, 'brown_dye', 'Brown Dye'],
+            [215, 'green_dye', 'Green Dye'],
+            [216, 'red_dye', 'Red Dye'],
+            [217, 'black_dye', 'Black Dye'],
+        ];
+        for (const [id, tex, desc] of dyeColors) {
+            BlockRegistry[`ITEM_${tex.toUpperCase()}`] = new ItemGeneric(id, tex, desc);
+        }
 
         BlockRegistry.STONEBRICK = new BlockStoneLike(116, 0, "stonebrick", "Stone Bricks");
         BlockRegistry.DARK_STONEBRICK = new BlockStoneLike(117, 0, "dark_stonebrick", "Dark Stone Bricks");

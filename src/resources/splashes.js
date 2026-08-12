@@ -1,5 +1,6 @@
 export class SplashTexts {
     static SPLASHES = `Indev!
+The Bountiful Update!
 Alpha!
 oooOOOOooo!
 Appl1cation was here!
@@ -35,7 +36,15 @@ RUNNNNNNNNNNNNNNNNNNNNNN!!!
 4 + 4 = 44!
 1 + 1 = 10!
 Breakmine.com!
-Bluestone: by Stryck!`.split('\n');
+Bluestone: by Stryck!
+PS4 Compatible! (maybe...)
+I like beans!
+Pre-included supertunnel!
+Share your worlds!
+Play with your friends!
+Gamers unite!
+Legendary!
+Nahh Brotato that's crazy`.split('\n');
 
     static generateSplash() {
         return this.SPLASHES[Math.floor(Math.random() * this.SPLASHES.length)];
