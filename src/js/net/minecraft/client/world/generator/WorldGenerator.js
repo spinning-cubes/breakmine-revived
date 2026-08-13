@@ -23,6 +23,7 @@ export default class WorldGenerator extends Generator {
         this.DIRT_ID = BlockRegistry.DIRT.getId();
         this.BEDROCK_ID = BlockRegistry.BEDROCK.getId();
         this.SAND_ID = BlockRegistry.SAND.getId();
+        this.CLAY_ID = BlockRegistry.CLAY.getId();
         this.GRAVEL_ID = BlockRegistry.GRAVEL.getId();
         this.COAL_ORE_ID = BlockRegistry.COAL_ORE.getId();
         this.IRON_ORE_ID = BlockRegistry.IRON_ORE.getId();
@@ -238,10 +239,47 @@ export default class WorldGenerator extends Generator {
 
                 if (plantY <= 0 || plantY >= 256) continue;
                 if (this.world.getBlockAt(plantX, plantY - 1, plantZ) !== this.GRASS_ID) continue;
-                // Prevent generating inside tree blocks
                 if (this.world.getBlockAt(plantX, plantY, plantZ) !== 0) continue;
 
                 this.world.setBlockAt(plantX, plantY, plantZ, this.GRASS_PLANT_ID);
+            }
+        }
+
+        // Clay patches: small underwater deposits, up to 10 clay per patch
+        let clayPatches = 1 + this.random.nextInt(2);
+        for (let i = 0; i < clayPatches; i++) {
+            let patchX = absoluteX + this.random.nextInt(16);
+            let patchZ = absoluteZ + this.random.nextInt(16);
+
+            // Find the sea floor (solid block under water)
+            let floorY = -1;
+            for (let y = this.seaLevel; y > 0; y--) {
+                if (this.world.getBlockAt(patchX, y, patchZ) === this.WATER_ID) {
+                    for (let fy = y - 1; fy > 0; fy--) {
+                        let belowId = this.world.getBlockAt(patchX, fy, patchZ);
+                        if (belowId !== this.WATER_ID && belowId !== AIR_ID) {
+                            floorY = fy;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+            if (floorY <= 0) continue;
+
+            let clayCount = 1 + this.random.nextInt(10);
+            for (let j = 0; j < clayCount; j++) {
+                let clayX = patchX + this.random.nextInt(3) - 1;
+                let clayZ = patchZ + this.random.nextInt(3) - 1;
+                let clayY = floorY + this.random.nextInt(2);
+
+                if (clayY <= 0 || clayY >= 256) continue;
+                let currentId = this.world.getBlockAt(clayX, clayY, clayZ);
+                if (currentId !== this.SAND_ID && currentId !== this.DIRT_ID && currentId !== this.GRAVEL_ID) continue;
+                // Only replace blocks still underwater
+                if (this.world.getBlockAt(clayX, clayY + 1, clayZ) !== this.WATER_ID) continue;
+
+                this.world.setBlockAt(clayX, clayY, clayZ, this.CLAY_ID);
             }
         }
     }

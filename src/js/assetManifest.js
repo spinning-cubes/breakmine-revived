@@ -1,16 +1,3 @@
-// Single source of truth for every asset the game actually uses.
-//
-// All keys are relative to src/resources/ (the keys of `base64Assets` in
-// src/resources.js). scripts/build-assets.js embeds ONLY the files listed
-// here, and the game code below imports the same lists to decide what to
-// load — so the bundle can never grow stale assets that nothing uses.
-//
-// NOTE: this file is pure data (no DOM / THREE / Node imports) so it can be
-// imported both by the browser bundle and by the Node build script.
-
-// ---------------------------------------------------------------------------
-// UI textures (Start.js preloads these into Minecraft.resources)
-// ---------------------------------------------------------------------------
 export const uiTextures = [
     "misc/grasscolor.png",
     "gui/font.png",
