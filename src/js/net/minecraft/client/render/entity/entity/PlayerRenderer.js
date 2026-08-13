@@ -1,6 +1,7 @@
 import ModelPlayer from "../../model/model/ModelPlayer.js";
 import EntityRenderer from "../EntityRenderer.js";
 import Block from "../../../world/block/Block.js";
+import Tessellator from "../../Tessellator.js";
 import * as AuthLib from "../../../network/AuthLib.js";
 import * as THREE from "../../../../../../../../libraries/three.module.js";
 
@@ -150,7 +151,7 @@ export default class PlayerRenderer extends EntityRenderer {
                 // Copy material and update depth test of the item to render it always in front
                 if (itemGroup.children.length > 0) {
                     let mesh = itemGroup.children[0];
-                    mesh.material = mesh.material.clone();
+                    mesh.material = Tessellator.cloneMaterial(mesh.material);
                     mesh.material.depthTest = false;
                 }
             }
@@ -182,7 +183,7 @@ export default class PlayerRenderer extends EntityRenderer {
 
             // Copy material and update depth test of the hand to render it always in front
             let mesh = this.handModel.bone.children[0];
-            mesh.material = mesh.material.clone();
+            mesh.material = Tessellator.cloneMaterial(mesh.material);
             mesh.material.depthTest = false;
         }
     }

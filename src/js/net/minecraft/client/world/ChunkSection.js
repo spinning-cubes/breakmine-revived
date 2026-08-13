@@ -95,11 +95,6 @@ export default class ChunkSection {
         const wy = this.y << 4;
         const wz = this.z << 4;
 
-        // Set chunk offset for dynamic lighting shader
-        if (tessellator.useDynamicLighting) {
-            tessellator.setChunkOffset(wx, wy, wz);
-        }
-
         // Fetch adjacent sections using world block offsets
         const north = this.world.getChunkAtBlock(wx, wy, wz - 1);
         const south = this.world.getChunkAtBlock(wx, wy, wz + 16);

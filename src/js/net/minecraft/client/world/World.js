@@ -51,7 +51,6 @@ export default class World {
         this.lastPlayerY = null;
         this.lastPlayerZ = null;
         this.dynamicLightUpdateInterval = null;
-        this.dynamicLightSources = []; // Track current dynamic light sources
 
         const textureLoader = new THREE.TextureLoader();
         this.cloudTexture = textureLoader.load('src/resources/terrain/clouds.png', () => {
@@ -1246,7 +1245,7 @@ export default class World {
     }
 
     updateDynamicLighting() {
-        if (!this.minecraft.player || !this.minecraft.worldRenderer) return;
+        if (!this.minecraft.player) return;
 
         const player = this.minecraft.player;
         const playerX = Math.floor(player.x);
@@ -1258,50 +1257,47 @@ export default class World {
             this.lastPlayerX = playerX;
             this.lastPlayerY = playerY;
             this.lastPlayerZ = playerZ;
-            
-            // Update light texture instead of rebuilding chunks
-            this.updateDynamicLightTexture(playerX, playerY, playerZ);
+            this.markChunksAroundPlayerDirty();
         }
     }
 
-    updateDynamicLightTexture(playerX, playerY, playerZ) {
-        if (!this.minecraft.worldRenderer.lightTextureManager) return;
+    markChunksAroundPlayerDirty() {
+        if (!this.minecraft.player || !this.chunkProvider) return;
 
-        const lightManager = this.minecraft.worldRenderer.lightTextureManager;
-        const propagator = this.minecraft.worldRenderer.lightPropagator;
-        
-        if (!propagator) return;
+        const player = this.minecraft.player;
+        const playerChunkX = Math.floor(player.x) >> 4;
+        const playerChunkZ = Math.floor(player.z) >> 4;
+        const playerSectionY = Math.floor(player.y) >> 4;
+        const lightRadius = 1; // Update neighboring chunks
 
-        // Get held item light value
-        const heldItem = this.minecraft.player.inventory.getItemInSelectedSlot();
-        const itemLight = this.getItemLightValue(heldItem.getType());
+        // Mark only affected sections in chunks around player
+        for (let dx = -lightRadius; dx <= lightRadius; dx++) {
+            for (let dz = -lightRadius; dz <= lightRadius; dz++) {
+                const chunkX = playerChunkX + dx;
+                const chunkZ = playerChunkZ + dz;
 
-        // Update dynamic light sources list
-        this.dynamicLightSources = [];
-        
-        if (itemLight > 0) {
-            this.dynamicLightSources.push({
-                x: playerX,
-                y: playerY,
-                z: playerZ,
-                level: itemLight
-            });
+                const chunk = this.chunkProvider.getChunkAt(chunkX, chunkZ);
+                if (chunk) {
+                    // Only mark sections that could be affected by light (current + adjacent)
+                    // Light radius is 8 blocks, so it can affect current section and adjacent ones
+                    const sectionsToUpdate = [playerSectionY - 1, playerSectionY, playerSectionY + 1];
+                    
+                    for (let sectionY of sectionsToUpdate) {
+                        if (sectionY >= 0 && sectionY < 16) {
+                            const section = chunk.sections[sectionY];
+                            if (section && !section.isEmpty()) {
+                                section.isModified = true;
+                                // Queue for rebuild via WorldRenderer
+                                if (this.minecraft.worldRenderer && 
+                                    !this.minecraft.worldRenderer.chunkSectionUpdateQueue.includes(section)) {
+                                    this.minecraft.worldRenderer.chunkSectionUpdateQueue.push(section);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-
-        // Propagate light from all sources
-        const lightMap = propagator.propagateMultipleLights(
-            this.dynamicLightSources,
-            8, // Light radius
-            true // Dynamic light
-        );
-
-        // Update light texture in the affected region
-        const updateRadius = 8;
-        lightManager.updateLightRegion(
-            playerX, playerY, playerZ,
-            updateRadius * 2,
-            (x, y, z) => propagator.getCombinedLight(lightMap, x, y, z)
-        );
     }
 
     getTotalLightAt(x, y, z) {
@@ -1310,7 +1306,36 @@ export default class World {
         }
 
         let section = this.getChunkSectionAt(x >> 4, y >> 4, z >> 4);
-        return section.getTotalLightAt(x & 15, y & 15, z & 15);
+        let baseLight = section.getTotalLightAt(x & 15, y & 15, z & 15);
+
+        // Add dynamic lighting from held items if enabled
+        if (this.minecraft.settings.dynamicLights && this.minecraft.player) {
+            const player = this.minecraft.player;
+            const playerX = Math.floor(player.x);
+            const playerY = Math.floor(player.y);
+            const playerZ = Math.floor(player.z);
+
+            // Check if this position is near the player
+            const dx = x - playerX;
+            const dy = y - playerY;
+            const dz = z - playerZ;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (distance < 8) { // Dynamic light radius
+                // Get held item light value
+                const heldItem = player.inventory.getItemInSelectedSlot();
+                const itemLight = this.getItemLightValue(heldItem.getType());
+
+                if (itemLight > 0) {
+                    // Calculate falloff based on distance
+                    const falloff = Math.max(0, 1 - (distance / 8));
+                    const dynamicLight = Math.floor(itemLight * falloff);
+                    baseLight = Math.max(baseLight, dynamicLight);
+                }
+            }
+        }
+
+        return baseLight;
     }
 
     getSkyColorByTemp(temperature) {

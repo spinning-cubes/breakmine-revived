@@ -56,7 +56,7 @@ export default class IngameOverlay extends Gui {
                 this.drawString(stack, "Breakmine " + Minecraft.VERSION, 2, 2, 0xffffffff, true, false);
             } else {
                 this.drawString(stack, "Breakmine " + Minecraft.VERSION, 2, 2, 0xffffffff, true, false);
-                this.drawString(stack, fps.toString() + " fps", 2, 2 + FontRenderer.FONT_HEIGHT * 1, 0xffffffff, true, false);
+                this.drawString(stack, fps.toString() + " fps", 2, 3 + FontRenderer.FONT_HEIGHT * 1, 0xffffffff, true, false);
             }
         }
 
