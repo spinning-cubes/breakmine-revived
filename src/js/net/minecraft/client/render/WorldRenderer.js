@@ -123,6 +123,11 @@ export default class WorldRenderer {
         // Add block hit box to scene
         this.scene.add(this.blockHitBox);
 
+        // Create block placement preview (ghost of the block about to be placed)
+        this.blockPreviewGroup = new THREE.Group();
+        this.blockPreviewGroup.visible = false;
+        this.scene.add(this.blockPreviewGroup);
+
         // Create chunk boundary helper
         this.chunkBoundaryMaterial = new THREE.LineBasicMaterial({
             color: 0x00ff00,
@@ -271,6 +276,9 @@ export default class WorldRenderer {
         // Render target block
         this.renderBlockHitBox(player, partialTicks);
 
+        // Render placement preview ghost block
+        this.updateBlockPlacePreview(partialTicks);
+
         // Render entity bounding boxes
         this.updateEntityBoundingBoxes(partialTicks);
 
@@ -361,6 +369,12 @@ export default class WorldRenderer {
         // (sortObjects=false means Three.js uses scene traversal order, not renderOrder)
         this.scene.remove(this.translucentBatcher.mesh);
         this.scene.add(this.translucentBatcher.mesh);
+
+        // Move placement preview to the end too so it renders on top of the world
+        if (this.blockPreviewGroup.visible) {
+            this.scene.remove(this.blockPreviewGroup);
+            this.scene.add(this.blockPreviewGroup);
+        }
 
         // Render actual scene (batcher mesh draws last, on top of entities/chunks)
         this.webRenderer.render(this.scene, this.camera);
@@ -1169,6 +1183,191 @@ export default class WorldRenderer {
         this.lastHitResult = hitResult;
     }
 
+    updateBlockPlacePreview(partialTicks) {
+        this.blockPreviewGroup.visible = false;
+
+        if (!this.minecraft.settings.showPreview) return;
+
+        let player = this.minecraft.player;
+        if (!player || player.spectator) return;
+
+        let heldItem = player.inventory.getItemInSelectedSlot();
+        if (!heldItem || heldItem.isEmpty()) return;
+
+        let typeId = heldItem.getType() || 0;
+        if (typeId === 0) return;
+
+        let block = Block.getById(typeId);
+        if (!block || block.isItem()) return;
+
+        let hitResult = player.rayTrace(5, partialTicks);
+        if (hitResult === null) return;
+
+        let x = hitResult.x + hitResult.face.x;
+        let y = hitResult.y + hitResult.face.y;
+        let z = hitResult.z + hitResult.face.z;
+
+        let world = this.minecraft.world;
+
+        // Mirror the placement checks from Minecraft.js so the ghost only shows
+        // where the block could actually be placed
+        let placedBoundingBox = new BoundingBox(x, y, z, x + 1, y + 1, z + 1);
+        if (placedBoundingBox.intersects(player.boundingBox)) return;
+
+        let prevTypeId = world.getBlockAt(x, y, z);
+        let prevBlock = Block.getById(prevTypeId);
+        let isReplaceable = (prevBlock && prevBlock.isReplaceable(world, x, y, z)) || prevTypeId === 0;
+        if (!isReplaceable) return;
+
+        // Clear existing preview meshes
+        while (this.blockPreviewGroup.children.length > 0) {
+            this.blockPreviewGroup.remove(this.blockPreviewGroup.children[0]);
+        }
+
+        // Block renderer emits chunk-local coordinates, so move the group to
+        // the chunk origin that contains the target position
+        this.blockPreviewGroup.position.set(x >> 4 << 4, y >> 4 << 4, z >> 4 << 4);
+        // draw() disables matrixAutoUpdate on the group, so bake the transform
+        // manually or the ghost stays pinned to chunk 0,0
+        this.blockPreviewGroup.updateMatrix();
+
+        let tessellator = this.blockRenderer.tessellator;
+
+        // Render against a proxy world that reports the placement block data
+        // and shape for the target position, without touching real chunk storage.
+        let fakeWorld = this.createPreviewWorld(world, typeId, x, y, z, this.getBlockPlacementData(block, hitResult));
+
+        // Blocks like stairs, torches and doors compute their orientation in
+        // onBlockPlaced; run it against the fake world so the ghost matches.
+        block.onBlockPlaced(fakeWorld, x, y, z, hitResult.face);
+
+        tessellator.startDrawing();
+        tessellator.setRenderingPass(true);
+        this.blockRenderer.renderBlock(fakeWorld, block, false, x, y, z);
+
+        if (tessellator.addedVertices > 0) {
+            let mesh = tessellator.draw(this.blockPreviewGroup);
+            mesh.material.transparent = true;
+            mesh.material.opacity = 0.45;
+            mesh.material.depthWrite = false;
+            mesh.material.alphaTest = 0;
+            mesh.renderOrder = 10001;
+
+            // Tint the ghost toward white so it reads as a light preview
+            let colorAttr = mesh.geometry.getAttribute('color');
+            if (colorAttr) {
+                for (let i = 0; i < colorAttr.count; i++) {
+                    colorAttr.setXYZ(i,
+                        1 - (1 - colorAttr.getX(i)) * 0.55,
+                        1 - (1 - colorAttr.getY(i)) * 0.55,
+                        1 - (1 - colorAttr.getZ(i)) * 0.55
+                    );
+                }
+                colorAttr.needsUpdate = true;
+            }
+        }
+
+        this.blockPreviewGroup.visible = true;
+    }
+
+    createPreviewWorld(world, typeId, px, py, pz, baseData) {
+        const chunkX = px >> 4;
+        const chunkZ = pz >> 4;
+        const isTarget = (x, y, z) => x === px && y === py && z === pz;
+
+        // Blocks that compute their orientation in onBlockPlaced write it here
+        let blockData = baseData;
+
+        return new Proxy(world, {
+            get(target, prop) {
+                switch (prop) {
+                    case 'getBlockDataAt':
+                        return (x, y, z) => isTarget(x, y, z) ? blockData : target.getBlockDataAt(x, y, z);
+                    case 'getBlockAt':
+                        return (x, y, z) => isTarget(x, y, z) ? typeId : target.getBlockAt(x, y, z);
+                    case 'getChunkAt':
+                        return (x, z) => {
+                            const chunk = target.getChunkAt(x, z);
+                            if (!chunk || x !== chunkX || z !== chunkZ) return chunk;
+                            return new Proxy(chunk, {
+                                get(chunkTarget, chunkProp) {
+                                    if (chunkProp === 'getBlockDataAt') {
+                                        return (lx, ly, lz) => {
+                                            const wx = (chunkX << 4) + lx;
+                                            const wz = (chunkZ << 4) + lz;
+                                            return isTarget(wx, ly, wz) ? blockData : chunkTarget.getBlockDataAt(lx, ly, lz);
+                                        };
+                                    }
+                                    return chunkTarget[chunkProp];
+                                }
+                            });
+                        };
+                    // Placement writes during onBlockPlaced are captured into
+                    // blockData instead of hitting real world storage
+                    case 'setBlockDataAt':
+                        return (x, y, z, data) => { if (isTarget(x, y, z)) blockData = data; };
+                    case 'setBlockAt':
+                        return () => { /* e.g. doors place their top half here — not part of the preview */ };
+                    case 'getChunkSectionAt':
+                        return (cx, cy, cz) => {
+                            const section = target.getChunkSectionAt(cx, cy, cz);
+                            if (!section) return section;
+                            return new Proxy(section, {
+                                get(sectionTarget, sectionProp) {
+                                    if (sectionProp === 'setBlockDataAt') {
+                                        return (x, y, z, data) => { blockData = data; };
+                                    }
+                                    if (sectionProp === 'getBlockDataAt') {
+                                        return (x, y, z) => {
+                                            const wx = (cx << 4) + x;
+                                            const wy = (cy << 4) + y;
+                                            const wz = (cz << 4) + z;
+                                            return isTarget(wx, wy, wz) ? blockData : sectionTarget.getBlockDataAt(x, y, z);
+                                        };
+                                    }
+                                    return sectionTarget[sectionProp];
+                                }
+                            });
+                        };
+                    case 'scheduleBlockTick':
+                    case 'onBlockChanged':
+                        return () => {};
+                }
+                return target[prop];
+            }
+        });
+    }
+
+    getBlockPlacementData(block, hitResult) {
+        // Mirrors the data calculation in Minecraft.js placement so the preview
+        // shows the exact shape/rotation the block would get
+        let blockData = 0;
+
+        // Set rotation data for logs based on placement face
+        if (block.constructor.name === 'BlockLog') {
+            if (hitResult.face.isXAxis()) {
+                blockData = 1; // East-west
+            } else if (hitResult.face.isZAxis()) {
+                blockData = 2; // North-south
+            }
+        }
+
+        // Slab top/bottom based on placement face
+        if (block.constructor.name === 'BlockSlab') {
+            if (hitResult.face.y === -1) {
+                blockData = 1; // Top slab
+            }
+        }
+
+        // Chest/furnace facing based on player yaw
+        if (block.constructor.name === 'BlockChest' || block.constructor.name === 'BlockFurnace') {
+            let dirIndex = Math.floor((this.minecraft.player.rotationYaw * 4 / 360) + 0.5) & 3;
+            blockData = [2, 5, 3, 4][dirIndex]; // 2=N, 3=S, 4=W, 5=E — front faces player
+        }
+
+        return blockData;
+    }
+
     updateEntityBoundingBoxes(partialTicks) {
         let show = this.minecraft.settings.showEntityBoundingBoxes;
         this.entityBBoxGroup.visible = show;
@@ -1330,7 +1529,7 @@ export default class WorldRenderer {
         // Clear any remaining children that might be stale, but preserve block hit box
         for (let i = this.scene.children.length - 1; i >= 0; i--) {
             const child = this.scene.children[i];
-            if (child !== this.blockHitBox) {
+            if (child !== this.blockHitBox && child !== this.blockPreviewGroup) {
                 this.scene.remove(child);
             }
         }
@@ -1348,6 +1547,10 @@ export default class WorldRenderer {
         if (!this.scene.children.includes(this.blockHitBox)) {
             this.scene.add(this.blockHitBox);
         }
+        if (!this.scene.children.includes(this.blockPreviewGroup)) {
+            this.scene.add(this.blockPreviewGroup);
+        }
+        this.blockPreviewGroup.visible = false;
         if (!this.overlay.children.includes(this.blockBreakMesh)) {
             this.overlay.add(this.blockBreakMesh);
         }

@@ -128,6 +128,10 @@ export class BlockRegistry {
         return this.registry.get(normalized) || this.registry.get(key);
     }
 
+    static getBlockByName(key) {
+        return this.get(key);
+    }
+
     static unregister(identifier) {
         const fullKey = this.normalizeKey(identifier);
         const block = this.registry.get(fullKey);

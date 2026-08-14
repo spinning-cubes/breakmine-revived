@@ -96,6 +96,12 @@ export default class GuiOptions extends GuiScreen {
                         type: "toggle",
                         tooltip: "This feature can cause lag and\nis still in development."
                     },
+                    {
+                        name: "Placement Preview",
+                        settingKey: "showPreview",
+                        type: "toggle",
+                        tooltip: "Render a ghost of the placed block."
+                    }
                 ]
             }
         ];
