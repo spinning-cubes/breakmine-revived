@@ -1,6 +1,10 @@
 {
   "name": "breakmine",
   "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "description": "Minecraft in javascript",
   "main": "src/js/net/minecraft/server/main.js",
   "scripts": {
