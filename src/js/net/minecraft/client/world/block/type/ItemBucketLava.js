@@ -2,6 +2,7 @@ import ItemGeneric from "./ItemGeneric.js";
 import { BlockRegistry } from "../BlockRegistry.js";
 import Block from "../Block.js";
 import EnumCreativeInventoryTab from "../../../gui/EnumCreativeInventoryTab.js";
+import BlockPosition from "../../../../util/BlockPosition.js";
 
 export default class ItemBucketLava extends ItemGeneric {
 
@@ -10,7 +11,7 @@ export default class ItemBucketLava extends ItemGeneric {
         this.inventoryTab = EnumCreativeInventoryTab.TOOLS;
     }
 
-    onUse(world, x, y, z, itemstack) {
+    onUse(world, x, y, z, itemstack, hitFace) {
         if (!world || x === undefined || y === undefined || z === undefined || !itemstack) {
             return;
         }
@@ -26,6 +27,20 @@ export default class ItemBucketLava extends ItemGeneric {
 
         world.setBlockAt(x, y, z, BlockRegistry.LAVA.getId());
         itemstack.typeId = BlockRegistry.ITEM_BUCKET_EMPTY.getId();
-        itemstack.count = Math.max(1, itemstack.count || 1);
+        if (!world.minecraft.player.creative) itemstack.count = Math.max(1, itemstack.count || 1);
+        this.notifyServerPlacement(world, x, y, z, hitFace, BlockRegistry.LAVA.getId());
+    }
+
+    notifyServerPlacement(world, x, y, z, hitFace, blockId) {
+        const minecraft = world.minecraft;
+        if (!minecraft || !hitFace || !minecraft.playerController ||
+            typeof minecraft.playerController.sendBlockPlacementPacket !== 'function') {
+            return;
+        }
+        minecraft.playerController.sendBlockPlacementPacket(
+            new BlockPosition(x - hitFace.x, y - hitFace.y, z - hitFace.z),
+            minecraft.getFaceValue(hitFace),
+            { id: blockId }
+        );
     }
 }

@@ -53,7 +53,7 @@ export default class World {
         this.dynamicLightUpdateInterval = null;
 
         const textureLoader = new THREE.TextureLoader();
-        this.cloudTexture = textureLoader.load('src/resources/terrain/clouds.png', () => {
+        this.cloudTexture = textureLoader.load('src/resources/terrain/clouds.png', (texture) => {
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
             texture.magFilter = THREE.NearestFilter;

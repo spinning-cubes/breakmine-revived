@@ -1,4 +1,6 @@
 import * as THREE from "../../../../../../libraries/three.module.js";
+import EnumBlockFace from "../../util/EnumBlockFace.js";
+import { getLiquidBlockCornerHeights } from "./LiquidMeshHelper.js";
 
 export default class Tessellator {
 
@@ -169,6 +171,65 @@ export default class Tessellator {
         // Add UV
         this.uv.push(u);
         this.uv.push(v);
+    }
+
+    /**
+     * Build a quad for a liquid surface. The top surface follows the smoothed
+     * corner heights sampled by LiquidMeshHelper (sloped water), while side
+     * faces drop from the two edge corners down to the block bottom.
+     * UVs must already be V-flipped, matching addFace conventions.
+     */
+    addLiquidFace(world, liquidId, face, chunkX, chunkY, chunkZ, x, y, z, minU, minV, maxU, maxV) {
+        const cx = chunkX << 4;
+        const cy = chunkY << 4;
+        const cz = chunkZ << 4;
+
+        const heights = getLiquidBlockCornerHeights(world, x, y, z, liquidId);
+        const h00 = heights.h00;
+        const h01 = heights.h01;
+        const h10 = heights.h10;
+        const h11 = heights.h11;
+
+        const v = (wx, wy, wz, u, vt) => this.addVertexWithUV(wx - cx, wy - cy, wz - cz, u, vt);
+
+        switch (face) {
+            case EnumBlockFace.TOP:
+                v(x, y + h01, z + 1, minU, maxV);
+                v(x, y + h00, z, minU, minV);
+                v(x + 1, y + h10, z, maxU, minV);
+                v(x + 1, y + h11, z + 1, maxU, maxV);
+                break;
+            case EnumBlockFace.BOTTOM:
+                v(x + 1, y, z + 1, maxU, maxV);
+                v(x + 1, y, z, maxU, minV);
+                v(x, y, z, minU, minV);
+                v(x, y, z + 1, minU, maxV);
+                break;
+            case EnumBlockFace.NORTH:
+                v(x, y + h00, z, maxU, minV);
+                v(x, y, z, maxU, maxV);
+                v(x + 1, y, z, minU, maxV);
+                v(x + 1, y + h10, z, minU, minV);
+                break;
+            case EnumBlockFace.SOUTH:
+                v(x, y + h01, z + 1, minU, minV);
+                v(x + 1, y + h11, z + 1, maxU, minV);
+                v(x + 1, y, z + 1, maxU, maxV);
+                v(x, y, z + 1, minU, maxV);
+                break;
+            case EnumBlockFace.WEST:
+                v(x, y, z, minU, maxV);
+                v(x, y + h00, z, minU, minV);
+                v(x, y + h01, z + 1, maxU, minV);
+                v(x, y, z + 1, maxU, maxV);
+                break;
+case EnumBlockFace.EAST:
+        v(x + 1, y + h11, z + 1, minU, minV);
+        v(x + 1, y + h10, z, maxU, minV);
+        v(x + 1, y, z, maxU, maxV);
+        v(x + 1, y, z + 1, minU, maxV);
+        break;
+        }
     }
 
     transformBrightness(brightness) {

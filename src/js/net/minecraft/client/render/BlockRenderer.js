@@ -55,6 +55,9 @@ export default class BlockRenderer {
                     case BlockRenderType.DECORATION:
                         this.renderDecoration(world, block, x, y, z);
                         break;
+                    case BlockRenderType.FLUID:
+                        this.renderLiquid(world, block, x, y, z);
+                        break;
                 }
             }
         }
@@ -175,6 +178,91 @@ export default class BlockRenderer {
             if (world === null || block.shouldRenderFace(world, x, y, z, face) || (neighborBlock !== null && (neighborBlock.path === true || neighborBlock.noFaceCull === true || neighborBlock.multipart === true))) {
                 this.renderFace(world, block, boundingBox, face, block.getAmbientOcclusion() && ambientOcclusion, x, y, z);
             }
+        }
+    }
+
+    renderLiquid(world, block, x, y, z) {
+        const chunkX = x >> 4;
+        const chunkY = y >> 4;
+        const chunkZ = z >> 4;
+        const liquidId = block.id;
+
+        // Texture UVs (V-flipped to match the other renderers)
+        const textureName = block.getTextureForFace(EnumBlockFace.TOP);
+        let minU, maxU, minV, maxV;
+        if (this.worldRenderer.textureAtlas && this.worldRenderer.textureAtlas.isLoaded()) {
+            let uvs = this.worldRenderer.textureAtlas.getUVs(textureName);
+            minU = uvs.minU;
+            maxU = uvs.maxU;
+            minV = uvs.minV;
+            maxV = uvs.maxV;
+        } else {
+            let textureIndex = block.getTextureForFace(EnumBlockFace.TOP);
+            minU = (textureIndex % 16) / 16.0;
+            maxU = minU + (16 / 256);
+            minV = Math.floor(textureIndex / 16) / 16.0;
+            maxV = minV + (16 / 256);
+        }
+        minV = 1 - minV;
+        maxV = 1 - maxV;
+
+        // Color multiplier (water/lava textures carry their own tint)
+        let color = block.getColor(world, x, y, z, EnumBlockFace.TOP);
+        let red = (color >> 16 & 255) / 255.0;
+        let green = (color >> 8 & 255) / 255.0;
+        let blue = (color & 255) / 255.0;
+
+        // Lighting sampled just above the liquid so open water stays bright
+        const lightLevel = world === null ? 15 : this.getEffectiveLightLevel(world, x, y + 0.9, z);
+        const brightness = 0.9 / 15.0 * lightLevel + 0.1;
+
+        const isLiquidAt = (nx, ny, nz) => world !== null && world.getBlockAt(nx, ny, nz) === liquidId;
+
+        // A full 1x1x1 solid opaque block hides whatever is directly behind it,
+        // so faces pressed against one are never visible and can be culled.
+        const isOpaqueFullCubeAt = (nx, ny, nz) => {
+            if (world === null) return false;
+            const neighborId = world.getBlockAt(nx, ny, nz);
+            if (neighborId === 0) return false;
+            const neighbor = Block.getById(neighborId);
+            if (neighbor === null || !neighbor.isSolid() || neighbor.isTranslucent()) return false;
+            const box = neighbor.getBoundingBox(world, nx, ny, nz);
+            return box !== null && box.minX === 0 && box.minY === 0 && box.minZ === 0 &&
+                   box.maxX === 1 && box.maxY === 1 && box.maxZ === 1;
+        };
+
+        // TOP: culled when liquid sits directly above (the upper block owns the surface)
+        // or when a full opaque block covers the liquid.
+        if (world === null || (!isLiquidAt(x, y + 1, z) && !isOpaqueFullCubeAt(x, y + 1, z))) {
+            const shade = brightness * EnumBlockFace.TOP.getShading();
+            this.tessellator.setColor(red * shade, green * shade, blue * shade);
+            this.tessellator.addLiquidFace(world, liquidId, EnumBlockFace.TOP, chunkX, chunkY, chunkZ, x, y, z, minU, minV, maxU, maxV);
+        }
+
+        // BOTTOM: only when exposed to an air/non-solid cave below (never
+        // under a liquid of the same type, so stacked columns stay seamless)
+        const belowId = world === null ? 1 : world.getBlockAt(x, y - 1, z);
+        const belowBlock = belowId === 0 ? null : Block.getById(belowId);
+        if (world === null || ((belowBlock === null || !belowBlock.isSolid()) && !isLiquidAt(x, y - 1, z))) {
+            const shade = brightness * EnumBlockFace.BOTTOM.getShading();
+            this.tessellator.setColor(red * shade, green * shade, blue * shade);
+            this.tessellator.addLiquidFace(world, liquidId, EnumBlockFace.BOTTOM, chunkX, chunkY, chunkZ, x, y, z, minU, minV, maxU, maxV);
+        }
+
+        // SIDES: culled when the neighbor column is the same liquid or when a
+        // full 1x1x1 solid opaque block sits on that side
+        const sides = [
+            { face: EnumBlockFace.NORTH, dx: 0, dz: -1 },
+            { face: EnumBlockFace.SOUTH, dx: 0, dz: 1 },
+            { face: EnumBlockFace.WEST, dx: -1, dz: 0 },
+            { face: EnumBlockFace.EAST, dx: 1, dz: 0 }
+        ];
+        for (const side of sides) {
+            if (world !== null && isLiquidAt(x + side.dx, y, z + side.dz)) continue;
+            if (world !== null && isOpaqueFullCubeAt(x + side.dx, y, z + side.dz)) continue;
+            const shade = brightness * side.face.getShading();
+            this.tessellator.setColor(red * shade, green * shade, blue * shade);
+            this.tessellator.addLiquidFace(world, liquidId, side.face, chunkX, chunkY, chunkZ, x, y, z, minU, minV, maxU, maxV);
         }
     }
 

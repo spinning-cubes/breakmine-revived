@@ -163,6 +163,29 @@ export default class FileSystem {
 
         const lsKey = this.localStoragePrefix + filename;
 
+        const store = await this._getTransactionStore('readwrite');
+        if (store) {
+            // Primary: save to IndexedDB
+            return new Promise((resolve, reject) => {
+                const fileRecord = {
+                    fileName: filename,
+                    data: base64Text,
+                    timestamp: Date.now()
+                };
+                const request = store.put(fileRecord);
+                
+                request.onsuccess = () => {
+                    console.log(`Saved '${filename}' in IndexedDB.`);
+                    resolve();
+                };
+                request.onerror = (event) => {
+                    console.error("IndexedDB save error:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        // Fallback: save to LocalStorage
         const ls = getLocalStorage();
         try {
             if (!ls) throw new Error('localStorage unavailable');
@@ -172,13 +195,7 @@ export default class FileSystem {
             return;
 
         } catch (e) {
-            console.warn(`LocalStorage quota exceeded or failed for '${filename}'`);
-            console.warn(`Using IndexedDB instead`);
-
-            const store = await this._getTransactionStore('readwrite');
-            if (!store) {
-                return Promise.reject(new Error("Save failed! IndexedDB not available"));
-            }
+            console.warn(`IndexedDB save failed, using LocalStorage for '${filename}': ${e.message}`);
 
             if (ls) ls.removeItem(lsKey);
 
@@ -219,20 +236,38 @@ export default class FileSystem {
 
         const lsKey = this.localStoragePrefix + filename;
 
+        const store = await this._getTransactionStore('readwrite');
+        if (store) {
+            // Primary: save to IndexedDB
+            return new Promise((resolve, reject) => {
+                const fileRecord = {
+                    fileName: filename,
+                    data: base64Data,
+                    timestamp: Date.now()
+                };
+                const request = store.put(fileRecord);
+                
+                request.onsuccess = () => {
+                    console.log(`Saved binary file '${filename}' in IndexedDB.`);
+                    resolve();
+                };
+                request.onerror = (event) => {
+                    console.error("IndexedDB save error:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        // Fallback: save to LocalStorage
         const ls = getLocalStorage();
         try {
             if (!ls) throw new Error('localStorage unavailable');
             ls.setItem(lsKey, base64Data);
             await this._deleteFileFromIndexedDB(filename);
             return;
-        } catch (e) {
-            console.warn(`LocalStorage quota exceeded or failed for '${filename}'`);
-            console.warn(`Using IndexedDB instead`);
 
-            const store = await this._getTransactionStore('readwrite');
-            if (!store) {
-                return Promise.reject(new Error("Save failed! IndexedDB not available"));
-            }
+        } catch (e) {
+            console.warn(`IndexedDB save failed, using LocalStorage for '${filename}': ${e.message}`);
 
             if (ls) ls.removeItem(lsKey);
 

@@ -57,12 +57,12 @@ export function initServer() {
         }
     }, 1000 / 20); // Tick every 1/20th second
 
-    // Save world time and world state every 60 seconds.
+    // Save world time and world state every 15 seconds.
     autosaveInterval = setInterval(() => {
         saveWorld();
-    }, 60 * 1000);
+    }, 15 * 1000);
 
-    // Periodically save player positions (every 30 seconds) for crash resilience
+    // Periodically save player positions (every 15 seconds) for crash resilience
     playerSaveInterval = setInterval(() => {
         const players = getPlayers();
         for (const player of players.values()) {
@@ -70,7 +70,7 @@ export function initServer() {
                 savePlayerData(player);
             }
         }
-    }, 30 * 1000);
+    }, 15 * 1000);
 
     log.info('Server', `Minecraft server started (world: ${getCurrentWorldName()})`);
 }
